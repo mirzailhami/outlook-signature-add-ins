@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0" xsi:type="MailApp">
+  <Id>f56e10b6-03a7-4d46-a9e8-42264673b4a8</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>M3Wind</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="M3 Signatures"/>
+  <Description DefaultValue="Attach one of your M3 Signatures to this message."/>
+  <IconUrl DefaultValue="https://localhost:3000/assets/m3wind-16x16.png"/>
+  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/m3wind-80x80.png"/>
+  <SupportUrl DefaultValue="https://m3wind.com/support"/>
+  <AppDomains>
+    <AppDomain>https://localhost:3000</AppDomain>
+    <AppDomain>https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net</AppDomain>
+    <AppDomain>https://m3storageaccount.blob.core.windows.net</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.1"/>
+    </Sets>
+  </Requirements>
+  <FormSettings>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://localhost:3000/error.html"/>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+  <Permissions>ReadWriteMailbox</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
+  </Rule>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.1">
+          <bt:Set Name="Mailbox"/>
+        </bt:Sets>
+      </Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <FunctionFile resid="Commands.Url"/>
+            <ExtensionPoint xsi:type="Events">
+              <Event Type="ItemSend" FunctionExecution="synchronous" FunctionName="validateSignature"/>
+            </ExtensionPoint>
+            <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="msgComposeGroup">
+                  <Label resid="GroupLabel"/>
+                  <Control xsi:type="Menu" id="msgComposeOpenPaneButton">
+                    <Label resid="TaskpaneButton.Label"/>
+                    <Supertip>
+                      <Title resid="TaskpaneButton.Label"/>
+                      <Description resid="TaskpaneButton.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16"/>
+                      <bt:Image size="32" resid="Icon.32x32"/>
+                      <bt:Image size="80" resid="Icon.80x80"/>
+                    </Icon>
+                    <Items>
+                      <Item id="msgReadMenuItem1">
+                        <Label resid="TaskpaneMenu.Label.Mona"/>
+                        <Supertip>
+                          <Title resid="TaskpaneMenu.Label.Mona"/>
+                          <Description resid="TaskpaneButton.Tooltip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="Icon.signature"/>
+                          <bt:Image size="32" resid="Icon.signature"/>
+                          <bt:Image size="80" resid="Icon.signature"/>
+                        </Icon>
+                        <Action xsi:type="ExecuteFunction">
+                          <FunctionName>addSignatureMona</FunctionName>
+                        </Action>
+                      </Item>
+                      <Item id="msgReadMenuItem2">
+                        <Label resid="TaskpaneMenu.Label.Morgan"/>
+                        <Supertip>
+                          <Title resid="TaskpaneMenu.Label.Morgan"/>
+                          <Description resid="TaskpaneButton.Tooltip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="Icon.signature"/>
+                          <bt:Image size="32" resid="Icon.signature"/>
+                          <bt:Image size="80" resid="Icon.signature"/>
+                        </Icon>
+                        <Action xsi:type="ExecuteFunction">
+                          <FunctionName>addSignatureMorgan</FunctionName>
+                        </Action>
+                      </Item>
+                      <Item id="msgReadMenuItem3">
+                        <Label resid="TaskpaneMenu.Label.Morven"/>
+                        <Supertip>
+                          <Title resid="TaskpaneMenu.Label.Morven"/>
+                          <Description resid="TaskpaneButton.Tooltip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="Icon.signature"/>
+                          <bt:Image size="32" resid="Icon.signature"/>
+                          <bt:Image size="80" resid="Icon.signature"/>
+                        </Icon>
+                        <Action xsi:type="ExecuteFunction">
+                          <FunctionName>addSignatureMorven</FunctionName>
+                        </Action>
+                      </Item>
+                      <Item id="msgReadMenuItem4">
+                        <Label resid="TaskpaneMenu.Label.M2"/>
+                        <Supertip>
+                          <Title resid="TaskpaneMenu.Label.M2"/>
+                          <Description resid="TaskpaneButton.Tooltip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="Icon.signature"/>
+                          <bt:Image size="32" resid="Icon.signature"/>
+                          <bt:Image size="80" resid="Icon.signature"/>
+                        </Icon>
+                        <Action xsi:type="ExecuteFunction">
+                          <FunctionName>addSignatureM2</FunctionName>
+                        </Action>
+                      </Item>
+                      <Item id="msgReadMenuItem5">
+                        <Label resid="TaskpaneMenu.Label.M3"/>
+                        <Supertip>
+                          <Title resid="TaskpaneMenu.Label.M3"/>
+                          <Description resid="TaskpaneButton.Tooltip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="Icon.signature"/>
+                          <bt:Image size="16" resid="Icon.signature"/>
+                          <bt:Image size="32" resid="Icon.signature"/>
+                          <bt:Image size="80" resid="Icon.signature"/>
+                        </Icon>
+                        <Action xsi:type="ExecuteFunction">
+                          <FunctionName>addSignatureM3</FunctionName>
+                        </Action>
+                      </Item>
+                    </Items>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/m3wind-16x16.png"/>
+          <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/m3wind-32x32.png"/>
+          <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/m3wind-80x80.png"/>
+          <bt:Image id="Icon.signature" DefaultValue="https://localhost:3000/assets/signature-16x16.png"/>
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
+          <bt:Url id="Error.Url" DefaultValue="https://localhost:3000/error.html"/>
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="GroupLabel" DefaultValue="M3 Signatures"/>
+          <bt:String id="TaskpaneButton.Label" DefaultValue="M3 Signatures"/>
+          <bt:String id="TaskpaneMenu.Label.Mona" DefaultValue="Mona"/>
+          <bt:String id="TaskpaneMenu.Label.Morgan" DefaultValue="Morgan"/>
+          <bt:String id="TaskpaneMenu.Label.Morven" DefaultValue="Morven"/>
+          <bt:String id="TaskpaneMenu.Label.M2" DefaultValue="M2"/>
+          <bt:String id="TaskpaneMenu.Label.M3" DefaultValue="M3"/>
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Attach one of your M3 Signatures to this message."/>
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
+  </VersionOverrides>
+</OfficeApp>
