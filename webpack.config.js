@@ -2,10 +2,7 @@ const path = require("path");
 const devCerts = require("office-addin-dev-certs");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const webpack = require("webpack");
-
-const urlDev = "https://localhost:3000/";
-const urlProd = "https://www.contoso.com/";
+const webpack = require('webpack');
 
 async function getHttpsOptions() {
   const httpsOptions = await devCerts.getHttpsServerOptions();
@@ -13,7 +10,13 @@ async function getHttpsOptions() {
 }
 
 module.exports = async (env, options) => {
-  const dev = options.mode === "development";
+  console.log(env);
+  console.log(options);
+  const isProduction = options.mode === 'production';
+  const envFile = isProduction ? '.env.production' : '.env';
+  const envPath = path.resolve(__dirname, envFile);
+  const envVars = require('dotenv').config({ path: envPath }).parsed || {};
+  
   const config = {
     devtool: "source-map",
     entry: {
@@ -30,15 +33,12 @@ module.exports = async (env, options) => {
     },
     resolve: {
       extensions: [".js", ".jsx", ".html"],
-      alias: {},
     },
     module: {
       rules: [
         {
           test: /\.jsx?$/,
-          use: {
-            loader: "babel-loader",
-          },
+          use: "babel-loader",
           exclude: /node_modules/,
         },
         {
@@ -56,6 +56,9 @@ module.exports = async (env, options) => {
       ],
     },
     plugins: [
+      new webpack.DefinePlugin({
+        'process.env': JSON.stringify(envVars),
+      }),
       new HtmlWebpackPlugin({
         filename: "taskpane.html",
         template: "./src/taskpane/taskpane.html",
@@ -71,11 +74,13 @@ module.exports = async (env, options) => {
             from: "manifest*.xml",
             to: "[name][ext]",
             transform(content) {
-              if (dev) {
-                return content;
-              } else {
-                return content.toString().replace(new RegExp(urlDev, "g"), urlProd);
+              console.log("Transforming manifest.xml");
+              if (!process.env.ASSET_BASE_URL) {
+                throw new Error(`ASSET_BASE_URL is not defined in ${dotenvFilename}`);
               }
+              const result = content.toString().replace(/\${ASSET_BASE_URL}/g, process.env.ASSET_BASE_URL);
+              console.log("Transformed manifest.xml sample:", result.slice(0, 200));
+              return result;
             },
           },
         ],
@@ -90,14 +95,13 @@ module.exports = async (env, options) => {
         template: "./src/error/error.html",
         chunks: ["polyfill", "vendor", "error"],
       }),
-      new webpack.ProvidePlugin({
-        Promise: ["es6-promise", "Promise"],
-      }),
     ],
     devServer: {
       hot: true,
       headers: {
-        "Access-Control-Allow-Origin": "*"
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
       },
       server: {
         type: "https",
@@ -107,7 +111,10 @@ module.exports = async (env, options) => {
       devMiddleware: {
         writeToDisk: true,
       },
+      allowedHosts: ['localhost', '.ngrok-free.app'],
     },
   };
+  
+  console.log("ASSET_BASE_URL after Dotenv:", process.env.ASSET_BASE_URL);
   return config;
 };
