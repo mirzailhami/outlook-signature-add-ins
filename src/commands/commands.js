@@ -14,7 +14,6 @@ function initializeWithRetry(attempt = 1, maxAttempts = 5) {
   console.log(`initializeWithRetry attempt ${attempt}`);
   Office.onReady((info) => {
     if (info.host === Office.HostType.Outlook) {
-      Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, onItemChanged);
       console.log("Office.onReady called, item:", Office.context.mailbox?.item, "host:", Office.context.mailbox.diagnostics.hostName);
       Office.actions.associate("addSignatureMona", addSignatureMona);
       Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
@@ -22,6 +21,7 @@ function initializeWithRetry(attempt = 1, maxAttempts = 5) {
       Office.actions.associate("addSignatureM2", addSignatureM2);
       Office.actions.associate("addSignatureM3", addSignatureM3);
       Office.actions.associate("validateSignature", validateSignature);
+      // Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, onItemChanged);
       Office.actions.associate("onItemChanged", onItemChanged);
       tryApplySignatureWithRetry();
       // Poll for compose mode
