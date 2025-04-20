@@ -79,7 +79,6 @@ module.exports = async (env, options) => {
                 throw new Error(`ASSET_BASE_URL is not defined in ${dotenvFilename}`);
               }
               const result = content.toString().replace(/\${ASSET_BASE_URL}/g, process.env.ASSET_BASE_URL);
-              console.log("Transformed manifest.xml sample:", result.slice(0, 200));
               return result;
             },
           },
