@@ -2,7 +2,7 @@ const path = require("path");
 const devCerts = require("office-addin-dev-certs");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const webpack = require('webpack');
+const webpack = require("webpack");
 
 async function getHttpsOptions() {
   const httpsOptions = await devCerts.getHttpsServerOptions();
@@ -10,18 +10,16 @@ async function getHttpsOptions() {
 }
 
 module.exports = async (env, options) => {
-  console.log(env);
-  console.log(options);
-  const isProduction = options.mode === 'production';
-  const envFile = isProduction ? '.env.production' : '.env';
+  const isProduction = options.mode === "production";
+  const envFile = isProduction ? ".env.production" : ".env";
   const envPath = path.resolve(__dirname, envFile);
-  const envVars = require('dotenv').config({ path: envPath }).parsed || {};
-  
+  const envVars = require("dotenv").config({ path: envPath }).parsed || {};
+
   const config = {
     devtool: "source-map",
     entry: {
       polyfill: ["core-js", "regenerator-runtime/runtime"],
-      vendor: ["react", "react-dom", "core-js", "@fluentui/react-components", "@fluentui/react-icons"],
+      vendor: ["react", "react-dom", "@fluentui/react-components", "@fluentui/react-icons"],
       taskpane: ["./src/taskpane/index.jsx", "./src/taskpane/taskpane.html"],
       commands: "./src/commands/commands.js",
       error: "./src/error/error.js",
@@ -29,7 +27,7 @@ module.exports = async (env, options) => {
     output: {
       clean: true,
       path: path.resolve(__dirname, "dist"),
-      filename: "[name].js",
+      filename: "[name].[contenthash].js", // Use hashed filenames
     },
     resolve: {
       extensions: [".js", ".jsx", ".html"],
@@ -57,12 +55,7 @@ module.exports = async (env, options) => {
     },
     plugins: [
       new webpack.DefinePlugin({
-        'process.env': JSON.stringify(envVars),
-      }),
-      new HtmlWebpackPlugin({
-        filename: "taskpane.html",
-        template: "./src/taskpane/taskpane.html",
-        chunks: ["polyfill", "vendor", "taskpane"],
+        "process.env": JSON.stringify(envVars),
       }),
       new CopyWebpackPlugin({
         patterns: [
@@ -76,13 +69,19 @@ module.exports = async (env, options) => {
             transform(content) {
               console.log("Transforming manifest.xml");
               if (!process.env.ASSET_BASE_URL) {
-                throw new Error(`ASSET_BASE_URL is not defined in ${dotenvFilename}`);
+                throw new Error(`ASSET_BASE_URL is not defined in ${envFile}`);
               }
               const result = content.toString().replace(/\${ASSET_BASE_URL}/g, process.env.ASSET_BASE_URL);
+              console.log("Transformed manifest.xml sample:", result.slice(0, 200));
               return result;
             },
           },
         ],
+      }),
+      new HtmlWebpackPlugin({
+        filename: "taskpane.html",
+        template: "./src/taskpane/taskpane.html",
+        chunks: ["polyfill", "vendor", "taskpane"],
       }),
       new HtmlWebpackPlugin({
         filename: "commands.html",
@@ -110,10 +109,10 @@ module.exports = async (env, options) => {
       devMiddleware: {
         writeToDisk: true,
       },
-      allowedHosts: ['localhost', '.ngrok-free.app'],
+      allowedHosts: ["localhost", ".ngrok-free.app"],
     },
   };
-  
+
   console.log("ASSET_BASE_URL after Dotenv:", process.env.ASSET_BASE_URL);
   return config;
 };
