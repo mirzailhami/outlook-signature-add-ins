@@ -1,66 +1,50 @@
-name: Build and Deploy Outlook Add-in
+name: Deploy to Azure Static Web Apps
 
 on:
   push:
     branches:
       - main
   pull_request:
+    types: [opened, synchronize, reopened, closed]
     branches:
       - main
 
 jobs:
-  build-and-deploy:
+  build_and_deploy_job:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
-
+    name: Build and Deploy Job
     steps:
-      # Checkout code
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      # Set up Node.js
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-
-      # Install dependencies
+      - name: Create .env.production
+        run: echo "${{ secrets.ENV_PRODUCTION }}" > .env.production
       - name: Install dependencies
-        run: npm ci
-
-      # Build the project
+        run: npm install
       - name: Build
         run: npm run build
-
-      # Upload images to Azure Blob Storage
-      - name: Upload assets to Azure Blob Storage
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            az storage blob upload-batch \
-              --account-name m3storageaccount \
-              --account-key ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }} \
-              --source dist/assets \
-              --destination assets \
-              --overwrite
-        env:
-          AZURE_STORAGE_ACCOUNT: m3storageaccount
-
-      # Deploy to Azure Static Web Apps
       - name: Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "/dist"
-          api_location: ""
-          output_location: ""
-        env:
-          NODE_ENV: production
+          app_location: "/" # Root for source files
+          output_location: "dist" # Build output directory
+          skip_app_build: true # Use pre-built dist
 
-      # Validate manifest.xml
-      - name: Validate manifest.xml
-        run: |
-          npm install -g @microsoft/teamsfx-cli
-          teamsfx validate --manifest manifest.xml
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request Job
+    steps:
+      - name: Close Pull Request
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: "close"

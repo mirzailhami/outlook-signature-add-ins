@@ -24,7 +24,7 @@
     "start:desktop": "office-addin-debugging start manifest.xml desktop",
     "start:web": "office-addin-debugging start manifest.xml web --document https://outlook.office.com/mail/inbox",
     "stop": "office-addin-debugging stop manifest.xml",
-    "validate": "office-addin-manifest validate -p manifest.xml",
+    "validate": "office-addin-manifest validate -p dist/manifest.xml",
     "watch": "webpack --mode development --watch"
   },
   "dependencies": {

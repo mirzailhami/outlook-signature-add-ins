@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:mail="http://schemas.microsoft.com/office/mailappversionoverrides/1.0" xsi:type="MailApp">
   <Id>f56e10b6-03a7-4d46-a9e8-42264673b4a8</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.0.0.2</Version>
   <ProviderName>M3Wind</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="M3 Signatures"/>
   <Description DefaultValue="Attach one of your M3 Signatures to this message."/>
-  <IconUrl DefaultValue="${ASSET_BASE_URL}/assets/m3wind-16x16.png"/>
-  <HighResolutionIconUrl DefaultValue="${ASSET_BASE_URL}/assets/m3wind-80x80.png"/>
-  <SupportUrl DefaultValue="https://m3wind.com/support"/>
+  <IconUrl DefaultValue="https://m3sigstorage.blob.core.windows.net/m3signatures/icons/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://m3sigstorage.blob.core.windows.net/m3signatures/icons/icon-128.png"/>
+  <SupportUrl DefaultValue="https://www.m3wind.com/contactus"/>
   <AppDomains>
-    <AppDomain>https://localhost:3000</AppDomain>
+    <AppDomain>${ASSET_BASE_URL}</AppDomain>
+    <AppDomain>https://m3sigstorage.blob.core.windows.net</AppDomain>
     <AppDomain>https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net</AppDomain>
-    <AppDomain>https://m3storageaccount.blob.core.windows.net</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Mailbox"/>
@@ -44,9 +44,6 @@
         <Host xsi:type="MailHost">
           <DesktopFormFactor>
             <FunctionFile resid="Commands.Url"/>
-            <ExtensionPoint xsi:type="Events">
-              <Event Type="ItemSend" FunctionExecution="synchronous" FunctionName="validateSignature"/>
-            </ExtensionPoint>
             <ExtensionPoint xsi:type="MessageComposeCommandSurface">
               <OfficeTab id="TabDefault">
                 <Group id="msgComposeGroup">
@@ -140,6 +137,21 @@
                       </Item>
                     </Items>
                   </Control>
+                  <Control xsi:type="Button" id="validateSignatureButton">
+                    <Label resid="ValidateButton.Label"/>
+                    <Supertip>
+                      <Title resid="ValidateButton.Label"/>
+                      <Description resid="ValidateButton.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16"/>
+                      <bt:Image size="32" resid="Icon.32x32"/>
+                      <bt:Image size="80" resid="Icon.80x80"/>
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>validateSignatureButton</FunctionName>
+                    </Action>
+                  </Control>
                 </Group>
               </OfficeTab>
             </ExtensionPoint>
@@ -148,10 +160,10 @@
       </Hosts>
       <Resources>
         <bt:Images>
-          <bt:Image id="Icon.16x16" DefaultValue="${ASSET_BASE_URL}/assets/m3wind-16x16.png"/>
-          <bt:Image id="Icon.32x32" DefaultValue="${ASSET_BASE_URL}/assets/m3wind-32x32.png"/>
-          <bt:Image id="Icon.80x80" DefaultValue="${ASSET_BASE_URL}/assets/m3wind-80x80.png"/>
-          <bt:Image id="Icon.signature" DefaultValue="${ASSET_BASE_URL}/assets/signature-16x16.png"/>
+          <bt:Image id="Icon.16x16" DefaultValue="https://m3sigstorage.blob.core.windows.net/m3signatures/icons/m3wind-16x16.png"/>
+          <bt:Image id="Icon.32x32" DefaultValue="https://m3sigstorage.blob.core.windows.net/m3signatures/icons/m3wind-32x32.png"/>
+          <bt:Image id="Icon.80x80" DefaultValue="https://m3sigstorage.blob.core.windows.net/m3signatures/icons/m3wind-80x80.png"/>
+          <bt:Image id="Icon.signature" DefaultValue="https://m3sigstorage.blob.core.windows.net/m3signatures/icons/signature-16x16.png"/>
         </bt:Images>
         <bt:Urls>
           <bt:Url id="Commands.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
@@ -160,6 +172,7 @@
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="M3 Signatures"/>
           <bt:String id="TaskpaneButton.Label" DefaultValue="M3 Signatures"/>
+          <bt:String id="ValidateButton.Label" DefaultValue="Validate Signature"/>
           <bt:String id="TaskpaneMenu.Label.Mona" DefaultValue="Mona"/>
           <bt:String id="TaskpaneMenu.Label.Morgan" DefaultValue="Morgan"/>
           <bt:String id="TaskpaneMenu.Label.Morven" DefaultValue="Morven"/>
@@ -168,6 +181,7 @@
         </bt:ShortStrings>
         <bt:LongStrings>
           <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Attach one of your M3 Signatures to this message."/>
+          <bt:String id="ValidateButton.Tooltip" DefaultValue="Validate the M3 signature in the email."/>
           <bt:String id="TaskpaneMenu.Tooltip.Mona" DefaultValue="Insert Mona signature"/>
           <bt:String id="TaskpaneMenu.Tooltip.Morgan" DefaultValue="Insert Morgan signature"/>
           <bt:String id="TaskpaneMenu.Tooltip.Morven" DefaultValue="Insert Morven signature"/>

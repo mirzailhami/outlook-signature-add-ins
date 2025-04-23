@@ -43,14 +43,7 @@ module.exports = async (env, options) => {
           test: /\.html$/,
           exclude: /node_modules/,
           use: "html-loader",
-        },
-        {
-          test: /\.(png|jpg|jpeg|ttf|woff|woff2|gif|ico)$/,
-          type: "asset/resource",
-          generator: {
-            filename: "assets/[name][ext][query]",
-          },
-        },
+        }
       ],
     },
     plugins: [
@@ -59,10 +52,6 @@ module.exports = async (env, options) => {
       }),
       new CopyWebpackPlugin({
         patterns: [
-          {
-            from: "assets/*",
-            to: "assets/[name][ext][query]",
-          },
           {
             from: "manifest*.xml",
             to: "[name][ext]",
@@ -109,7 +98,7 @@ module.exports = async (env, options) => {
       devMiddleware: {
         writeToDisk: true,
       },
-      allowedHosts: ["localhost", ".ngrok-free.app"],
+      allowedHosts: ["localhost", ".azurewebsites.net", ".ngrok-free.app"],
     },
   };
 
