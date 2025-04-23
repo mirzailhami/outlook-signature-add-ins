@@ -43,7 +43,7 @@ module.exports = async (env, options) => {
           test: /\.html$/,
           exclude: /node_modules/,
           use: "html-loader",
-        }
+        },
       ],
     },
     plugins: [
@@ -81,6 +81,11 @@ module.exports = async (env, options) => {
         filename: "error.html",
         template: "./src/error/error.html",
         chunks: ["polyfill", "vendor", "error"],
+      }),
+      new HtmlWebpackPlugin({
+        filename: "index.html",
+        template: "./src/index.html",
+        chunks: [],
       }),
     ],
     devServer: {
