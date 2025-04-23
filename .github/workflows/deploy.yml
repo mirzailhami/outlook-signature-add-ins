@@ -34,9 +34,9 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "/" # Root for source files
-          output_location: "dist" # Build output directory
-          skip_app_build: true # Use pre-built dist
+          app_location: "dist" # Deploy from dist directory
+          output_location: "" # No build output, using pre-built dist
+          skip_app_build: true # Skip Oryx build
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
