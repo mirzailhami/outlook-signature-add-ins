@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:mail="http://schemas.microsoft.com/office/mailappversionoverrides/1.0" xsi:type="MailApp">
   <Id>f56e10b6-03a7-4d46-a9e8-42264673b4a8</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.0.0.7</Version>
   <ProviderName>M3Wind</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="M3 Signatures"/>
@@ -19,7 +19,7 @@
   </Hosts>
   <Requirements>
     <Sets>
-      <Set Name="Mailbox" MinVersion="1.1"/>
+      <Set Name="Mailbox" MinVersion="1.10"/>
     </Sets>
   </Requirements>
   <FormSettings>
@@ -36,17 +36,17 @@
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <Requirements>
-        <bt:Sets DefaultMinVersion="1.1">
+        <bt:Sets DefaultMinVersion="1.10">
           <bt:Set Name="Mailbox"/>
         </bt:Sets>
       </Requirements>
       <Hosts>
         <Host xsi:type="MailHost">
+          <Runtimes>
+            <Runtime resid="WebViewRuntime.Url"/>
+          </Runtimes>
           <DesktopFormFactor>
             <FunctionFile resid="Commands.Url"/>
-            <ExtensionPoint xsi:type="Events">
-              <Event Type="ItemSend" FunctionExecution="synchronous" FunctionName="validateSignature"/>
-            </ExtensionPoint>
             <ExtensionPoint xsi:type="MessageComposeCommandSurface">
               <OfficeTab id="TabDefault">
                 <Group id="msgComposeGroup">
@@ -143,6 +143,13 @@
                 </Group>
               </OfficeTab>
             </ExtensionPoint>
+            <ExtensionPoint xsi:type="LaunchEvent">
+              <LaunchEvents>
+                <LaunchEvent Type="OnMessageSend" FunctionName="validateSignature"/>
+                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler"/>
+              </LaunchEvents>
+              <SourceLocation resid="WebViewRuntime.Url"/>
+            </ExtensionPoint>
           </DesktopFormFactor>
         </Host>
       </Hosts>
@@ -156,6 +163,7 @@
         <bt:Urls>
           <bt:Url id="Commands.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
           <bt:Url id="Error.Url" DefaultValue="${ASSET_BASE_URL}/error.html"/>
+          <bt:Url id="WebViewRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="M3 Signatures"/>
@@ -168,6 +176,7 @@
         </bt:ShortStrings>
         <bt:LongStrings>
           <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Attach one of your M3 Signatures to this message."/>
+          <bt:String id="ErrorButton.Tooltip" DefaultValue="Show signature error details."/>
           <bt:String id="TaskpaneMenu.Tooltip.Mona" DefaultValue="Insert Mona signature"/>
           <bt:String id="TaskpaneMenu.Tooltip.Morgan" DefaultValue="Insert Morgan signature"/>
           <bt:String id="TaskpaneMenu.Tooltip.Morven" DefaultValue="Insert Morven signature"/>
