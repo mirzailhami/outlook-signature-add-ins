@@ -68,6 +68,10 @@ module.exports = (env, options) => {
               return content.toString().replace(/\${ASSET_BASE_URL}/g, assetBaseUrl);
             },
           },
+          {
+            from: "src/index.html",
+            to: "index.html",
+          },
         ],
       }),
     ],
