@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - main
+      - dev
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
+      - dev
 
 jobs:
   build_and_deploy_job:
@@ -22,8 +24,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      - name: Create .env.production
-        run: echo "${{ secrets.ENV_PRODUCTION }}" > .env.production
+      - name: Set ASSET_BASE_URL
+        run: echo "ASSET_BASE_URL=${{ secrets.ASSET_BASE_URL }}" > .env.production
       - name: Install dependencies
         run: npm install
       - name: Build
@@ -34,9 +36,9 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "dist" # Deploy from dist directory
-          output_location: "" # No build output, using pre-built dist
-          skip_app_build: true # Skip Oryx build
+          app_location: "dist"
+          output_location: ""
+          skip_app_build: true
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'

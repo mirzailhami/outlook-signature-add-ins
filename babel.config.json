@@ -3,10 +3,10 @@
     [
       "@babel/preset-env",
       {
-        "targets": {
-          "esmodules": false
-        }
+        "useBuiltIns": "usage",
+        "corejs": "3.37.1",
+        "targets": "> 0.25%, not dead, ie 11"
       }
-    ],
+    ]
   ]
 }
