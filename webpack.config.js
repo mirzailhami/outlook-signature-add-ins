@@ -2,6 +2,11 @@ const path = require("path");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const devCerts = require("office-addin-dev-certs");
+const dotenv = require("dotenv");
+
+// Load environment variables from .env or .env.production
+const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env";
+dotenv.config({ path: path.resolve(__dirname, envFile) });
 
 const getHttpsOptions = async () => {
   try {

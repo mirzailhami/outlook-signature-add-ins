@@ -31,7 +31,8 @@
     "@microsoft/office-js": "^1.1.107",
     "core-js": "^3.37.1",
     "es6-promise": "^4.2.8",
-    "regenerator-runtime": "^0.14.1"
+    "regenerator-runtime": "^0.14.1",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
