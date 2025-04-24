@@ -2,11 +2,7 @@ const path = require("path");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const devCerts = require("office-addin-dev-certs");
-const dotenv = require("dotenv");
-
-// Load environment variables from .env or .env.production
-const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env";
-dotenv.config({ path: path.resolve(__dirname, envFile) });
+const webpack = require("webpack");
 
 const getHttpsOptions = async () => {
   try {
@@ -22,6 +18,11 @@ const getHttpsOptions = async () => {
 const httpsOptions = getHttpsOptions();
 
 module.exports = (env, options) => {
+  const isProduction = options.mode === "production";
+  const envFile = isProduction ? ".env.production" : ".env";
+  const envPath = path.resolve(__dirname, envFile);
+  const envVars = require("dotenv").config({ path: envPath }).parsed || {};
+
   const config = {
     devtool: "source-map",
     entry: {
@@ -55,6 +56,9 @@ module.exports = (env, options) => {
       ],
     },
     plugins: [
+      new webpack.DefinePlugin({
+        "process.env": JSON.stringify(envVars),
+      }),
       new HtmlWebpackPlugin({
         filename: "commands.html",
         template: "./src/commands/commands.html",
