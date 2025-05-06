@@ -702,5 +702,5 @@ function addSignatureM3(event) {
  */
 function onNewMessageComposeHandler(event) {
   console.log({ event: "onNewMessageComposeHandler" });
-  initializeAutoSignature(event);
+  // initializeAutoSignature(event);
 }
