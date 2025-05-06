@@ -584,6 +584,8 @@ function addSignature(signatureUrlIndex, event) {
 
   try {
     const item = Office.context.mailbox.item;
+    const conversationId = item.conversationId;
+    console.log(conversationId);
     displayNotification("Info", `Applying ${signatureKey}...`, false);
     const localTemplate = localStorage.getItem(signatureKey);
     if (localTemplate) {
