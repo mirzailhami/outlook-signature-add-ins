@@ -574,12 +574,14 @@ function isExternalEmail(item) {
 
 /**
  * Adds a signature to the email.
- * @param {string} signatureKey - The signature key (e.g., "m3Signature").
- * @param {number} signatureUrlIndex - The index for the signature URL.
+ * @param {string} signatureUrlIndex - The signature index (e.g., "2").
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
-function addSignature(signatureKey, signatureUrlIndex, event) {
+function addSignature(signatureUrlIndex, event) {
+  const signature = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
+  const signatureKey = signature[signatureUrlIndex];
   console.log({ event: "addSignature", signatureKey });
+
   try {
     const item = Office.context.mailbox.item;
     displayNotification("Info", `Applying ${signatureKey}...`, false);
@@ -661,7 +663,7 @@ function addSignature(signatureKey, signatureUrlIndex, event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureMona(event) {
-  addSignature("monaSignature", 0, event);
+  addSignature(0, event);
 }
 
 /**
@@ -669,7 +671,7 @@ function addSignatureMona(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureMorgan(event) {
-  addSignature("morganSignature", 1, event);
+  addSignature(1, event);
 }
 
 /**
@@ -677,7 +679,7 @@ function addSignatureMorgan(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureMorven(event) {
-  addSignature("morvenSignature", 2, event);
+  addSignature(2, event);
 }
 
 /**
@@ -685,7 +687,7 @@ function addSignatureMorven(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureM2(event) {
-  addSignature("m2Signature", 3, event);
+  addSignature(3, event);
 }
 
 /**
@@ -693,7 +695,7 @@ function addSignatureM2(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureM3(event) {
-  addSignature("m3Signature", 4, event);
+  addSignature(4, event);
 }
 
 /**
@@ -704,41 +706,26 @@ function onNewMessageComposeHandler(event) {
   console.log({ event: "onNewMessageComposeHandler" });
   // initializeAutoSignature(event);
 
-  // Check whether a default signature is already set.
-  const defaultSignature = localStorage.getItem("defaultSignature");
-  if (!defaultSignature) {
-    // Open the dialog to prompt the user to set their default signature.
-    Office.context.ui.displayDialogAsync(
-      "https://white-grass-0b6dc6e03.6.azurestaticapps.net/taskpane.html", // URL where the UI for signature selection lives
-      { height: 50, width: 30 },
-      function (asyncResult) {
-        if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-          var dialog = asyncResult.value;
-          // Set up an event handler to receive messages from the dialog.
-          dialog.addEventHandler(Office.EventType.DialogMessageReceived, function (arg) {
-            console.log("Dialog message received: " + arg.message);
-            // Assume the message is the ID of the default signature selected (e.g., "monaSignature")
-            localStorage.setItem("defaultSignature", arg.message);
-            // Close the dialog after the default signature is set.
-            dialog.close();
-            // Now that a default signature is set, if needed, you can insert it immediately:
-            insertDefaultSignature(arg.message, event);
-          });
-        } else {
-          console.error("Failed to open dialog: " + asyncResult.error.message);
-          event.completed();
-        }
-      }
-    );
-  } else {
-    // If a default is already set, apply it (if that’s your desired behavior)
-    insertDefaultSignature(defaultSignature, event);
-  }
-}
+  // Retrieve the host name from Office
+  var hostName = Office.context.mailbox.diagnostics.hostName || "";
+  hostName = hostName.toLowerCase();
 
-// Helper function to insert the signature.
-function insertDefaultSignature(signatureKey, event) {
-  // This function works much like your existing addSignature(..)
-  // You may want to reuse your addSignature function here.
-  addSignature(signatureKey, 0, event);
+  // Determine if the device is mobile.
+  // This example checks for 'android' or 'ios' in the hostName.
+  if (hostName.includes("android") || hostName.includes("ios")) {
+    console.log("Running on mobile. Applying default signature if set.");
+
+    const signatureKey = localStorage.getItem("defaultSignature");
+    if (signatureKey) {
+      const signature = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
+      const signatureIndex = signature.indexOf(signatureKey);
+      addSignature(signatureIndex, event);
+    } else {
+      console.log("No default signature set on mobile.");
+      event.completed();
+    }
+  } else {
+    console.log("Not on mobile. Skipping auto insertion of default signature.");
+    event.completed();
+  }
 }

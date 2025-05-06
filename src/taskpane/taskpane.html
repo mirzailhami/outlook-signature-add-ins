@@ -3,36 +3,100 @@
 <head>
   <title>M3 Signature Taskpane</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Office.js -->
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <script src="commands.js"></script>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- Fluent UI (Office UI Fabric Core) CSS for a native Microsoft look -->
+  <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/11.0.0/css/fabric.min.css">
   <style>
-    /* Your additional CSS here */
+    body {
+      padding: 20px;
+      background-color: #f3f2f1;
+      font-family: "Segoe UI", "Segoe UI Web (West European)", "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Helvetica Neue", sans-serif;
+    }
+    .container {
+      max-width: 400px;
+      margin: auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border: 1px solid #ddd;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      border-radius: 4px;
+    }
+    /* Fluent-styled radio buttons using Office UI Fabric Core classes */
+    .ms-ChoiceField {
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+    .ms-ChoiceField-input {
+      margin-right: 8px;
+    }
+    .ms-Button {
+      margin-top: 20px;
+      width: 100%;
+    }
   </style>
 </head>
-<body>
+<body class="ms-Fabric">
   <div class="container">
-    <h2>Select Your Default Signature</h2>
-    <p>Please choose one of your signatures which will be automatically applied when composing new emails.</p>
-    <ul>
-      <li id="mona-item">Mona</li>
-      <li id="morgan-item">Morgan</li>
-      <li id="morven-item">Morven</li>
-    </ul>
-  </div>
-  <script>
-    Office.initialize = function () {
-      console.log('Dialog add-in initialized.');
+    <h2 class="ms-fontSize-24 ms-fontWeight-semibold">Select Your Default Signature</h2>
+    <p class="ms-fontSize-16">Choose one of your signatures. This will automatically be applied when composing new emails.</p>
+    
+    <form id="signatureForm">
+      <div class="ms-ChoiceField">
+        <input class="ms-ChoiceField-input" type="radio" id="radioMona" name="signatureOption" value="monaSignature">
+        <label class="ms-ChoiceField-field" for="radioMona">
+          <span class="ms-Label">Mona</span>
+        </label>
+      </div>
+      <div class="ms-ChoiceField">
+        <input class="ms-ChoiceField-input" type="radio" id="radioMorgan" name="signatureOption" value="morganSignature">
+        <label class="ms-ChoiceField-field" for="radioMorgan">
+          <span class="ms-Label">Morgan</span>
+        </label>
+      </div>
+      <div class="ms-ChoiceField">
+        <input class="ms-ChoiceField-input" type="radio" id="radioMorven" name="signatureOption" value="morvenSignature">
+        <label class="ms-ChoiceField-field" for="radioMorven">
+          <span class="ms-Label">Morven</span>
+        </label>
+      </div>
+      <div class="ms-ChoiceField">
+        <input class="ms-ChoiceField-input" type="radio" id="radioM2" name="signatureOption" value="m2Signature">
+        <label class="ms-ChoiceField-field" for="radioM2">
+          <span class="ms-Label">M2</span>
+        </label>
+      </div>
+      <div class="ms-ChoiceField">
+        <input class="ms-ChoiceField-input" type="radio" id="radioM3" name="signatureOption" value="m3Signature">
+        <label class="ms-ChoiceField-field" for="radioM3">
+          <span class="ms-Label">M3</span>
+        </label>
+      </div>
       
-      // When a signature is chosen, send the value back to the parent.
-      document.getElementById("mona-item").addEventListener("click", function () {
-        Office.context.ui.messageParent("monaSignature");
-      });
-      document.getElementById("morgan-item").addEventListener("click", function () {
-        Office.context.ui.messageParent("morganSignature");
-      });
-      document.getElementById("morven-item").addEventListener("click", function () {
-        Office.context.ui.messageParent("morvenSignature");
+      <button type="submit" class="ms-Button ms-Button--primary">
+        <span class="ms-Button-label">Set Default Signature</span>
+      </button>
+    </form>
+  </div>
+  
+  <script>
+    Office.initialize = function(reason) {
+      console.log('Taskpane (Fluent UI) initialized on mobile/web.');
+      
+      document.getElementById('signatureForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        // Get the selected signature from the radio inputs.
+        var selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
+        if (selectedRadio) {
+          // Save the default signature locally.
+          localStorage.setItem("defaultSignature", selectedRadio.value);
+          // Pass the selected signature back to the parent.
+          Office.context.ui.messageParent(selectedRadio.value);
+        } else {
+          alert("Please select a signature before submitting.");
+        }
       });
     };
   </script>
