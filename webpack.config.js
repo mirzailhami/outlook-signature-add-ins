@@ -81,6 +81,14 @@ module.exports = (env, options) => {
             from: "src/index.html",
             to: "index.html",
           },
+          {
+            from: "src/taskpane/taskpane.html",
+            to: "taskpane.html",
+          },
+          {
+            from: "src/commands/commands.js",
+            to: "commands.js",
+          },
         ],
       }),
     ],

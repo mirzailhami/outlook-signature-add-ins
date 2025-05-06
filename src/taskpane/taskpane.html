@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>M3 Signature Taskpane</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script src="commands.js"></script>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    /* Your additional CSS here */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Select Your Default Signature</h2>
+    <p>Please choose one of your signatures which will be automatically applied when composing new emails.</p>
+    <ul>
+      <li id="mona-item">Mona</li>
+      <li id="morgan-item">Morgan</li>
+      <li id="morven-item">Morven</li>
+    </ul>
+  </div>
+  <script>
+    Office.initialize = function () {
+      console.log('Dialog add-in initialized.');
+      
+      // When a signature is chosen, send the value back to the parent.
+      document.getElementById("mona-item").addEventListener("click", function () {
+        Office.context.ui.messageParent("monaSignature");
+      });
+      document.getElementById("morgan-item").addEventListener("click", function () {
+        Office.context.ui.messageParent("morganSignature");
+      });
+      document.getElementById("morven-item").addEventListener("click", function () {
+        Office.context.ui.messageParent("morvenSignature");
+      });
+    };
+  </script>
+</body>
+</html>

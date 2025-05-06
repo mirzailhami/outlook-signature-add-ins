@@ -703,4 +703,42 @@ function addSignatureM3(event) {
 function onNewMessageComposeHandler(event) {
   console.log({ event: "onNewMessageComposeHandler" });
   // initializeAutoSignature(event);
+
+  // Check whether a default signature is already set.
+  const defaultSignature = localStorage.getItem("defaultSignature");
+  if (!defaultSignature) {
+    // Open the dialog to prompt the user to set their default signature.
+    Office.context.ui.displayDialogAsync(
+      "https://white-grass-0b6dc6e03.6.azurestaticapps.net/taskpane.html", // URL where the UI for signature selection lives
+      { height: 50, width: 30 },
+      function (asyncResult) {
+        if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+          var dialog = asyncResult.value;
+          // Set up an event handler to receive messages from the dialog.
+          dialog.addEventHandler(Office.EventType.DialogMessageReceived, function (arg) {
+            console.log("Dialog message received: " + arg.message);
+            // Assume the message is the ID of the default signature selected (e.g., "monaSignature")
+            localStorage.setItem("defaultSignature", arg.message);
+            // Close the dialog after the default signature is set.
+            dialog.close();
+            // Now that a default signature is set, if needed, you can insert it immediately:
+            insertDefaultSignature(arg.message, event);
+          });
+        } else {
+          console.error("Failed to open dialog: " + asyncResult.error.message);
+          event.completed();
+        }
+      }
+    );
+  } else {
+    // If a default is already set, apply it (if that’s your desired behavior)
+    insertDefaultSignature(defaultSignature, event);
+  }
+}
+
+// Helper function to insert the signature.
+function insertDefaultSignature(signatureKey, event) {
+  // This function works much like your existing addSignature(..)
+  // You may want to reuse your addSignature function here.
+  addSignature(signatureKey, 0, event);
 }

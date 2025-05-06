@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:mail="http://schemas.microsoft.com/office/mailappversionoverrides/1.0" xsi:type="MailApp">
   <Id>f56e10b6-03a7-4d46-a9e8-42264673b4a8</Id>
-  <Version>1.0.0.9</Version>
+  <Version>1.0.0.12</Version>
   <ProviderName>M3Wind</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="M3 Signatures"/>
@@ -57,7 +57,7 @@
                       <Title resid="TaskpaneButton.Label"/>
                       <Description resid="TaskpaneButton.Tooltip"/>
                     </Supertip>
-                    <Icon>
+                    <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
                       <bt:Image size="16" resid="Icon.16x16"/>
                       <bt:Image size="32" resid="Icon.32x32"/>
                       <bt:Image size="80" resid="Icon.80x80"/>
@@ -69,8 +69,8 @@
                           <Title resid="TaskpaneMenu.Label.Mona"/>
                           <Description resid="TaskpaneMenu.Tooltip.Mona"/>
                         </Supertip>
-                        <Icon>
-                          <bt:Image size="16" resid="Icon.signature"/>
+                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
+                          <bt:Image size="16" resid="Icon.signature" />
                           <bt:Image size="32" resid="Icon.signature"/>
                           <bt:Image size="80" resid="Icon.signature"/>
                         </Icon>
@@ -84,7 +84,7 @@
                           <Title resid="TaskpaneMenu.Label.Morgan"/>
                           <Description resid="TaskpaneMenu.Tooltip.Morgan"/>
                         </Supertip>
-                        <Icon>
+                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
                           <bt:Image size="16" resid="Icon.signature"/>
                           <bt:Image size="32" resid="Icon.signature"/>
                           <bt:Image size="80" resid="Icon.signature"/>
@@ -99,7 +99,7 @@
                           <Title resid="TaskpaneMenu.Label.Morven"/>
                           <Description resid="TaskpaneMenu.Tooltip.Morven"/>
                         </Supertip>
-                        <Icon>
+                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
                           <bt:Image size="16" resid="Icon.signature"/>
                           <bt:Image size="32" resid="Icon.signature"/>
                           <bt:Image size="80" resid="Icon.signature"/>
@@ -114,7 +114,7 @@
                           <Title resid="TaskpaneMenu.Label.M2"/>
                           <Description resid="TaskpaneMenu.Tooltip.M2"/>
                         </Supertip>
-                        <Icon>
+                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
                           <bt:Image size="16" resid="Icon.signature"/>
                           <bt:Image size="32" resid="Icon.signature"/>
                           <bt:Image size="80" resid="Icon.signature"/>
@@ -129,7 +129,7 @@
                           <Title resid="TaskpaneMenu.Label.M3"/>
                           <Description resid="TaskpaneMenu.Tooltip.M3"/>
                         </Supertip>
-                        <Icon>
+                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
                           <bt:Image size="16" resid="Icon.signature"/>
                           <bt:Image size="32" resid="Icon.signature"/>
                           <bt:Image size="80" resid="Icon.signature"/>
@@ -145,21 +145,37 @@
             </ExtensionPoint>
             <ExtensionPoint xsi:type="LaunchEvent">
               <LaunchEvents>
-                <LaunchEvent Type="OnMessageSend" FunctionName="validateSignature" SendMode="SoftBlock" />
-                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler" SendMode="SoftBlock" />
+                <LaunchEvent Type="OnMessageSend" FunctionName="validateSignature" SendMode="SoftBlock"/>
+                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler" SendMode="SoftBlock"/>
               </LaunchEvents>
               <SourceLocation resid="WebViewRuntime.Url"/>
             </ExtensionPoint>
           </DesktopFormFactor>
           <MobileFormFactor>
-            <!-- Configures event-based activation. -->
-            <ExtensionPoint xsi:type="LaunchEvent">
-              <LaunchEvents>
-                <LaunchEvent Type="OnMessageSend" FunctionName="validateSignature" SendMode="SoftBlock" />
-                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler" SendMode="SoftBlock"/>
-              </LaunchEvents>
-              <!-- Identifies the runtime to be used (also referenced by the Runtime element). -->
-              <SourceLocation resid="WebViewRuntime.Url"/>
+            <FunctionFile resid="Commands.Url"/>
+            <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
+              <Group id="mobileMsgRead">
+                <Label resid="GroupLabel"/>
+                <Control xsi:type="MobileButton" id="TaskPaneBtn">
+                  <Label resid="TaskpaneButton.Label"/>
+                  <Icon xsi:type="bt:MobileIconList">
+                    <bt:Image size="25" scale="1" resid="Icon.32x32" />
+                    <bt:Image size="25" scale="2" resid="Icon.32x32" />
+                    <bt:Image size="25" scale="3" resid="Icon.32x32" />
+
+                    <bt:Image size="32" resid="Icon.32x32" scale="1"/>
+                    <bt:Image size="32" resid="Icon.32x32" scale="2"/>
+                    <bt:Image size="32" resid="Icon.32x32" scale="3"/>
+                    
+                    <bt:Image size="48" resid="Icon.80x80" scale="1"/>
+                    <bt:Image size="48" resid="Icon.80x80" scale="2"/>
+                    <bt:Image size="48" resid="Icon.80x80" scale="3"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
             </ExtensionPoint>
           </MobileFormFactor>
         </Host>
@@ -175,6 +191,7 @@
           <bt:Url id="Commands.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
           <bt:Url id="Error.Url" DefaultValue="${ASSET_BASE_URL}/error.html"/>
           <bt:Url id="WebViewRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
+          <bt:Url id="Taskpane.Url" DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="M3 Signatures"/>
