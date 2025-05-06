@@ -723,7 +723,9 @@ function onNewMessageComposeHandler(event) {
       const signatureIndex = signature.indexOf(signatureKey);
       addSignature(signatureIndex, event);
     } else {
-      console.log("No default signature set on mobile.");
+      // console.log("No default signature set on mobile.");
+      // load mona as initial
+      addSignature(0, event);
       event.completed();
     }
   } else {
