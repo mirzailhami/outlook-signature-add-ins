@@ -709,7 +709,7 @@ function onNewMessageComposeHandler(event) {
   if (!defaultSignature) {
     // Open the dialog to prompt the user to set their default signature.
     Office.context.ui.displayDialogAsync(
-      "https://localhost:3000/taskpane.html", // URL where the UI for signature selection lives
+      "https://white-grass-0b6dc6e03.6.azurestaticapps.net/taskpane.html", // URL where the UI for signature selection lives
       { height: 50, width: 30 },
       function (asyncResult) {
         if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
