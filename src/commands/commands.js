@@ -386,7 +386,7 @@ function validateSignature(event) {
 
               if (isReplyOrForward && !initialSignature) {
                 console.log({ event: "validateSignature", status: "No signature in reply/forward" });
-                const lastSignature = localStorage.getItem("initialSignature");
+                const lastSignature = false; //localStorage.getItem("initialSignature");
                 if (lastSignature) {
                   item.body.setSignatureAsync(
                     "<!-- signature -->" + lastSignature,
