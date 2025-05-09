@@ -12,6 +12,8 @@
     "dev_server_port": 3000
   },
   "scripts": {
+    "deploy": "gh-pages -d dist -b gh-pages",
+    "build:prod": "NODE_ENV=production webpack --mode production",
     "build": "webpack --mode production",
     "dev-server": "webpack serve --mode development --open",
     "build:dev": "webpack --mode development",

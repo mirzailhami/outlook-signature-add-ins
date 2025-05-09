@@ -10,7 +10,7 @@
   <HighResolutionIconUrl DefaultValue="https://m3sigstorage.blob.core.windows.net/m3signatures/icons/icon-128.png"/>
   <SupportUrl DefaultValue="https://www.m3wind.com/contactus"/>
   <AppDomains>
-    <AppDomain>https://raw.githubusercontent.com</AppDomain>
+    <AppDomain>https://localhost:3000</AppDomain>
     <AppDomain>https://m3sigstorage.blob.core.windows.net</AppDomain>
     <AppDomain>https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net</AppDomain>
   </AppDomains>
@@ -25,7 +25,7 @@
   <FormSettings>
     <Form xsi:type="ItemEdit">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://raw.githubusercontent.com/mirzailhami/outlook-signature-add-ins/refs/heads/dev-mobile/error.html"/>
+        <SourceLocation DefaultValue="https://localhost:3000/error.html"/>
       </DesktopSettings>
     </Form>
   </FormSettings>
@@ -188,10 +188,10 @@
           <bt:Image id="Icon.signature" DefaultValue="https://m3sigstorage.blob.core.windows.net/m3signatures/icons/signature-16x16.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="Commands.Url" DefaultValue="https://raw.githubusercontent.com/mirzailhami/outlook-signature-add-ins/refs/heads/dev-mobile/commands.html"/>
-          <bt:Url id="Error.Url" DefaultValue="https://raw.githubusercontent.com/mirzailhami/outlook-signature-add-ins/refs/heads/dev-mobile/error.html"/>
-          <bt:Url id="WebViewRuntime.Url" DefaultValue="https://raw.githubusercontent.com/mirzailhami/outlook-signature-add-ins/refs/heads/dev-mobile/commands.html"/>
-          <bt:Url id="Taskpane.Url" DefaultValue="https://raw.githubusercontent.com/mirzailhami/outlook-signature-add-ins/refs/heads/dev-mobile/taskpane.html"/>
+          <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
+          <bt:Url id="Error.Url" DefaultValue="https://localhost:3000/error.html"/>
+          <bt:Url id="WebViewRuntime.Url" DefaultValue="https://localhost:3000/commands.html"/>
+          <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="M3 Signatures"/>

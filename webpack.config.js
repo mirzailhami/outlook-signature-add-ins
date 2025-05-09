@@ -1,42 +1,40 @@
 const path = require("path");
+const webpack = require("webpack");
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const devCerts = require("office-addin-dev-certs");
-const webpack = require("webpack");
-
-const getHttpsOptions = async () => {
-  try {
-    const httpsOptions = await devCerts.getHttpsServerOptions();
-    return { ca: httpsOptions.ca, key: httpsOptions.key, cert: httpsOptions.cert };
-  } catch (error) {
-    console.error("Failed to get HTTPS certificates, falling back to HTTP:", error.message);
-    return {};
-  }
-};
-
-// Pre-fetch HTTPS options to avoid async issues
-const httpsOptions = getHttpsOptions();
+const dotenv = require("dotenv");
 
 module.exports = (env, options) => {
   const isProduction = options.mode === "production";
-  const envFile = isProduction ? ".env.production" : ".env";
-  const envPath = path.resolve(__dirname, envFile);
-  const envVars = require("dotenv").config({ path: envPath }).parsed || {};
 
-  const config = {
-    devtool: "source-map",
+  // Load environment variables
+  const envPath = path.resolve(__dirname, isProduction ? ".env.production" : ".env");
+  const envVars = dotenv.config({ path: envPath }).parsed || {};
+
+  // Fallback to GitHub Pages URL if not in .env.production
+  const assetBaseUrl = isProduction
+    ? envVars.ASSET_BASE_URL || "https://mirzailhami.github.io/outlook-signature-add-ins"
+    : "http://localhost:3000";
+
+  return {
+    mode: isProduction ? "production" : "development",
+    devtool: isProduction ? "source-map" : "eval-source-map",
+
     entry: {
-      polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
       commands: "./src/commands/commands.js",
     },
+
     output: {
-      clean: true,
       path: path.resolve(__dirname, "dist"),
-      filename: "[name].[contenthash].js",
+      filename: "[name].[contenthash:8].js",
+      publicPath: "/",
     },
+
     resolve: {
-      extensions: [".js", ".html"],
+      extensions: [".js"],
     },
+
     module: {
       rules: [
         {
@@ -44,71 +42,96 @@ module.exports = (env, options) => {
           exclude: /node_modules/,
           use: {
             loader: "babel-loader",
+            options: {
+              presets: [
+                [
+                  "@babel/preset-env",
+                  {
+                    useBuiltIns: "usage",
+                    corejs: 3,
+                    targets: {
+                      browsers: ["last 2 versions", "not dead", "not ie 11"],
+                    },
+                  },
+                ],
+              ],
+            },
           },
         },
         {
           test: /\.html$/,
-          exclude: /node_modules/,
-          use: {
-            loader: "html-loader",
-          },
+          use: ["html-loader"],
         },
       ],
     },
+
     plugins: [
+      new CleanWebpackPlugin(),
       new webpack.DefinePlugin({
-        "process.env": JSON.stringify(envVars),
+        "process.env.ASSET_BASE_URL": JSON.stringify(assetBaseUrl),
       }),
+      // Taskpane HTML
       new HtmlWebpackPlugin({
-        filename: "commands.html",
+        template: "./src/taskpane/taskpane.html",
+        filename: "taskpane.html",
+        chunks: ["commands"],
+        minify: isProduction
+          ? {
+              removeComments: true,
+              collapseWhitespace: true,
+              removeRedundantAttributes: true,
+            }
+          : false,
+      }),
+      // Commands HTML
+      new HtmlWebpackPlugin({
         template: "./src/commands/commands.html",
-        chunks: ["polyfill", "commands"],
+        filename: "commands.html",
+        chunks: ["commands"],
+        minify: isProduction
+          ? {
+              removeComments: true,
+              collapseWhitespace: true,
+              removeRedundantAttributes: true,
+            }
+          : false,
       }),
       new CopyWebpackPlugin({
         patterns: [
           {
             from: "manifest.xml",
-            to: "manifest.xml",
             transform(content) {
-              const assetBaseUrl = process.env.ASSET_BASE_URL || "https://localhost:3000";
-              if (!assetBaseUrl) {
-                throw new Error("ASSET_BASE_URL is not defined");
-              }
               return content.toString().replace(/\${ASSET_BASE_URL}/g, assetBaseUrl);
             },
           },
           {
-            from: "src/index.html",
-            to: "index.html",
-          },
-          {
-            from: "src/taskpane/taskpane.html",
-            to: "taskpane.html",
-          },
-          {
-            from: "src/commands/commands.js",
-            to: "commands.js",
+            from: "assets",
+            to: "assets",
           },
         ],
       }),
     ],
+
     devServer: {
+      static: {
+        directory: path.join(__dirname, "dist"),
+      },
+      compress: true,
+      port: 3000,
       hot: true,
+      historyApiFallback: true,
       headers: {
         "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
       },
-      server: {
-        type: "https",
-        options: httpsOptions,
-      },
-      port: 3000,
-      devMiddleware: {
-        writeToDisk: true,
-      },
-      allowedHosts: ["localhost", ".azurewebsites.net", ".ngrok-free.app"],
+      allowedHosts: "all",
     },
-    mode: options.mode || "development",
-  };
 
-  return config;
+    performance: {
+      hints: isProduction ? "warning" : false,
+      maxAssetSize: 1024 * 1024,
+      maxEntrypointSize: 1024 * 1024,
+    },
+  };
 };
