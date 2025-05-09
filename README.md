@@ -1,3 +1,5 @@
+[![Deploy to GitHub Pages](https://github.com/mirzailhami/outlook-signature-add-ins/actions/workflows/deploy.yml/badge.svg)](https://github.com/mirzailhami/outlook-signature-add-ins/actions/workflows/deploy.yml)
+
 # Outlook Signature Add-in
 
 This Outlook add-in enables users to insert and validate M3 email signatures in Outlook. It supports multiple signature templates (Mona, Morgan, Morven, M2, M3) and enforces signature compliance for new emails, replies, and forwards using Smart Alerts.
