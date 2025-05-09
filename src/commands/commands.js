@@ -42,29 +42,59 @@ function displayNotification(type, message, persistent = false) {
 
     // Ensure persistent is boolean
     const isPersistent = persistent === true ? true : false;
-    console.log({ event: "displayNotification", type, message, isPersistent });
+    console.log({ event: "displayNotification", type, message, isPersistent, status: "Skipped" });
 
-    // Clear existing notifications
-    item.notificationMessages.removeAsync("Err", () => {});
-    item.notificationMessages.removeAsync("Info", () => {});
-
-    // Add new notification
-    item.notificationMessages.replaceAsync(
-      messageId,
-      {
-        type: notificationType,
-        message: message,
-        persistent: isPersistent,
-      },
-      (asyncResult) => {
-        if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-          console.error({ event: "displayNotification", error: asyncResult.error.message });
-        }
-      }
-    );
+    // Temporarily disable notifications to avoid icon/persistent errors
+    // item.notificationMessages.removeAsync("Err", () => {});
+    // item.notificationMessages.removeAsync("Info", () => {});
+    // item.notificationMessages.replaceAsync(
+    //   messageId,
+    //   {
+    //     type: notificationType,
+    //     message: message,
+    //     persistent: isPersistent,
+    //   },
+    //   (asyncResult) => {
+    //     if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+    //       console.error({ event: "displayNotification", error: asyncResult.error.message });
+    //     }
+    //   }
+    // );
   } catch (error) {
     console.error({ event: "displayNotification", error: error.message });
   }
+}
+
+/**
+ * Restores the signature using a Promise-based approach.
+ * @param {Office.MessageCompose} item - The email item.
+ * @param {string} cachedSignature - The signature to restore.
+ * @param {string} signatureKey - The signature key.
+ * @returns {Promise<boolean>} True if restoration succeeds, false otherwise.
+ */
+function restoreSignatureAsync(item, cachedSignature, signatureKey) {
+  return new Promise((resolve) => {
+    console.log({ event: "restoreSignatureAsync", signatureKey, cachedSignatureLength: cachedSignature?.length });
+    if (!cachedSignature) {
+      console.error({ event: "restoreSignatureAsync", error: "No cached signature", signatureKey });
+      resolve(false);
+      return;
+    }
+
+    item.body.setSignatureAsync(
+      "<!-- signature -->" + cachedSignature,
+      { coercionType: Office.CoercionType.Html },
+      (asyncResult) => {
+        if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+          console.error({ event: "restoreSignatureAsync", error: asyncResult.error.message, signatureKey });
+          resolve(false);
+        } else {
+          console.log({ event: "restoreSignatureAsync", status: "Signature restored", signatureKey });
+          resolve(true);
+        }
+      }
+    );
+  });
 }
 
 /**
@@ -74,7 +104,7 @@ function displayNotification(type, message, persistent = false) {
  * @param {boolean} restoreSignature - Whether to restore the original signature.
  * @param {string} signatureKey - The signature key to restore.
  */
-function displayError(message, event, restoreSignature = false, signatureKey = null) {
+async function displayError(message, event, restoreSignature = false, signatureKey = null) {
   console.log({ event: "displayError", message, restoreSignature, signatureKey });
 
   const markdownMessage = restoreSignature
@@ -89,7 +119,7 @@ function displayError(message, event, restoreSignature = false, signatureKey = n
       allowEvent: false,
       errorMessage: message,
       errorMessageMarkdown: markdownMessage,
-      cancelLabel: restoreSignature ? "Send Now" : "Apply Signature",
+      cancelLabel: "OK",
     });
     return;
   }
@@ -103,43 +133,40 @@ function displayError(message, event, restoreSignature = false, signatureKey = n
         allowEvent: false,
         errorMessage: message,
         errorMessageMarkdown: markdownMessage,
-        cancelLabel: "Send Now",
+        cancelLabel: "OK",
       });
       return;
     }
 
-    item.body.setSignatureAsync(
-      "<!-- signature -->" + cachedSignature,
-      { coercionType: Office.CoercionType.Html },
-      (asyncResult) => {
-        if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-          console.error({ event: "displayError", error: asyncResult.error.message });
-          displayNotification("Error", "Failed to restore signature.", true);
-          event.completed({
-            allowEvent: false,
-            errorMessage: "Failed to restore signature.",
-            errorMessageMarkdown: "Failed to restore signature.\n\n**Tip**: Select an M3 signature from the ribbon.",
-            cancelLabel: "Send Now",
-          });
-        } else {
-          console.log({ event: "displayError", status: "Signature restored", signatureKey });
-          displayNotification("Error", message, true);
-          event.completed({
-            allowEvent: false,
-            errorMessage: message,
-            errorMessageMarkdown: markdownMessage,
-            cancelLabel: "Send Now",
-          });
-        }
-      }
-    );
+    // Restore signature and wait for completion
+    const restored = await restoreSignatureAsync(item, cachedSignature, signatureKey);
+    if (!restored) {
+      console.error({ event: "displayError", error: "Failed to restore signature", signatureKey });
+      displayNotification("Error", "Failed to restore signature.", true);
+      event.completed({
+        allowEvent: false,
+        errorMessage: "Failed to restore signature.",
+        errorMessageMarkdown: "Failed to restore signature.\n\n**Tip**: Select an M3 signature from the ribbon.",
+        cancelLabel: "OK",
+      });
+      return;
+    }
+
+    // Signature restored, show Smart Alert
+    displayNotification("Error", message, true);
+    event.completed({
+      allowEvent: false,
+      errorMessage: message,
+      errorMessageMarkdown: markdownMessage,
+      cancelLabel: "OK",
+    });
   } else {
     displayNotification("Error", message, true);
     event.completed({
       allowEvent: false,
       errorMessage: message,
       errorMessageMarkdown: markdownMessage,
-      cancelLabel: "Apply Signature",
+      cancelLabel: "OK",
     });
   }
 }
@@ -649,7 +676,7 @@ function saveSignatureData(item, signatureKey) {
     const conversationId = item.conversationId || null;
     console.log({ event: "saveSignatureData", signatureKey, recipients, conversationId });
 
-    // Update existing entry if Ascending order if conversationId matches
+    // Update existing entry if conversationId matches
     let existingKey = null;
     if (conversationId) {
       for (let i = 0; i < localStorage.length; i++) {
