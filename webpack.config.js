@@ -28,7 +28,7 @@ module.exports = (env, options) => {
     output: {
       path: path.resolve(__dirname, "dist"),
       filename: "[name].[contenthash:8].js",
-      publicPath: process.env.ASSET_BASE_URL || "/",
+      publicPath: "auto",
     },
 
     resolve: {
@@ -75,7 +75,7 @@ module.exports = (env, options) => {
         template: "./src/taskpane/taskpane.html",
         filename: "taskpane.html",
         chunks: ["commands"],
-        publicPath: process.env.ASSET_BASE_URL || "/",
+        publicPath: "./",
         minify: isProduction
           ? {
               removeComments: true,
@@ -88,7 +88,7 @@ module.exports = (env, options) => {
         template: "./src/commands/commands.html",
         filename: "commands.html",
         chunks: ["commands"],
-        publicPath: process.env.ASSET_BASE_URL || "/",
+        publicPath: "./",
         minify: isProduction
           ? {
               removeComments: true,
