@@ -722,7 +722,7 @@ function onNewMessageComposeHandler(event) {
   if (hostName.includes("android") || hostName.includes("ios")) {
     console.log("Running on mobile. Applying default signature if set.");
 
-    load();
+    var customProps = load();
     const propertyName = 'hello';
     const propertyValue = customProps.get(propertyName);
     console.log(`The value of custom property "${propertyName}" is "${propertyValue}".`);
@@ -752,6 +752,7 @@ function load() {
 
       customProps = result.value;
       console.log("Loaded the CustomProperties object.");
+      return customProps;
   });
 }
 
