@@ -22,6 +22,12 @@ Office.onReady(() => {
   Office.actions.associate("cancelAction", cancelAction);
   Office.actions.associate("validateSignature", validateSignature);
   Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
+
+  Office.context.ui.addHandlerAsync(Office.EventType.DialogMessageReceived, function (message) {
+    if (message === "close") {
+      Office.context.ui.close();
+    }
+  });
 });
 
 /**
@@ -709,23 +715,19 @@ function onNewMessageComposeHandler(event) {
   // initializeAutoSignature(event);
 
   // Retrieve the host name from Office
-  var hostName = Office.context.mailbox.diagnostics.hostName || "";
-  hostName = hostName.toLowerCase();
+  var hostName = Office.context.mailbox.diagnostics.hostName.toLowerCase();
 
   // Determine if the device is mobile.
   // This example checks for 'android' or 'ios' in the hostName.
   if (hostName.includes("android") || hostName.includes("ios")) {
     console.log("Running on mobile. Applying default signature if set.");
-
     const signatureKey = localStorage.getItem("defaultSignature");
     if (signatureKey) {
       const signature = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
       const signatureIndex = signature.indexOf(signatureKey);
       addSignature(signatureIndex, event);
     } else {
-      // console.log("No default signature set on mobile.");
-      // load mona as initial
-      addSignature(0, event);
+      displayNotification("Error", "Please set a default signature from the read message surface.", true);
       event.completed();
     }
   } else {
