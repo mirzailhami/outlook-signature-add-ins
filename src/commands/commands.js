@@ -22,12 +22,6 @@ Office.onReady(() => {
   Office.actions.associate("cancelAction", cancelAction);
   Office.actions.associate("validateSignature", validateSignature);
   Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
-
-  Office.context.ui.addHandlerAsync(Office.EventType.DialogMessageReceived, function (message) {
-    if (message === "close") {
-      Office.context.ui.close();
-    }
-  });
 });
 
 /**

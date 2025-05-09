@@ -194,6 +194,7 @@
                     Office.context.roamingSettings.saveAsync((saveResult) => {
                         if (saveResult.status === Office.AsyncResultStatus.Succeeded) {
                             Office.context.ui.closeContainer();
+                            Office.addin.hide();
                         } else {
                             console.error('Error saving settings:', saveResult.error);
                             alert('Failed to save settings. Please try again.');
