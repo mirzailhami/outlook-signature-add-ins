@@ -105,8 +105,8 @@ module.exports = (env, options) => {
             },
           },
           {
-            from: "assets",
-            to: "assets",
+            from: "src/index.html",
+            to: "index.html",
           },
         ],
       }),

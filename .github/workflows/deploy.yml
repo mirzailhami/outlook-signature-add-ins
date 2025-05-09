@@ -35,3 +35,7 @@ jobs:
           keep_files: true
           force_orphan: true
           enable_jekyll: false
+          full_commit_message: "Deploy from dev-mobile (SHA: ${{ github.sha }})"
+          user_name: "GitHub Actions"
+          user_email: "41898282+github-actions[bot]@users.noreply.github.com"
+          cname: mirzailhami.github.io/outlook-signature-add-ins
