@@ -22,6 +22,12 @@ Office.onReady(() => {
   Office.actions.associate("cancelAction", cancelAction);
   Office.actions.associate("validateSignature", validateSignature);
   Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
+
+  Office.context.ui.addHandlerAsync(Office.EventType.DialogMessageReceived, function (message) {
+    if (message === "close") {
+      Office.context.ui.close();
+    }
+  });
 });
 
 /**
@@ -711,9 +717,8 @@ function onNewMessageComposeHandler(event) {
   // Retrieve the host name from Office
   var hostName = Office.context.mailbox.diagnostics.hostName.toLowerCase();
 
-  console.log(localStorage.getItem("defaultSignature"));
-
   // Determine if the device is mobile.
+  // This example checks for 'android' or 'ios' in the hostName.
   if (hostName.includes("android") || hostName.includes("ios")) {
     console.log("Running on mobile. Applying default signature if set.");
 
