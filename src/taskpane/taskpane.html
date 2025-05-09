@@ -118,8 +118,7 @@
 
                     // Close the taskpane; use Office.context.ui.close() if in a dialog, or window.close().
                     if (Office.context?.ui) {
-                        Office.context.ui.close();
-                        Office.context.ui.messageParent("close");
+                        Office.context.ui.closeContainer();
                     } else {
                         window.close();
                     }
