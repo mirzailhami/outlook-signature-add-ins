@@ -168,6 +168,15 @@
 
     <script>
         Office.onReady().then(() => {
+            // Load saved settings
+            const defaultSignature = localStorage.getItem("defaultSignature");
+            if (defaultSignature) {
+                const selectedRadio = document.querySelector(`input[value="${defaultSignature}"]`);
+                if (selectedRadio) {
+                    selectedRadio.checked = true;
+                }
+            }
+
             // Add click handler for entire choice field
             document.querySelectorAll('.choice-field').forEach(field => {
                 field.addEventListener('click', (e) => {
