@@ -105,6 +105,10 @@ module.exports = (env, options) => {
             },
           },
           {
+            from: ".nojekyll",
+            to: ".nojekyll",
+          },
+          {
             from: "src/index.html",
             to: "index.html",
           },
