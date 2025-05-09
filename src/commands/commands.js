@@ -7,11 +7,7 @@
  * Initializes the Outlook add-in and associates event handlers.
  */
 Office.onReady(() => {
-  console.log({
-    event: "Office.onReady",
-    host: Office.context?.mailbox?.diagnostics?.hostName,
-    initialSignature: localStorage.getItem("initialSignature")?.slice(0, 50),
-  });
+  console.log({ event: "Office.onReady", host: Office.context?.mailbox?.diagnostics?.hostName });
 
   Office.actions.associate("addSignatureMona", addSignatureMona);
   Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
@@ -25,107 +21,12 @@ Office.onReady(() => {
 });
 
 /**
- * Initializes auto-signature for new or reply/forward emails.
- * @param {Office.AddinCommands.Event} event - The Outlook event object.
- */
-function initializeAutoSignature(event) {
-  console.log({ event: "initializeAutoSignature" });
-  try {
-    const item = Office.context.mailbox.item;
-    if (item) {
-      applyAutoSignature(event);
-    } else {
-      console.error({ event: "initializeAutoSignature", error: "No mailbox item" });
-      displayNotification("Error", "Failed to detect compose window.", true);
-      event?.completed();
-    }
-  } catch (error) {
-    console.error({ event: "initializeAutoSignature", error: error.message });
-    displayNotification("Error", "Unexpected error initializing signature.", true);
-    event?.completed();
-  }
-}
-
-/**
- * Attempts to apply a signature with retries.
- * @param {Office.AddinCommands.Event} event - The Outlook event object.
- * @param {number} attempt - Current attempt number.
- * @param {number} maxAttempts - Maximum retry attempts.
- */
-function applyAutoSignature(event, attempt = 1, maxAttempts = 10) {
-  console.log({ event: "applyAutoSignature", attempt });
-  try {
-    const item = Office.context.mailbox.item;
-
-    checkForReplyOrForward(item)
-      .then((isReplyOrForward) => {
-        if (!isReplyOrForward) {
-          console.log({ event: "applyAutoSignature", status: "New email, skipping auto-signature" });
-          displayNotification("Info", "No signature applied for new email.", false);
-          event?.completed();
-          return;
-        }
-
-        displayNotification("Info", "Loading M3 signature...", false);
-        const lastSignature = localStorage.getItem("initialSignature");
-        if (!lastSignature) {
-          console.log({ event: "applyAutoSignature", status: "No last signature found" });
-          displayNotification("Info", "No previous M3 signature found. Please select a signature.", false);
-          event?.completed();
-          return;
-        }
-
-        item.body.getAsync("html", (result) => {
-          if (result.status !== Office.AsyncResultStatus.Succeeded) {
-            console.error({ event: "applyAutoSignature", error: result.error.message });
-            displayNotification("Error", "Failed to load email body.", true);
-            event?.completed();
-            return;
-          }
-
-          const body = result.value;
-          if (!body.includes("<!-- signature -->")) {
-            item.body.setSignatureAsync(
-              "<!-- signature -->" + lastSignature,
-              { coercionType: Office.CoercionType.Html },
-              (asyncResult) => {
-                if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                  console.error({ event: "applyAutoSignature", error: asyncResult.error.message });
-                  displayNotification("Error", "Failed to apply M3 signature.", true);
-                } else {
-                  console.log({ event: "applyAutoSignature", status: "Signature applied" });
-                  localStorage.setItem("initialSignature", lastSignature);
-                  displayNotification("Info", "M3 signature applied.", false);
-                }
-                event?.completed();
-              }
-            );
-          } else {
-            console.log({ event: "applyAutoSignature", status: "Signature already present" });
-            displayNotification("Info", "M3 signature already present.", false);
-            event?.completed();
-          }
-        });
-      })
-      .catch((error) => {
-        console.error({ event: "applyAutoSignature", error: error.message });
-        displayNotification("Error", "Failed to detect reply/forward status.", true);
-        event?.completed();
-      });
-  } catch (error) {
-    console.error({ event: "applyAutoSignature", error: error.message });
-    displayNotification("Error", "Unexpected error applying signature.", true);
-    event?.completed();
-  }
-}
-
-/**
  * Displays a notification in the Outlook UI.
  * @param {string} type - Notification type ("Error" or "Info").
  * @param {string} message - Notification message.
  * @param {boolean} persistent - Whether the notification persists.
  */
-function displayNotification(type, message, persistent) {
+function displayNotification(type, message, persistent = false) {
   try {
     const item = Office.context.mailbox.item;
     if (!item) {
@@ -133,26 +34,31 @@ function displayNotification(type, message, persistent) {
       return;
     }
 
-    const messageId = type === "Error" ? "SignatureError" : "SignatureInfo";
+    const messageId = type === "Error" ? "Err" : "Info";
     const notificationType =
       type === "Error"
         ? Office.MailboxEnums.ItemNotificationMessageType.ErrorMessage
         : Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage;
 
-    console.log({ event: "displayNotification", type, message, persistent, messageId });
+    // Ensure persistent is boolean
+    const isPersistent = persistent === true ? true : false;
+    console.log({ event: "displayNotification", type, message, isPersistent });
+
+    // Clear existing notifications
+    item.notificationMessages.removeAsync("Err", () => {});
+    item.notificationMessages.removeAsync("Info", () => {});
+
+    // Add new notification
     item.notificationMessages.replaceAsync(
       messageId,
       {
         type: notificationType,
-        message,
-        icon: "Icon.16x16",
-        persistent,
+        message: message,
+        persistent: isPersistent,
       },
       (asyncResult) => {
         if (asyncResult.status === Office.AsyncResultStatus.Failed) {
           console.error({ event: "displayNotification", error: asyncResult.error.message });
-        } else {
-          console.log({ event: "displayNotification", status: "Success", message });
         }
       }
     );
@@ -166,9 +72,10 @@ function displayNotification(type, message, persistent) {
  * @param {string} message - Error message.
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  * @param {boolean} restoreSignature - Whether to restore the original signature.
+ * @param {string} signatureKey - The signature key to restore.
  */
-function displayError(message, event, restoreSignature = false) {
-  console.log({ event: "displayError", message, restoreSignature });
+function displayError(message, event, restoreSignature = false, signatureKey = null) {
+  console.log({ event: "displayError", message, restoreSignature, signatureKey });
 
   const markdownMessage = restoreSignature
     ? `${message}\n\n**Tip**: Ensure the M3 signature is not edited before sending.`
@@ -183,38 +90,26 @@ function displayError(message, event, restoreSignature = false) {
       errorMessage: message,
       errorMessageMarkdown: markdownMessage,
       cancelLabel: restoreSignature ? "Send Now" : "Apply Signature",
-      commandId: "msgComposeApplyDefault",
-      action: {
-        actionText: "Cancel",
-        actionType: "executeFunction",
-        commandId: "msgComposeCancelAction",
-      },
     });
     return;
   }
 
-  if (restoreSignature) {
-    const initialSignature = localStorage.getItem("initialSignature");
-    if (!initialSignature) {
-      console.error({ event: "displayError", error: "No signature to restore" });
+  if (restoreSignature && signatureKey) {
+    const cachedSignature = localStorage.getItem(`signature_${signatureKey}`);
+    if (!cachedSignature) {
+      console.error({ event: "displayError", error: "No signature to restore", signatureKey });
       displayNotification("Error", message, true);
       event.completed({
         allowEvent: false,
         errorMessage: message,
         errorMessageMarkdown: markdownMessage,
         cancelLabel: "Send Now",
-        commandId: "msgComposeApplyDefault",
-        action: {
-          actionText: "Cancel",
-          actionType: "executeFunction",
-          commandId: "msgComposeCancelAction",
-        },
       });
       return;
     }
 
     item.body.setSignatureAsync(
-      "<!-- signature -->" + initialSignature,
+      "<!-- signature -->" + cachedSignature,
       { coercionType: Office.CoercionType.Html },
       (asyncResult) => {
         if (asyncResult.status === Office.AsyncResultStatus.Failed) {
@@ -225,28 +120,15 @@ function displayError(message, event, restoreSignature = false) {
             errorMessage: "Failed to restore signature.",
             errorMessageMarkdown: "Failed to restore signature.\n\n**Tip**: Select an M3 signature from the ribbon.",
             cancelLabel: "Send Now",
-            commandId: "msgComposeApplyDefault",
-            action: {
-              actionText: "Cancel",
-              actionType: "executeFunction",
-              commandId: "msgComposeCancelAction",
-            },
           });
         } else {
-          console.log({ event: "displayError", status: "Signature restored" });
-          localStorage.setItem("initialSignature", initialSignature);
+          console.log({ event: "displayError", status: "Signature restored", signatureKey });
           displayNotification("Error", message, true);
           event.completed({
             allowEvent: false,
             errorMessage: message,
             errorMessageMarkdown: markdownMessage,
             cancelLabel: "Send Now",
-            commandId: "msgComposeApplyDefault",
-            action: {
-              actionText: "Cancel",
-              actionType: "executeFunction",
-              commandId: "msgComposeCancelAction",
-            },
           });
         }
       }
@@ -258,12 +140,6 @@ function displayError(message, event, restoreSignature = false) {
       errorMessage: message,
       errorMessageMarkdown: markdownMessage,
       cancelLabel: "Apply Signature",
-      commandId: "msgComposeApplyDefault",
-      action: {
-        actionText: "Cancel",
-        actionType: "executeFunction",
-        commandId: "msgComposeCancelAction",
-      },
     });
   }
 }
@@ -286,22 +162,32 @@ function applyDefaultSignature(event) {
     const body = result.value;
     const isClassicOutlook = Office.context.mailbox.diagnostics.hostName === "Outlook";
     const currentSignature = isClassicOutlook ? extractSignatureForOutlookClassic(body) : extractSignature(body);
-    const initialSignature = localStorage.getItem("initialSignature");
-    const initialSignatureFromStore = isClassicOutlook
-      ? extractSignatureFromStoreForOutlookClassic(initialSignature)
-      : extractSignatureFromStore(initialSignature);
 
-    if (currentSignature && initialSignatureFromStore) {
-      const cleanCurrentSignature = normalizeSignature(currentSignature);
-      const cleanStoredSignature = normalizeSignature(initialSignatureFromStore);
-      if (cleanCurrentSignature === cleanStoredSignature) {
-        console.log({ event: "applyDefaultSignature", status: "Signature restored, allowing send" });
-        event.completed({ allowEvent: true });
+    getSignatureKeyForRecipients(item).then((signatureKey) => {
+      if (!signatureKey) {
+        console.log({ event: "applyDefaultSignature", status: "No signature key found, applying default" });
+        addSignature("m3Signature", event);
         return;
       }
-    }
 
-    addSignature("m3Signature", 4, event);
+      const cachedSignature = localStorage.getItem(`signature_${signatureKey}`);
+      if (!cachedSignature) {
+        console.log({ event: "applyDefaultSignature", status: "No cached signature, applying default" });
+        addSignature("m3Signature", event);
+        return;
+      }
+
+      const cleanCurrentSignature = normalizeSignature(currentSignature);
+      const cleanStoredSignature = normalizeSignature(cachedSignature);
+
+      if (cleanCurrentSignature === cleanStoredSignature) {
+        console.log({ event: "applyDefaultSignature", status: "Signature matches, allowing send", signatureKey });
+        event.completed({ allowEvent: true });
+      } else {
+        console.log({ event: "applyDefaultSignature", status: "Signature mismatch, applying default" });
+        addSignature("m3Signature", event);
+      }
+    });
   });
 }
 
@@ -325,14 +211,14 @@ function checkForReplyOrForward(item) {
     if (item.itemType === Office.MailboxEnums.ItemType.Message && item.conversationId) {
       console.log({
         event: "checkForReplyOrForward",
-        status: "Detected via conversationId",
+        status: "Reply/forward detected",
         conversationId: item.conversationId,
       });
       resolve(true);
       return;
     }
     if (item.inReplyTo) {
-      console.log({ event: "checkForReplyOrForward", status: "Detected via inReplyTo", inReplyTo: item.inReplyTo });
+      console.log({ event: "checkForReplyOrForward", status: "Reply detected", inReplyTo: item.inReplyTo });
       resolve(true);
       return;
     }
@@ -342,12 +228,7 @@ function checkForReplyOrForward(item) {
           result.value.toLowerCase().includes("re:") ||
           result.value.toLowerCase().includes("fw:") ||
           result.value.toLowerCase().includes("fwd:");
-        console.log({
-          event: "checkForReplyOrForward",
-          status: "Detected via subject",
-          subject: result.value,
-          isReplyOrForward,
-        });
+        console.log({ event: "checkForReplyOrForward", status: "Subject checked", isReplyOrForward });
         resolve(isReplyOrForward);
       } else {
         console.error({ event: "checkForReplyOrForward", error: result.error.message });
@@ -380,37 +261,18 @@ function validateSignature(event) {
 
               const body = result.value;
               const isClassicOutlook = Office.context.mailbox.diagnostics.hostName === "Outlook";
-              const initialSignature = isClassicOutlook
+              const currentSignature = isClassicOutlook
                 ? extractSignatureForOutlookClassic(body)
                 : extractSignature(body);
 
-              if (isReplyOrForward && !initialSignature) {
-                console.log({ event: "validateSignature", status: "No signature in reply/forward" });
-                const lastSignature = false; //localStorage.getItem("initialSignature");
-                if (lastSignature) {
-                  item.body.setSignatureAsync(
-                    "<!-- signature -->" + lastSignature,
-                    { coercionType: Office.CoercionType.Html },
-                    (asyncResult) => {
-                      if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                        console.error({ event: "validateSignature", error: asyncResult.error.message });
-                        displayError("Failed to apply M3 signature.", event);
-                      } else {
-                        console.log({ event: "validateSignature", status: "Signature set for reply/forward" });
-                        event.completed({ allowEvent: true });
-                      }
-                    }
-                  );
-                } else {
-                  displayError("No M3 signature found for reply/forward. Please select a signature.", event);
-                }
-              } else if (!initialSignature) {
+              if (!currentSignature) {
+                console.log({ event: "validateSignature", status: "No signature found" });
                 displayError(
                   "Email is missing the M3 required signature. Please select an appropriate email signature.",
                   event
                 );
               } else {
-                validateSignatureChanges(item, initialSignature, event, isReplyOrForward);
+                validateSignatureChanges(item, currentSignature, event, isReplyOrForward);
               }
             });
           })
@@ -430,13 +292,13 @@ function validateSignature(event) {
 }
 
 /**
- * Validates if the signature has been modified.
+ * Validates if the signature has been modified or changed.
  * @param {Office.MessageCompose} item - The email item.
- * @param {string} initialSignature - The initial signature.
+ * @param {string} currentSignature - The current signature in the email body.
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
-function validateSignatureChanges(item, initialSignature, event, isReplyOrForward) {
+function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
   try {
     item.body.getAsync("html", (result) => {
       if (result.status !== Office.AsyncResultStatus.Succeeded) {
@@ -448,13 +310,9 @@ function validateSignatureChanges(item, initialSignature, event, isReplyOrForwar
       const newBody = result.value;
       const isClassicOutlook = Office.context.mailbox.diagnostics.hostName === "Outlook";
       const newSignature = isClassicOutlook ? extractSignatureForOutlookClassic(newBody) : extractSignature(newBody);
-      const initialSavedSignature = localStorage.getItem("initialSignature");
-      const initialSignatureFromStore = isClassicOutlook
-        ? extractSignatureFromStoreForOutlookClassic(initialSavedSignature)
-        : extractSignatureFromStore(initialSavedSignature);
 
-      if (!newSignature || !initialSignatureFromStore) {
-        console.log({ event: "validateSignatureChanges", status: "Missing signature data" });
+      if (!newSignature) {
+        console.log({ event: "validateSignatureChanges", status: "Missing signature" });
         displayError(
           "Email is missing the M3 required signature. Please select an appropriate email signature.",
           event
@@ -462,21 +320,51 @@ function validateSignatureChanges(item, initialSignature, event, isReplyOrForwar
         return;
       }
 
-      const cleanNewSignature = normalizeSignature(newSignature);
-      const cleanStoredSignature = normalizeSignature(initialSignatureFromStore);
+      // Find the expected signature key from localStorage
+      getSignatureKeyForRecipients(item).then((signatureKey) => {
+        const cleanNewSignature = normalizeSignature(newSignature);
+        const signatureKeys = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
+        let matchedSignatureKey = null;
 
-      if (cleanNewSignature !== cleanStoredSignature) {
-        console.log({ event: "validateSignatureChanges", status: "Signature modified" });
-        displayError(
-          "Selected M3 signature has been modified. M3 email signatures cannot be modified. Restoring the original signature.",
-          event,
-          true
-        );
-      } else {
-        console.log({ event: "validateSignatureChanges", status: "Signature unchanged" });
-        localStorage.setItem("initialSignature", initialSavedSignature);
-        event.completed({ allowEvent: true });
-      }
+        // Check if the current signature matches any valid M3 signature
+        for (const key of signatureKeys) {
+          const cachedSignature = localStorage.getItem(`signature_${key}`);
+          if (cachedSignature && cleanNewSignature === normalizeSignature(cachedSignature)) {
+            matchedSignatureKey = key;
+            console.log({ event: "validateSignatureChanges", status: "Matched signature", matchedSignatureKey });
+            break;
+          }
+        }
+
+        if (matchedSignatureKey) {
+          // Signature is a valid M3 signature
+          if (matchedSignatureKey !== signatureKey) {
+            // User changed to a different valid M3 signature
+            console.log({
+              event: "validateSignatureChanges",
+              status: "Signature changed to another valid M3 signature",
+              from: signatureKey,
+              to: matchedSignatureKey,
+            });
+            saveSignatureData(item, matchedSignatureKey);
+          }
+          console.log({ event: "validateSignatureChanges", status: "Signature valid", matchedSignatureKey });
+          event.completed({ allowEvent: true });
+        } else {
+          // Signature is modified (not a valid M3 signature)
+          console.log({
+            event: "validateSignatureChanges",
+            status: "Signature modified",
+            originalSignatureKey: signatureKey,
+          });
+          displayError(
+            "Selected M3 signature has been modified. Restoring the original signature.",
+            event,
+            true,
+            signatureKey
+          );
+        }
+      });
     });
   } catch (error) {
     console.error({ event: "validateSignatureChanges", error: error.message });
@@ -521,32 +409,6 @@ function extractSignatureForOutlookClassic(body) {
 }
 
 /**
- * Extracts the signature from local storage.
- * @param {string} body - The stored signature HTML.
- * @returns {string|null} The extracted signature or null.
- */
-function extractSignatureFromStore(body) {
-  console.log({ event: "extractSignatureFromStore" });
-  if (!body) return null;
-  const signatureDivRegex = /<div\s+class="Signature">(.*?)<\/div>/s;
-  const match = body.match(signatureDivRegex);
-  return match ? match[1] : body;
-}
-
-/**
- * Extracts the signature from local storage for classic Outlook.
- * @param {string} body - The stored signature HTML.
- * @returns {string|null} The extracted signature or null.
- */
-function extractSignatureFromStoreForOutlookClassic(body) {
-  console.log({ event: "extractSignatureFromStoreForOutlookClassic" });
-  if (!body) return null;
-  const signatureDivRegex = /<table class="MsoNormalTable"[^>]*>(.*?)<\/table>/is;
-  const match = body.match(signatureDivRegex);
-  return match ? match[1] : body;
-}
-
-/**
  * Normalizes a signature for comparison.
  * @param {string} sig - The signature HTML.
  * @returns {string} The normalized signature.
@@ -573,91 +435,255 @@ function isExternalEmail(item) {
 }
 
 /**
- * Adds a signature to the email.
- * @param {string} signatureUrlIndex - The signature index (e.g., "2").
- * @param {Office.AddinCommands.Event} event - The Outlook event object.
+ * Fetches a signature from the API.
+ * @param {string} signatureKey - The signature key (e.g., "m3Signature").
+ * @param {function} callback - Callback with (template, error).
  */
-function addSignature(signatureUrlIndex, event) {
-  const signature = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
-  const signatureKey = signature[signatureUrlIndex];
-  console.log({ event: "addSignature", signatureKey });
+function fetchSignature(signatureKey, callback) {
+  const signatureIndex = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"].indexOf(
+    signatureKey
+  );
+  const initialUrl = "https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net/api/Ribbons/ribbons";
+  let signatureUrl =
+    "https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net/api/Signatures/signatures?signatureURL=";
+
+  fetch(initialUrl)
+    .then((response) => response.json())
+    .then((data) => {
+      signatureUrl += data.result[signatureIndex].url;
+      fetch(signatureUrl)
+        .then((response) => response.json())
+        .then((data) => {
+          let template = data.result;
+          template = template.replace("{First name} ", Office.context.mailbox.userProfile.displayName || "");
+          template = template.replace("{Last name}", "");
+          template = template.replaceAll("{E-mail}", Office.context.mailbox.userProfile.emailAddress || "");
+          template = template.replace("{Title}", "");
+          callback(template, null);
+        })
+        .catch((err) => callback(null, err));
+    })
+    .catch((err) => callback(null, err));
+}
+
+/**
+ * Finds the signature key by matching conversationId or recipient emails in localStorage.
+ * @param {Office.MessageCompose} item - The email item.
+ * @returns {Promise<string|null>} The signature key or null if no match.
+ */
+function getSignatureKeyForRecipients(item) {
+  return new Promise((resolve) => {
+    item.to.getAsync((result) => {
+      if (result.status !== Office.AsyncResultStatus.Succeeded) {
+        console.error({ event: "getSignatureKeyForRecipients", error: result.error.message });
+        resolve(null);
+        return;
+      }
+
+      const recipients = result.value.map((recipient) => recipient.emailAddress.toLowerCase());
+      const conversationId = item.conversationId || null;
+      console.log({ event: "getSignatureKeyForRecipients", recipients, conversationId });
+
+      // Collect and sort signatureData entries by timestamp (newest first)
+      const signatureDataEntries = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith("signatureData_")) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key));
+            signatureDataEntries.push({ key, data });
+          } catch (error) {
+            console.error({ event: "getSignatureKeyForRecipients", error: error.message, key });
+          }
+        }
+      }
+      signatureDataEntries.sort((a, b) => new Date(b.data.timestamp) - new Date(a.data.timestamp));
+
+      let signatureKey = null;
+
+      // Prioritize matching by conversationId
+      if (conversationId) {
+        for (const entry of signatureDataEntries) {
+          const data = entry.data;
+          if (data.conversationId === conversationId && data.signature !== "none") {
+            signatureKey = data.signature;
+            console.log({
+              event: "getSignatureKeyForRecipients",
+              status: "Found matching signature by conversationId",
+              signatureKey,
+              key: entry.key,
+            });
+            break;
+          }
+        }
+      }
+
+      // Fallback to matching by recipients
+      if (!signatureKey) {
+        for (const entry of signatureDataEntries) {
+          const data = entry.data;
+          const storedRecipients = data.recipients.map((email) => email.toLowerCase());
+          if (recipients.some((recipient) => storedRecipients.includes(recipient)) && data.signature !== "none") {
+            signatureKey = data.signature;
+            console.log({
+              event: "getSignatureKeyForRecipients",
+              status: "Found matching signature by recipients",
+              signatureKey,
+              key: entry.key,
+            });
+            break;
+          }
+        }
+      }
+
+      console.log({ event: "getSignatureKeyForRecipients", selectedSignatureKey: signatureKey });
+      resolve(signatureKey);
+    });
+  });
+}
+
+/**
+ * Adds a signature to the email and saves it to localStorage.
+ * @param {string} signatureKey - The signature key (e.g., "m3Signature").
+ * @param {Office.AddinCommands.Event} event - The Outlook event object.
+ * @param {boolean} isAutoApplied - Whether the signature is auto-applied.
+ */
+function addSignature(signatureKey, event, isAutoApplied = false) {
+  console.log({ event: "addSignature", signatureKey, isAutoApplied });
 
   try {
     const item = Office.context.mailbox.item;
-    const conversationId = item.conversationId;
-    console.log(conversationId);
     displayNotification("Info", `Applying ${signatureKey}...`, false);
-    const localTemplate = localStorage.getItem(signatureKey);
-    if (localTemplate) {
+
+    const cachedSignature = localStorage.getItem(`signature_${signatureKey}`);
+    if (cachedSignature) {
       item.body.setSignatureAsync(
-        "<!-- signature -->" + localTemplate,
+        "<!-- signature -->" + cachedSignature,
         { coercionType: Office.CoercionType.Html },
         (asyncResult) => {
           if (asyncResult.status === Office.AsyncResultStatus.Failed) {
             console.error({ event: "addSignature", error: asyncResult.error.message });
             displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
-            event.completed();
+            if (!isAutoApplied) {
+              event.completed();
+            } else {
+              displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+              saveSignatureData(item, "none");
+              event.completed();
+            }
           } else {
-            console.log({ event: "addSignature", status: "Signature applied", signatureKey });
-            localStorage.setItem("initialSignature", localTemplate);
-            localStorage.setItem("lastSentSignature", localTemplate);
+            console.log({ event: "addSignature", status: "Signature applied from cache", signatureKey });
             displayNotification("Info", `${signatureKey} applied.`, false);
+            saveSignatureData(item, signatureKey);
             event.completed();
           }
         }
       );
     } else {
-      const initialUrl = "https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net/api/Ribbons/ribbons";
-      let signatureUrl =
-        "https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net/api/Signatures/signatures?signatureURL=";
-      fetch(initialUrl)
-        .then((response) => response.json())
-        .then((data) => {
-          signatureUrl += data.result[signatureUrlIndex].url;
-          fetch(signatureUrl)
-            .then((response) => response.json())
-            .then((data) => {
-              let template = data.result;
-              template = template.replace("{First name} ", Office.context.mailbox.userProfile.displayName || "");
-              template = template.replace("{Last name}", "");
-              template = template.replaceAll("{E-mail}", Office.context.mailbox.userProfile.emailAddress || "");
-              template = template.replace("{Title}", "");
-              item.body.setSignatureAsync(
-                "<!-- signature -->" + template,
-                { coercionType: Office.CoercionType.Html },
-                (asyncResult) => {
-                  if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                    console.error({ event: "addSignature", error: asyncResult.error.message });
-                    displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
-                    event.completed();
-                  } else {
-                    console.log({ event: "addSignature", status: "Signature applied", signatureKey });
-                    localStorage.setItem(signatureKey, template);
-                    localStorage.setItem("initialSignature", template);
-                    localStorage.setItem("lastSentSignature", template);
-                    displayNotification("Info", `${signatureKey} applied.`, false);
-                    event.completed();
-                  }
-                }
-              );
-            })
-            .catch((err) => {
-              console.error({ event: "addSignature", error: err.message });
-              displayNotification("Error", "Failed to fetch signature.", true);
+      fetchSignature(signatureKey, (template, error) => {
+        if (error) {
+          console.error({ event: "addSignature", error: error.message });
+          displayNotification("Error", `Failed to fetch ${signatureKey}.`, true);
+          if (!isAutoApplied) {
+            event.completed();
+          } else {
+            displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+            saveSignatureData(item, "none");
+            event.completed();
+          }
+          return;
+        }
+
+        item.body.setSignatureAsync(
+          "<!-- signature -->" + template,
+          { coercionType: Office.CoercionType.Html },
+          (asyncResult) => {
+            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+              console.error({ event: "addSignature", error: asyncResult.error.message });
+              displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
+              if (!isAutoApplied) {
+                event.completed();
+              } else {
+                displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+                saveSignatureData(item, "none");
+                event.completed();
+              }
+            } else {
+              console.log({ event: "addSignature", status: "Signature applied", signatureKey });
+              localStorage.setItem(`signature_${signatureKey}`, template);
+              displayNotification("Info", `${signatureKey} applied.`, false);
+              saveSignatureData(item, signatureKey);
               event.completed();
-            });
-        })
-        .catch((err) => {
-          console.error({ event: "addSignature", error: err.message });
-          displayNotification("Error", "Failed to fetch ribbons.", true);
-          event.completed();
-        });
+            }
+          }
+        );
+      });
     }
   } catch (error) {
     console.error({ event: "addSignature", error: error.message });
     displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
-    event.completed();
+    if (!isAutoApplied) {
+      event.completed();
+    } else {
+      displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+      saveSignatureData(item, "none");
+      event.completed();
+    }
   }
+}
+
+/**
+ * Saves signature data to localStorage.
+ * @param {Office.MessageCompose} item - The email item.
+ * @param {string} signatureKey - The signature key.
+ */
+function saveSignatureData(item, signatureKey) {
+  item.to.getAsync((result) => {
+    let recipients = [];
+    if (result.status === Office.AsyncResultStatus.Succeeded) {
+      recipients = result.value.map((recipient) => recipient.emailAddress);
+    } else {
+      console.error({ event: "saveSignatureData", error: result.error.message });
+    }
+
+    const conversationId = item.conversationId || null;
+    console.log({ event: "saveSignatureData", signatureKey, recipients, conversationId });
+
+    // Update existing entry if Ascending order if conversationId matches
+    let existingKey = null;
+    if (conversationId) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith("signatureData_")) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key));
+            if (data.conversationId === conversationId) {
+              existingKey = key;
+              break;
+            }
+          } catch (error) {
+            console.error({ event: "saveSignatureData", error: error.message, key });
+          }
+        }
+      }
+    }
+
+    const data = {
+      recipients,
+      signature: signatureKey,
+      conversationId,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (existingKey) {
+      localStorage.setItem(existingKey, JSON.stringify(data));
+      console.log({ event: "saveSignatureData", status: "Updated existing entry", key: existingKey });
+    } else {
+      const newKey = `signatureData_${Date.now()}`;
+      localStorage.setItem(newKey, JSON.stringify(data));
+      console.log({ event: "saveSignatureData", status: "Created new entry", key: newKey });
+    }
+  });
 }
 
 /**
@@ -665,7 +691,7 @@ function addSignature(signatureUrlIndex, event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureMona(event) {
-  addSignature(0, event);
+  addSignature("monaSignature", event);
 }
 
 /**
@@ -673,7 +699,7 @@ function addSignatureMona(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureMorgan(event) {
-  addSignature(1, event);
+  addSignature("morganSignature", event);
 }
 
 /**
@@ -681,7 +707,7 @@ function addSignatureMorgan(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureMorven(event) {
-  addSignature(2, event);
+  addSignature("morvenSignature", event);
 }
 
 /**
@@ -689,7 +715,7 @@ function addSignatureMorven(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureM2(event) {
-  addSignature(3, event);
+  addSignature("m2Signature", event);
 }
 
 /**
@@ -697,7 +723,7 @@ function addSignatureM2(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureM3(event) {
-  addSignature(4, event);
+  addSignature("m3Signature", event);
 }
 
 /**
@@ -706,38 +732,83 @@ function addSignatureM3(event) {
  */
 function onNewMessageComposeHandler(event) {
   console.log({ event: "onNewMessageComposeHandler" });
-  // initializeAutoSignature(event);
 
-  // Retrieve the host name from Office
-  var hostName = Office.context.mailbox.diagnostics.hostName.toLowerCase();
+  const item = Office.context.mailbox.item;
+  checkForReplyOrForward(item)
+    .then((isReplyOrForward) => {
+      console.log({ event: "onNewMessageComposeHandler", isReplyOrForward });
 
-  // Determine if the device is mobile.
-  // This example checks for 'android' or 'ios' in the hostName.
-  if (hostName.includes("android") || hostName.includes("ios")) {
-    console.log("Running on mobile. Applying default signature if set.");
-
-    Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
-      if (result.status === Office.AsyncResultStatus.Failed) {
-        console.error(`loadCustomPropertiesAsync failed with message ${result.error.message}`);
-        return;
+      if (isReplyOrForward) {
+        // Try to auto-apply signature for replies/forwards
+        getSignatureKeyForRecipients(item)
+          .then((signatureKey) => {
+            if (signatureKey) {
+              console.log({
+                event: "onNewMessageComposeHandler",
+                status: "Auto-applying signature for reply/forward",
+                signatureKey,
+              });
+              addSignature(signatureKey, event, true);
+            } else {
+              console.log({
+                event: "onNewMessageComposeHandler",
+                status: "No signature found for reply/forward, requiring manual selection",
+              });
+              displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+              saveInitialSignatureData(item);
+              event.completed();
+            }
+          })
+          .catch((error) => {
+            console.error({ event: "onNewMessageComposeHandler", error: error.message });
+            displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+            saveInitialSignatureData(item);
+            event.completed();
+          });
+      } else {
+        // Require manual signature selection for new emails
+        console.log({ event: "onNewMessageComposeHandler", status: "New email, requiring manual signature selection" });
+        displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+        saveInitialSignatureData(item);
+        event.completed();
       }
-
-      customProps = result.value;
-      const propertyValue = customProps.get(propertyName);
-      console.log(`The value of custom property "${propertyName}" is "${propertyValue}".`);
-    });
-
-    const signatureKey = localStorage.getItem("defaultSignature");
-    if (signatureKey) {
-      const signature = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
-      const signatureIndex = signature.indexOf(signatureKey);
-      addSignature(signatureIndex, event);
-    } else {
-      displayNotification("Error", "Please set a default signature from the read message surface.", true);
+    })
+    .catch((error) => {
+      console.error({ event: "onNewMessageComposeHandler", error: error.message });
+      displayNotification("Error", "Failed to detect reply/forward status.", true);
+      saveInitialSignatureData(item);
       event.completed();
+    });
+}
+
+/**
+ * Saves initial signature data with "none" for new or reply/forward emails.
+ * @param {Office.MessageCompose} item - The email item.
+ */
+function saveInitialSignatureData(item) {
+  item.to.getAsync((result) => {
+    let recipients = [];
+    if (result.status === Office.AsyncResultStatus.Succeeded) {
+      recipients = result.value.map((recipient) => recipient.emailAddress);
+    } else {
+      console.error({ event: "saveInitialSignatureData", error: result.error.message });
     }
-  } else {
-    console.log("Not on mobile. Skipping auto insertion of default signature.");
-    event.completed();
-  }
+
+    const conversationId = item.conversationId || null;
+    localStorage.setItem(
+      `signatureData_${Date.now()}`,
+      JSON.stringify({
+        recipients,
+        signature: "none",
+        conversationId,
+        timestamp: new Date().toISOString(),
+      })
+    );
+    console.log({
+      event: "saveInitialSignatureData",
+      status: "Stored initial signature data",
+      recipients,
+      conversationId,
+    });
+  });
 }

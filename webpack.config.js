@@ -4,35 +4,51 @@ const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const dotenv = require("dotenv");
+const devCerts = require("office-addin-dev-certs");
 
-module.exports = (env, options) => {
+const getHttpsOptions = async () => {
+  try {
+    const httpsOptions = await devCerts.getHttpsServerOptions();
+    return { ca: httpsOptions.ca, key: httpsOptions.key, cert: httpsOptions.cert };
+  } catch (error) {
+    console.error("Failed to get HTTPS certificates, falling back to HTTP:", error.message);
+    return {};
+  }
+};
+
+module.exports = async (env, options) => {
   const isProduction = options.mode === "production";
 
   // Load environment variables
   const envPath = path.resolve(__dirname, isProduction ? ".env.production" : ".env");
   const envVars = dotenv.config({ path: envPath }).parsed || {};
 
-  // Fallback to GitHub Pages URL if not in .env.production
+  // Fallback to appropriate URL
   const assetBaseUrl = isProduction
     ? envVars.ASSET_BASE_URL || "https://mirzailhami.github.io/outlook-signature-add-ins"
-    : "http://localhost:3000";
+    : envVars.ASSET_BASE_URL || "https://localhost:3000";
+
+  // Get HTTPS options for dev server
+  const httpsOptions = await getHttpsOptions();
 
   return {
     mode: isProduction ? "production" : "development",
     devtool: isProduction ? "source-map" : "eval-source-map",
 
     entry: {
+      polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
       commands: "./src/commands/commands.js",
     },
 
     output: {
       path: path.resolve(__dirname, "dist"),
       filename: "[name].[contenthash:8].js",
-      publicPath: "auto",
+      publicPath: assetBaseUrl,
+      clean: true,
     },
 
     resolve: {
-      extensions: [".js"],
+      extensions: [".js", ".html"],
     },
 
     module: {
@@ -74,8 +90,8 @@ module.exports = (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/taskpane/taskpane.html",
         filename: "taskpane.html",
-        chunks: ["commands"],
-        publicPath: "./",
+        chunks: ["polyfill", "commands"],
+        publicPath: assetBaseUrl,
         minify: isProduction
           ? {
               removeComments: true,
@@ -87,8 +103,8 @@ module.exports = (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/commands/commands.html",
         filename: "commands.html",
-        chunks: ["commands"],
-        publicPath: "./",
+        chunks: ["polyfill", "commands"],
+        publicPath: assetBaseUrl,
         minify: isProduction
           ? {
               removeComments: true,
@@ -113,10 +129,13 @@ module.exports = (env, options) => {
             from: "src/index.html",
             to: "index.html",
           },
+          {
+            from: "assets",
+            to: "assets",
+          },
         ],
       }),
     ],
-
     devServer: {
       static: {
         directory: path.join(__dirname, "dist"),
@@ -124,13 +143,19 @@ module.exports = (env, options) => {
       compress: true,
       port: 3000,
       hot: true,
-      historyApiFallback: true,
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
         "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
       },
-      allowedHosts: "all",
+      allowedHosts: ["localhost", ".azurewebsites.net", ".ngrok-free.app"],
+      server: {
+        type: "https",
+        options: httpsOptions,
+      },
+      devMiddleware: {
+        writeToDisk: true,
+      },
     },
 
     performance: {
