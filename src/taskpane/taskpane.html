@@ -192,8 +192,8 @@
                 const selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
                 if (selectedRadio) {
                     localStorage.setItem("defaultSignature", selectedRadio.value);
-                    Office.context.ui.closeContainer();
-                    // Office.addin.close();
+                    // Office.context.ui.closeContainer();
+                    Office.addin.close();
                 } else {
                     alert('Please select a signature option');
                 }
