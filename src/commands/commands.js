@@ -721,6 +721,12 @@ function onNewMessageComposeHandler(event) {
   // This example checks for 'android' or 'ios' in the hostName.
   if (hostName.includes("android") || hostName.includes("ios")) {
     console.log("Running on mobile. Applying default signature if set.");
+
+    load();
+    const propertyName = 'hello';
+    const propertyValue = customProps.get(propertyName);
+    console.log(`The value of custom property "${propertyName}" is "${propertyValue}".`);
+
     const signatureKey = localStorage.getItem("defaultSignature");
     if (signatureKey) {
       const signature = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
@@ -734,4 +740,58 @@ function onNewMessageComposeHandler(event) {
     console.log("Not on mobile. Skipping auto insertion of default signature.");
     event.completed();
   }
+}
+
+
+function load() {
+  Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
+      if (result.status === Office.AsyncResultStatus.Failed) {
+          console.error(`loadCustomPropertiesAsync failed with message ${result.error.message}`);
+          return;
+      }
+
+      customProps = result.value;
+      console.log("Loaded the CustomProperties object.");
+  });
+}
+
+function get() {
+  const propertyName = (document.getElementById("get-property-name") as HTMLInputElement).value;
+  const propertyValue = customProps.get(propertyName);
+  console.log(`The value of custom property "${propertyName}" is "${propertyValue}".`);
+}
+
+function getAll() {
+  let allCustomProps;
+  if (Office.context.requirements.isSetSupported("Mailbox", "1.9")) {
+      allCustomProps = customProps.getAll();
+  } else {
+      allCustomProps = customProps["rawData"];
+  }
+
+  console.log(allCustomProps);
+}
+
+function set() {
+  const propertyName = (document.getElementById("set-property-name") as HTMLInputElement).value;
+  const propertyValue = (document.getElementById("property-value") as HTMLInputElement).value;
+  customProps.set(propertyName, propertyValue);
+  console.log(`Custom property "${propertyName}" set to value "${propertyValue}".`);
+}
+
+function remove() {
+  const propertyName = (document.getElementById("remove-property-name") as HTMLInputElement).value;
+  customProps.remove(propertyName);
+  console.log(`Custom property "${propertyName}" removed.`);
+}
+
+function save() {
+  customProps.saveAsync((result) => {
+      if (result.status === Office.AsyncResultStatus.Failed) {
+          console.error(`saveAsync failed with message ${result.error.message}`);
+          return;
+      }
+
+      console.log(`Custom properties saved with status: ${result.status}`);
+  });
 }
