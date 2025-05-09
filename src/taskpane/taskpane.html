@@ -108,13 +108,13 @@
 
                     // Directly call your addSignature function.
 
-                    if (typeof addSignature === "function") {
-                        const signature = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
-                        const signatureIndex = signature.indexOf(selectedRadio.value);
-                        addSignature(signatureIndex, null);
-                    } else {
-                        console.error("addSignature function is not defined.");
-                    }
+                    // if (typeof addSignature === "function") {
+                        // const signature = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
+                        // const signatureIndex = signature.indexOf(selectedRadio.value);
+                        // addSignature(signatureIndex, null);
+                    // } else {
+                    //     console.error("addSignature function is not defined.");
+                    // }
 
                     // Close the taskpane; use Office.context.ui.close() if in a dialog, or window.close().
                     if (Office.context?.ui) {
