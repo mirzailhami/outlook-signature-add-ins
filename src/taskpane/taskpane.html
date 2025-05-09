@@ -168,14 +168,6 @@
 
     <script>
         Office.onReady().then(() => {
-            // Load saved settings
-            Office.context.roamingSettings.getAsync("defaultSignature", (result) => {
-                if (result.status === Office.AsyncResultStatus.Succeeded && result.value) {
-                    const selectedValue = result.value;
-                    document.querySelector(`input[value="${selectedValue}"]`).checked = true;
-                }
-            });
-
             // Add click handler for entire choice field
             document.querySelectorAll('.choice-field').forEach(field => {
                 field.addEventListener('click', (e) => {
@@ -190,16 +182,8 @@
             document.getElementById('saveButton').addEventListener('click', () => {
                 const selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
                 if (selectedRadio) {
-                    Office.context.roamingSettings.set("defaultSignature", selectedRadio.value);
-                    Office.context.roamingSettings.saveAsync((saveResult) => {
-                        if (saveResult.status === Office.AsyncResultStatus.Succeeded) {
-                            Office.context.ui.closeContainer();
-                            Office.addin.hide();
-                        } else {
-                            console.error('Error saving settings:', saveResult.error);
-                            alert('Failed to save settings. Please try again.');
-                        }
-                    });
+                    localStorage.setItem("defaultSignature", selectedRadio.value);
+                    Office.context.ui.closeContainer();
                 } else {
                     alert('Please select a signature option');
                 }
