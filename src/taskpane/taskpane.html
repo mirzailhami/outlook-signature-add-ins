@@ -1,258 +1,203 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>M3 Signature Taskpane</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Office.js -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3 Signature Settings</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@fluentui/react@8.106.4/dist/css/fabric.min.css">
     <script src="commands.js"></script>
-    <!-- Fluent UI (Office UI Fabric Core) CSS for a native Microsoft look -->
-    <link rel="stylesheet" href="https://unpkg.com/office-ui-fabric-core@11.1.0/dist/css/fabric.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/office-ui-fabric-js@1.5.0/dist/css/fabric.components.min.css">
     <style>
+        :root {
+            --background-color: #f3f2f1;
+            --surface-color: #ffffff;
+            --primary-color: #0078d4;
+        }
+
         body {
-            padding: 20px;
-            background-color: #f3f2f1;
-            font-family: "Segoe UI", "Segoe UI Web (West European)", "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 16px;
+            background-color: var(--background-color);
+            font-family: 'Segoe UI', 'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
 
         .container {
-            max-width: 400px;
-            margin: auto;
-            background-color: #ffffff;
-            padding: 20px;
-            border: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            background-color: var(--surface-color);
             border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 24px;
         }
 
-        /* Fluent-styled radio buttons using Office UI Fabric Core classes */
-        .ms-ChoiceField {
-            margin-bottom: 10px;
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #252423;
+            margin: 0 0 8px 0;
+        }
+
+        .description {
+            font-size: 14px;
+            color: #605e5c;
+            margin: 0;
+        }
+
+        .choice-group {
+            margin: 16px 0;
+        }
+
+        .choice-field {
+            margin: 8px 0;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+
+        .choice-field label {
             display: flex;
             align-items: center;
-        }
-
-        .ms-ChoiceField-input {
-            margin-right: 8px;
-        }
-
-        .ms-Button {
-            margin-top: 20px;
+            padding: 12px;
             width: 100%;
+            height: 100%;
+            margin: 0;
         }
 
-        section.samples {
-            margin-top: 20px;
+        .choice-field input[type="radio"] {
+            margin: 0 12px 0 0;
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
         }
 
-        section.samples .ms-Button,
-        section.setup .ms-Button {
-            display: block;
-            margin-bottom: 5px;
-            margin-left: 20px;
-            min-width: 80px;
+        .choice-field:hover {
+            background-color: #f3f2f1;
+        }
+
+        .primary-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px;
+                margin: 8px;
+            }
+            
+            .title {
+                font 18px;
+ 18px;
+            }
+            
+            .description {
+                font-size: 13px;
+            }
+            
+            .choice-field label {
+                padding: 16px 12px;
+            }
         }
     </style>
 </head>
 
-<body class="ms-Fabric">
+<body>
     <div class="container">
-        <h2 class="ms-fontSize-24 ms-fontWeight-semibold">Select Your Default Signature</h2>
-        <p class="ms-fontSize-16">Choose one of your signatures. This will automatically be applied when composing new
-            emails.</p>
+        <div class="header">
+            <h1 class="title">Default Signature Settings</h1>
+            <p class="description">Choose your default email signature. This will be automatically applied to new messages.</p>
+        </div>
 
-        <form id="signatureForm">
-            <div class="ms-ChoiceField">
-                <input class="ms-ChoiceField-input" type="radio" id="radioMona" name="signatureOption"
-                    value="monaSignature">
-                <label class="ms-ChoiceField-field" for="radioMona">
-                    <span class="ms-Label">Mona</span>
+        <div class="choice-group" id="signatureOptions">
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioMona" name="signatureOption" value="monaSignature">
+                    Mona
                 </label>
             </div>
-            <div class="ms-ChoiceField">
-                <input class="ms-ChoiceField-input" type="radio" id="radioMorgan" name="signatureOption"
-                    value="morganSignature">
-                <label class="ms-ChoiceField-field" for="radioMorgan">
-                    <span class="ms-Label">Morgan</span>
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioMorgan" name="signatureOption" value="morganSignature">
+                    Morgan
                 </label>
             </div>
-            <div class="ms-ChoiceField">
-                <input class="ms-ChoiceField-input" type="radio" id="radioMorven" name="signatureOption"
-                    value="morvenSignature">
-                <label class="ms-ChoiceField-field" for="radioMorven">
-                    <span class="ms-Label">Morven</span>
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioMorven" name="signatureOption" value="morvenSignature">
+                    Morven
                 </label>
             </div>
-            <div class="ms-ChoiceField">
-                <input class="ms-ChoiceField-input" type="radio" id="radioM2" name="signatureOption"
-                    value="m2Signature">
-                <label class="ms-ChoiceField-field" for="radioM2">
-                    <span class="ms-Label">M2</span>
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioM2" name="signatureOption" value="m2Signature">
+                    M2
                 </label>
             </div>
-            <div class="ms-ChoiceField">
-                <input class="ms-ChoiceField-input" type="radio" id="radioM3" name="signatureOption"
-                    value="m3Signature">
-                <label class="ms-ChoiceField-field" for="radioM3">
-                    <span class="ms-Label">M3</span>
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioM3" name="signatureOption" value="m3Signature">
+                    M3
                 </label>
             </div>
+        </div>
 
-            <button type="submit" class="ms-Button ms-Button--primary">
-                <span class="ms-Button-label">Set Default Signature</span>
-            </button>
-        </form>
+        <button class="primary-button" id="saveButton">Save Settings</button>
     </div>
 
-    <section class="ms-Fabric ms-font-m">
-        <p>This sample shows how to set, save, and get the custom per-item properties of an add-in.</p>
-    </section>
-    <section class="ms-Fabric samples ms-font-m">
-        <h3>Try it out</h3>
-        <p>First load the <a href="https://learn.microsoft.com/javascript/api/outlook/office.customproperties"
-                target="_blank">CustomProperties</a> object of the mail item.</p>
-        <button id="load" class="ms-Button">
-            <div class="ms-Button-label">Load custom properties</div>
-        </button>
-        <div class="ms-TextField">
-            <label class="ms-Label">Property name:</label>
-            <input id="set-property-name" class="ms-TextField-field" type="text" value="hello" placeholder="">
-        </div>
-        <div class="ms-TextField">
-            <label class="ms-Label">Property value:</label>
-            <input id="property-value" class="ms-TextField-field" type="text" value="world" placeholder="">
-        </div>
-        <button id="set" class="ms-Button">
-            <div class="ms-Button-label">Set</div>
-        </button>
-        <div class="ms-TextField">
-            <label class="ms-Label">Property name:</label>
-            <input id="get-property-name" class="ms-TextField-field" type="text" value="hello" placeholder="">
-        </div>
-        <button id="get" class="ms-Button">
-            <div class="ms-Button-label">Get</div>
-        </button>
-        <button id="get-all" class="ms-Button">
-            <div class="ms-Button-label">Get all</div>
-        </button>
-        <div class="ms-TextField">
-            <label class="ms-Label">Property name:</label>
-            <input id="remove-property-name" class="ms-TextField-field" type="text" value="hello" placeholder="">
-        </div>
-        <button id="remove" class="ms-Button">
-            <div class="ms-Button-label">Remove</div>
-        </button>
-        <button id="save" class="ms-Button">
-            <div class="ms-Button-label">Save all</div>
-        </button>
-    </section>
-
     <script>
-        let customProps;
-        document.getElementById("load").addEventListener("click", load);
-        document.getElementById("get").addEventListener("click", get);
-        document.getElementById("get-all").addEventListener("click", getAll);
-        document.getElementById("set").addEventListener("click", set);
-        document.getElementById("remove").addEventListener("click", remove);
-        document.getElementById("save").addEventListener("click", save);
+        Office.onReady().then(() => {
+            // Load saved settings
+            Office.context.roamingSettings.getAsync("defaultSignature", (result) => {
+                if (result.status === Office.AsyncResultStatus.Succeeded && result.value) {
+                    const selectedValue = result.value;
+                    document.querySelector(`input[value="${selectedValue}"]`).checked = true;
+                }
+            });
 
-        Office.initialize = function (reason) {
-            console.log('Taskpane (Fluent UI) initialized on mobile/web.');
-
-            document.getElementById('signatureForm').addEventListener('submit', function (e) {
-                e.preventDefault();
-                // Get the selected signature from the radio inputs.
-                var selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
-                if (selectedRadio) {
-                    // Save the default signature locally.
-                    localStorage.setItem("defaultSignature", selectedRadio.value);
-
-                    // Directly call your addSignature function.
-
-                    // if (typeof addSignature === "function") {
-                    // const signature = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
-                    // const signatureIndex = signature.indexOf(selectedRadio.value);
-                    // addSignature(signatureIndex, null);
-                    // } else {
-                    //     console.error("addSignature function is not defined.");
-                    // }
-
-                    // Close the taskpane; use Office.context.ui.close() if in a dialog, or window.close().
-                    if (Office.context?.ui) {
-                        Office.context.ui.closeContainer();
-                    } else {
-                        window.close();
+            // Add click handler for entire choice field
+            document.querySelectorAll('.choice-field').forEach(field => {
+                field.addEventListener('click', (e) => {
+                    const radio = field.querySelector('input[type="radio"]');
+                    if (radio && e.target !== radio) {
+                        radio.checked = true;
                     }
+                });
+            });
+
+            // Save settings handler
+            document.getElementById('saveButton').addEventListener('click', () => {
+                const selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
+                if (selectedRadio) {
+                    Office.context.roamingSettings.set("defaultSignature", selectedRadio.value);
+                    Office.context.roamingSettings.saveAsync((saveResult) => {
+                        if (saveResult.status === Office.AsyncResultStatus.Succeeded) {
+                            Office.context.ui.closeContainer();
+                        } else {
+                            console.error('Error saving settings:', saveResult.error);
+                            alert('Failed to save settings. Please try again.');
+                        }
+                    });
                 } else {
-                    alert("Please select a signature before submitting.");
+                    alert('Please select a signature option');
                 }
             });
-        };
-
-        let customProps;
-
-        document.getElementById("load").addEventListener("click", load);
-        document.getElementById("get").addEventListener("click", get);
-        document.getElementById("get-all").addEventListener("click", getAll);
-        document.getElementById("set").addEventListener("click", set);
-        document.getElementById("remove").addEventListener("click", remove);
-        document.getElementById("save").addEventListener("click", save);
-
-        function load() {
-            Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
-                if (result.status === Office.AsyncResultStatus.Failed) {
-                    console.error(`loadCustomPropertiesAsync failed with message ${result.error.message}`);
-                    return;
-                }
-
-                customProps = result.value;
-                console.log("Loaded the CustomProperties object.");
-            });
-        }
-
-        function get() {
-            const propertyName = (document.getElementById("get-property-name") as HTMLInputElement).value;
-            const propertyValue = customProps.get(propertyName);
-            console.log(`The value of custom property "${propertyName}" is "${propertyValue}".`);
-        }
-
-        function getAll() {
-            let allCustomProps;
-            if (Office.context.requirements.isSetSupported("Mailbox", "1.9")) {
-                allCustomProps = customProps.getAll();
-            } else {
-                allCustomProps = customProps["rawData"];
-            }
-
-            console.log(allCustomProps);
-        }
-
-        function set() {
-            const propertyName = (document.getElementById("set-property-name") as HTMLInputElement).value;
-            const propertyValue = (document.getElementById("property-value") as HTMLInputElement).value;
-            customProps.set(propertyName, propertyValue);
-            console.log(`Custom property "${propertyName}" set to value "${propertyValue}".`);
-        }
-
-        function remove() {
-            const propertyName = (document.getElementById("remove-property-name") as HTMLInputElement).value;
-            customProps.remove(propertyName);
-            console.log(`Custom property "${propertyName}" removed.`);
-        }
-
-        function save() {
-            customProps.saveAsync((result) => {
-                if (result.status === Office.AsyncResultStatus.Failed) {
-                    console.error(`saveAsync failed with message ${result.error.message}`);
-                    return;
-                }
-
-                console.log(`Custom properties saved with status: ${result.status}`);
-            });
-        }
+        }).catch(error => {
+            console.error('Office initialization failed:', error);
+        });
     </script>
 </body>
-
 </html>
