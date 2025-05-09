@@ -7,7 +7,7 @@
     <title>M3 Signature Settings</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@fluentui/react@8.106.4/dist/css/fabric.min.css">
-    
+
     <style>
         :root {
             --background-color: #f3f2f1;
@@ -98,28 +98,35 @@
                 padding: 16px;
                 margin: 8px;
             }
-            
+
             .title {
                 font 18px;
- 18px;
+                18px;
             }
-            
+
             .description {
                 font-size: 13px;
             }
-            
+
             .choice-field label {
                 padding: 16px 12px;
             }
         }
     </style>
+
+    <script>
+        if (typeof WebView !== 'undefined') {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
+    </script>
 </head>
 
 <body>
     <div class="container">
         <div class="header">
             <h1 class="title">Default Signature Settings</h1>
-            <p class="description">Choose your default email signature. This will be automatically applied to new messages.</p>
+            <p class="description">Choose your default email signature. This will be automatically applied to new
+                messages.</p>
         </div>
 
         <div class="choice-group" id="signatureOptions">
@@ -200,4 +207,5 @@
         });
     </script>
 </body>
+
 </html>

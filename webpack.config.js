@@ -28,7 +28,7 @@ module.exports = (env, options) => {
     output: {
       path: path.resolve(__dirname, "dist"),
       filename: "[name].[contenthash:8].js",
-      publicPath: "/",
+      publicPath: process.env.ASSET_BASE_URL || "/",
     },
 
     resolve: {
@@ -75,6 +75,7 @@ module.exports = (env, options) => {
         template: "./src/taskpane/taskpane.html",
         filename: "taskpane.html",
         chunks: ["commands"],
+        publicPath: process.env.ASSET_BASE_URL || "/",
         minify: isProduction
           ? {
               removeComments: true,
@@ -83,11 +84,11 @@ module.exports = (env, options) => {
             }
           : false,
       }),
-      // Commands HTML
       new HtmlWebpackPlugin({
         template: "./src/commands/commands.html",
         filename: "commands.html",
         chunks: ["commands"],
+        publicPath: process.env.ASSET_BASE_URL || "/",
         minify: isProduction
           ? {
               removeComments: true,
