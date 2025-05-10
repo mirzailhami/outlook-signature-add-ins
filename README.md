@@ -1,172 +1,167 @@
-[![Deploy to GitHub Pages](https://github.com/mirzailhami/outlook-signature-add-ins/actions/workflows/deploy.yml/badge.svg)](https://github.com/mirzailhami/outlook-signature-add-ins/actions/workflows/deploy.yml)
+# M3 Signatures Outlook Add-in
 
-# Outlook Signature Add-in
+## Overview
+The M3 Signatures Outlook Add-in enhances email composition in Outlook Web App by managing email signatures for new, reply, and forward emails. It ensures signatures are applied correctly, validated before sending, and restored if modified. The add-in uses the Office.js API to interact with Outlook, `localStorage` for persisting signature data, and an external API to fetch signature templates.
 
-This Outlook add-in enables users to insert and validate M3 email signatures in Outlook. It supports multiple signature templates (Mona, Morgan, Morven, M2, M3) and enforces signature compliance for new emails, replies, and forwards using Smart Alerts.
+### Features
+- **Signature Selection**: Users can select from multiple signatures (Mona, Morgan, Morven, M2, M3) via the ribbon.
+- **New Email Handling**: Prompts manual signature selection and stores a temporary signature for restoration if modified.
+- **Reply/Forward Auto-Loading**: Automatically applies the signature used in the original email based on `conversationId`, recipients, or subject.
+- **Signature Validation**: Ensures the signature is valid and unmodified before sending; restores the original if modified.
+- **Error Notifications**: Displays user-friendly notifications for missing or modified signatures.
+- **Persistence**: Stores signature data in `localStorage` to track signatures across email threads.
 
-## Features
+### Architecture
+The add-in consists of:
+- **manifest.xml**: Defines the add-in's configuration, ribbon actions, and event handlers (version 1.0.0.12).
+- **commands.js**: Core logic for signature handling, validation, and storage.
+- **taskpane.js/html**: UI for signature management (optional).
+- **LocalStorage**: Stores signature templates (`signature_<key>`) and metadata (`signatureData_<timestamp>`).
+- **External API**: Fetches signature templates from `https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net`.
 
-- **Signature Insertion**: Select from predefined M3 signature templates via the ribbon menu ("M3 Signatures").
-- **Signature Validation**: Prevents sending emails without an M3 signature or with modified signatures, with Smart Alerts for user correction.
-- **Reply/Forward Support**: Automatically applies the last used signature for replies and forwards.
-- **Cross-Platform**: Works on Outlook web, desktop (Windows, Mac), and mobile (iOS, Android).
-- **Event-Based Activation**: Handles signature insertion and validation during compose and send events.
-
-## Prerequisites
-
-- Node.js (v18 or later)
-- npm (v8 or later)
-- Outlook with Microsoft 365 subscription (web, desktop, or mobile)
-- Azure account for deployment
-- GitHub account for CI/CD
+See the [Architecture Diagram](architecture.mmd) for a visual representation.
 
 ## Setup
+1. **Prerequisites**:
+   - Node.js (v16+)
+   - Outlook Web App (https://outlook.office365.com)
+   - Azure account for signature API (optional for development)
 
-1. **Clone the Repository**:
+2. **Installation**:
    ```bash
-   git clone https://github.com/mirzailhami/outlook-signature-add-ins.git
-   cd outlook-signature-add-ins
-   ```
-
-2. **Install Dependencies**:
-   ```bash
+   git clone <repository-url>
+   cd m3-signatures-outlook-addin
    npm install
    ```
 
-3. **Start Development Server**:
-   ```bash
-   npm run dev-server
-   ```
-
-4. **Sideload the Add-in**:
-   - Open Outlook on the web (Chrome or Edge).
-   - Go to **Settings > Manage Integrations > Add from File**.
-   - Select `dist/manifest.xml`.
-   - Alternatively, use:
+3. **Development**:
+   - Start the dev server:
      ```bash
-     npm run start:web
+     npm run dev-server
+     ```
+   - Output is in the `dist` folder:
+     ```
+     assets  commands.html  commands.[contenthash].js  manifest.xml  polyfill.[contenthash].js  taskpane.html  taskpane.[contenthash].js
      ```
 
-## Usage
+4. **Sideloading**:
+   - Open Outlook Web App.
+   - Go to **Settings > Manage add-ins**.
+   - Remove existing add-in (if any).
+   - Upload `dist/manifest.xml`.
+   - Verify version `1.0.0.12` in **Manage add-ins**.
 
-1. **Insert a Signature**:
-   - Open a new email in Outlook.
-   - Click the **M3 Signatures** ribbon button.
-   - Select a signature (e.g., Mona, Morgan, M3) from the dropdown.
-   - The signature is inserted into the email body.
+5. **Testing**:
+   - Clear browser cache or use Incognito mode:
+     - Chrome: DevTools > Application > Clear storage > Clear site data.
+   - Test new email, reply, and forward scenarios (see Flow below).
 
-2. **Reply/Forward**:
-   - When replying or forwarding, the add-in automatically applies the last used signature from `localStorage`.
+## Flow
+The add-in handles email composition with the following flows, covering all cases including fixes for signature detection and modification.
 
-3. **Validation**:
-   - If an email lacks an M3 signature, a Smart Alert prompts you to apply one ("Apply Signature" button).
-   - If the signature is modified, a Smart Alert restores the original and allows sending ("Send Now" button).
-   - Use the "Cancel" button to stop sending and edit the email.
+### 1. New Email
+- **No Signature Detected**:
+  - On compose, `onNewMessageComposeHandler` detects a new email (`isReplyOrForward: false`).
+  - Prompts: "Please select an M3 signature from the ribbon."
+  - Saves initial `signatureData_<timestamp>` with `signature: "none"`.
+  - Logs:
+    ```javascript
+    { event: "onNewMessageComposeHandler", status: "New email, requiring manual signature selection" }
+    { event: "saveInitialSignatureData", status: "Stored initial signature data", recipients, conversationId, subject }
+    ```
+- **Signature Applied**:
+  - User selects a signature (e.g., `m2Signature`) from the ribbon.
+  - `addSignature` applies the signature and stores it in `tempSignature_new`.
+  - Saves `signatureData_<timestamp>` with `signature: "m2Signature"`.
+  - Logs:
+    ```javascript
+    { event: "addSignature", signatureKey: "m2Signature", isAutoApplied: false }
+    { event: "addSignature", status: "Stored temporary signature for new email" }
+    { event: "saveSignatureData", signatureKey: "m2Signature", recipients, conversationId, subject }
+    ```
+- **Sending**:
+  - `validateSignature` checks the signature.
+  - If valid, clears `tempSignature_new` and saves `signatureData_<timestamp>`.
+  - Logs:
+    ```javascript
+    { event: "validateSignatureChanges", status: "Matched signature", matchedSignatureKey: "m2Signature" }
+    { event: "validateSignatureChanges", status: "Cleared temporary signature for new email" }
+    { event: "saveSignatureData", status: "Created new entry", key: "signatureData_..." }
+    ```
+- **Modified Signature**:
+  - If the signature is modified, `validateSignatureChanges` detects the mismatch.
+  - Restores `tempSignature_new` and shows: "Selected M3 signature has been modified. Restoring the original signature."
+  - Logs:
+    ```javascript
+    { event: "validateSignatureChanges", status: "Restoring temporary signature for new email" }
+    { event: "displayError", message: "Selected M3 signature has been modified. Restoring the original signature." }
+    ```
 
-## Development
+### 2. Reply/Forward
+- **Signature Auto-Loading**:
+  - `onNewMessageComposeHandler` detects reply/forward (`isReplyOrForward: true`).
+  - `getSignatureKeyForRecipients` matches `conversationId`, recipients, or subject in `signatureData_<timestamp>`.
+  - Applies the matched signature (e.g., `m2Signature`).
+  - Saves updated `signatureData_<timestamp>`.
+  - Logs:
+    ```javascript
+    { event: "checkForReplyOrForward", status: "Reply/forward detected", conversationId: "AAQkAG..." }
+    { event: "getSignatureKeyForRecipients", recipients: ["mr.ilhami@gmail.com"], conversationId, currentSubject }
+    { event: "getSignatureKeyForRecipients", signatureDataEntries: [{ key, conversationId, signature: "m2Signature", ... }] }
+    { event: "getSignatureKeyForRecipients", status: "Found matching signature by conversationId", signatureKey: "m2Signature" }
+    { event: "addSignature", signatureKey: "m2Signature", isAutoApplied: true }
+    { event: "saveSignatureData", status: "Updated existing entry", key: "signatureData_..." }
+    ```
+- **No Signature Detected**:
+  - If no match is found (`selectedSignatureKey: null`), prompts: "Please select an M3 signature from the ribbon."
+  - Saves `signatureData_<timestamp>` with `signature: "none"`.
+  - Logs:
+    ```javascript
+    { event: "getSignatureKeyForRecipients", selectedSignatureKey: null }
+    { event: "onNewMessageComposeHandler", status: "No signature found for reply/forward, requiring manual selection" }
+    { event: "saveInitialSignatureData", status: "Stored initial signature data" }
+    ```
+- **Modified Signature** обсуж
 
-### Project Structure
-```
-├── assets/               # Icon assets (icon-16.png, icon-32.png, etc.)
-├── src/
-│   ├── commands/         # Event handlers and ribbon commands
-│   │   ├── commands.js   # Signature logic (validation, insertion)
-│   │   ├── commands.html # Loads Office.js and commands.js
-├── dist/                 # Build output (commands.js, commands.html, manifest.xml, assets)
-├── manifest.xml          # Add-in manifest (ribbon commands, events)
-├── webpack.config.js     # Webpack configuration
-├── babel.config.json     # Babel configuration
-├── package.json          # Dependencies and scripts
-├── README.md             # Project documentation
-```
+  - On send, `validateSignatureChanges` detects modification.
+  - Restores the original signature using `signatureKey` from `getSignatureKeyForRecipients`.
+  - Shows: "Selected M3 signature has been modified. Restoring the original signature."
+  - Logs:
+    ```javascript
+    { event: "validateSignatureChanges", status: "Signature modified" }
+    { event: "displayError", message: "Selected M3 signature has been modified. Restoring the original signature." }
+    ```
 
-### Build
-```bash
-npm run build
-```
+### 3. Fixed Cases
+- **New Email Restoration**: Fixed signature restoration when modified, using `tempSignature_new`.
+- **Reply/Forward Auto-Loading**: Fixed by ensuring `saveSignatureData` stores `conversationId` and normalizing recipient emails to lowercase.
+- **Signature Validation**: Prevents sending with modified or missing signatures, with proper restoration.
+- **Async Reliability**: Made `saveSignatureData` and `restoreSignatureAsync` Promise-based for reliable execution.
+- **Debug Logging**: Added `signatureDataEntries` logging to debug mismatches in `getSignatureKeyForRecipients`.
 
-### Validate
-```bash
-npm run validate
-```
-
-### Test
-- Test in Outlook web (Chrome/Edge), desktop (Windows/Mac), and mobile (iOS/Android).
-- Verify:
-  - Ribbon dropdown ("M3 Signatures") shows all signature options.
-  - Signatures are inserted correctly.
-  - Smart Alerts appear for missing or modified signatures with correct buttons ("Apply Signature", "Send Now", "Cancel").
-  - Reply/forward emails include the last used signature.
-- Check browser console logs for errors (e.g., `validateSignature`, `applyDefaultSignature`).
-
-## Deployment
-
-1. **Update manifest.xml**:
-   - Replace `https://localhost:3000` with your Azure Static Web Apps URL (e.g., `https://white-grass-0b6dc6e03.6.azurestaticapps.net`).
-   - Ensure `AppDomains` includes `https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net`.
-
-2. **Deploy to Azure Static Web Apps**:
-   - Create a Static Web App in Azure Portal.
-   - Add the deployment token to GitHub Secrets (`AZURE_STATIC_WEB_APPS_API_TOKEN`).
-   - Push changes to the `main` or `dev` branch to trigger the CI/CD pipeline.
-
-3. **Deploy to Microsoft 365**:
-   - Upload `dist/manifest.xml` to Microsoft 365 Admin Center:
-     - **Settings > Integrated Apps > Upload Custom Apps**.
-   - Assign to users or groups.
-
-4. **Optional: AppSource**:
-   - Submit to Microsoft Partner Center for public distribution.
-
-## CI/CD
-
-The repository uses GitHub Actions for CI/CD (`.github/workflows/deploy.yml`). It builds and deploys to Azure Static Web Apps on pushes to `main` or `dev`.
-
-### Workflow Steps
-- Checkout code.
-- Set up Node.js.
-- Install dependencies.
-- Build the project.
-- Deploy to Azure.
-- Validate `manifest.xml`.
-
-### Configuration
-- Add `AZURE_STATIC_WEB_APPS_API_TOKEN` to GitHub Secrets.
-- Ensure Azure Blob Storage CORS allows `https://white-grass-0b6dc6e03.6.azurestaticapps.net`.
+## Development Notes
+- **Clear Cache**: Always clear browser cache or use Incognito mode to avoid stale `localStorage` or scripts.
+- **Logging**: Check console logs and Sentry for debugging:
+  - `saveSignatureData`: Confirms storage.
+  - `getSignatureKeyForRecipients`: Shows matches or mismatches.
+  - `validateSignatureChanges`: Tracks validation and restoration.
+- **Versioning**: Current `manifest.xml` version is 1.0.0.12.
 
 ## Troubleshooting
+- **Signature Not Auto-Loading**:
+  - Check `signatureDataEntries` in logs for `conversationId` or recipient mismatches.
+  - Verify `localStorage` has `signatureData_<timestamp>`.
+- **Restoration Fails**:
+  - Ensure `tempSignature_new` is set for new emails.
+  - Check `signature_<key>` in `localStorage` for replies.
+- **Errors**:
+  - Look for `item.to.getAsync` or `item.subject.getAsync` failures in logs.
+  - Verify API connectivity to `m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net`.
 
-- **Smart Alert Not Showing**:
-  - Verify OWA version supports Smart Alerts (`20250411007.09` or later).
-  - Check logs for `displayError`:
-    ```plaintext
-    { event: "displayError", message: "...", restoreSignature: true }
-    ```
-  - Test manually:
-    ```javascript
-    Office.context.mailbox.item.notificationMessages.replaceAsync(
-      "TestError",
-      { type: "ErrorMessage", message: "Test error", icon: "Icon.16x16", persistent: true },
-      (result) => console.log(result)
-    );
-    ```
-
-- **Signature Not Applied**:
-  - Check `localStorage` for `m3Signature`, `initialSignature`, `lastSentSignature`:
-    ```javascript
-    console.log(localStorage.getItem("initialSignature"));
-    ```
-  - Verify `commands.js` logs (`addSignature`, `applyDefaultSignature`).
-
-- **Icons Not Loading**:
-  - Ensure `dist/assets/icon-*.png` exists.
-  - Check Outlook console for CSP errors.
-  - Verify Azure Blob Storage CORS settings.
-
-- **Contact**:
-  - Open an issue: https://github.com/mirzailhami/outlook-signature-add-ins/issues
-  - Email: support@m3wind.com
+## Contributing
+- Submit pull requests with detailed descriptions.
+- Test all flows (new, reply, forward) before merging.
+- Update this README for new features or fixes.
 
 ## License
-
 MIT License. See [LICENSE](LICENSE) for details.
