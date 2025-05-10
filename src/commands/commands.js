@@ -45,22 +45,22 @@ function displayNotification(type, message, persistent = false) {
     console.log({ event: "displayNotification", type, message, isPersistent, status: "Skipped" });
 
     // Temporarily disable notifications to avoid icon/persistent errors
-    item.notificationMessages.removeAsync("Err", () => {});
-    item.notificationMessages.removeAsync("Info", () => {});
-    item.notificationMessages.replaceAsync(
-      messageId,
-      {
-        type: notificationType,
-        message: message,
-        persistent: isPersistent,
-        icon: "Icon.16x16",
-      },
-      (asyncResult) => {
-        if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-          console.error({ event: "displayNotification", error: asyncResult.error.message });
-        }
-      }
-    );
+    // item.notificationMessages.removeAsync("Err", () => {});
+    // item.notificationMessages.removeAsync("Info", () => {});
+    // item.notificationMessages.replaceAsync(
+    //   messageId,
+    //   {
+    //     type: notificationType,
+    //     message: message,
+    //     persistent: isPersistent,
+    //     icon: "Icon.16x16",
+    //   },
+    //   (asyncResult) => {
+    //     if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+    //       console.error({ event: "displayNotification", error: asyncResult.error.message });
+    //     }
+    //   }
+    // );
   } catch (error) {
     console.error({ event: "displayNotification", error: error.message });
   }
