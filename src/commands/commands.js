@@ -40,27 +40,8 @@ function displayNotification(type, message, persistent = false) {
         ? Office.MailboxEnums.ItemNotificationMessageType.ErrorMessage
         : Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage;
 
-    // Ensure persistent is boolean
     const isPersistent = persistent === true ? true : false;
     console.log({ event: "displayNotification", type, message, isPersistent, status: "Skipped" });
-
-    // Temporarily disable notifications to avoid icon/persistent errors
-    // item.notificationMessages.removeAsync("Err", () => {});
-    // item.notificationMessages.removeAsync("Info", () => {});
-    // item.notificationMessages.replaceAsync(
-    //   messageId,
-    //   {
-    //     type: notificationType,
-    //     message: message,
-    //     persistent: isPersistent,
-    //     icon: "Icon.16x16",
-    //   },
-    //   (asyncResult) => {
-    //     if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-    //       console.error({ event: "displayNotification", error: asyncResult.error.message });
-    //     }
-    //   }
-    // );
   } catch (error) {
     console.error({ event: "displayNotification", error: error.message });
   }
@@ -115,7 +96,7 @@ async function displayError(message, event, restoreSignature = false, signatureK
     tempSignatureLength: tempSignature?.length,
   });
 
-  const markdownMessage = restoreSignature
+  const markdownMessage = message.includes("modified")
     ? `${message}\n\n**Tip**: Ensure the M3 signature is not edited before sending.`
     : `${message}\n\n**Tip**: Select an M3 signature from the ribbon under "M3 Signatures".`;
 
@@ -361,7 +342,6 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
       const signatureKeys = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
       let matchedSignatureKey = null;
 
-      // Check if the current signature matches any valid M3 signature
       for (const key of signatureKeys) {
         const cachedSignature = localStorage.getItem(`signature_${key}`);
         if (cachedSignature && cleanNewSignature === normalizeSignature(cachedSignature)) {
@@ -372,27 +352,15 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
       }
 
       if (matchedSignatureKey) {
-        // Signature is a valid M3 signature
         console.log({ event: "validateSignatureChanges", status: "Signature valid", matchedSignatureKey });
-        // Clear temporary signature for new emails
         if (!isReplyOrForward) {
-          item.getItemIdAsync((result) => {
-            if (result.status === Office.AsyncResultStatus.Succeeded) {
-              localStorage.removeItem(`tempSignature_${result.value}`);
-              console.log({
-                event: "validateSignatureChanges",
-                status: "Cleared temporary signature",
-                itemId: result.value,
-              });
-            }
-          });
+          localStorage.removeItem("tempSignature_new");
+          console.log({ event: "validateSignatureChanges", status: "Cleared temporary signature for new email" });
         }
         event.completed({ allowEvent: true });
       } else {
-        // Signature is modified
         console.log({ event: "validateSignatureChanges", status: "Signature modified" });
         if (isReplyOrForward) {
-          // For replies/forwards, use signatureKey from localStorage
           getSignatureKeyForRecipients(item).then((signatureKey) => {
             if (signatureKey) {
               displayError(
@@ -414,44 +382,26 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
             }
           });
         } else {
-          // For new emails, restore from temporary signature
-          item.getItemIdAsync((result) => {
-            if (result.status !== Office.AsyncResultStatus.Succeeded) {
-              console.error({ event: "validateSignatureChanges", error: result.error.message });
-              displayError(
-                "Selected M3 signature has been modified. Please select an appropriate email signature.",
-                event,
-                false
-              );
-              return;
-            }
-            const itemId = result.value;
-            const tempSignature = localStorage.getItem(`tempSignature_${itemId}`);
-            if (tempSignature) {
-              console.log({
-                event: "validateSignatureChanges",
-                status: "Restoring temporary signature for new email",
-                itemId,
-              });
-              displayError(
-                "Selected M3 signature has been modified. Restoring the original signature.",
-                event,
-                true,
-                null,
-                tempSignature
-              );
-            } else {
-              console.log({
-                event: "validateSignatureChanges",
-                status: "No temporary signature found, prompting re-selection",
-              });
-              displayError(
-                "Selected M3 signature has been modified. Please select an appropriate email signature.",
-                event,
-                false
-              );
-            }
-          });
+          const tempSignature = localStorage.getItem("tempSignature_new");
+          if (tempSignature) {
+            console.log({ event: "validateSignatureChanges", status: "Restoring temporary signature for new email" });
+            displayError(
+              "Selected M3 signature has been modified. Restoring the original signature.",
+              event,
+              true,
+              null,
+              tempSignature
+            );
+          } else {
+            console.log({ event: "validateSignatureChanges", status: "No temporary signature found for new email" });
+            displayError(
+              "Selected M3 signature has been modified. Restoring the original signature.",
+              event,
+              true,
+              null,
+              localStorage.getItem(`signature_${signatureKeys[0]}`)
+            );
+          }
         }
       }
     });
@@ -709,14 +659,9 @@ function addSignature(signatureKey, event, isAutoApplied = false) {
             console.log({ event: "addSignature", status: "Signature applied from cache", signatureKey });
             displayNotification("Info", `${signatureKey} applied.`, false);
             saveSignatureData(item, signatureKey);
-            // Store temporary signature for new emails
             if (!isAutoApplied) {
-              item.getItemIdAsync((result) => {
-                if (result.status === Office.AsyncResultStatus.Succeeded) {
-                  localStorage.setItem(`tempSignature_${result.value}`, cachedSignature);
-                  console.log({ event: "addSignature", status: "Stored temporary signature", itemId: result.value });
-                }
-              });
+              localStorage.setItem("tempSignature_new", cachedSignature);
+              console.log({ event: "addSignature", status: "Stored temporary signature for new email" });
             }
             event.completed();
           }
@@ -756,14 +701,9 @@ function addSignature(signatureKey, event, isAutoApplied = false) {
               localStorage.setItem(`signature_${signatureKey}`, template);
               displayNotification("Info", `${signatureKey} applied.`, false);
               saveSignatureData(item, signatureKey);
-              // Store temporary signature for new emails
               if (!isAutoApplied) {
-                item.getItemIdAsync((result) => {
-                  if (result.status === Office.AsyncResultStatus.Succeeded) {
-                    localStorage.setItem(`tempSignature_${result.value}`, template);
-                    console.log({ event: "addSignature", status: "Stored temporary signature", itemId: result.value });
-                  }
-                });
+                localStorage.setItem("tempSignature_new", template);
+                console.log({ event: "addSignature", status: "Stored temporary signature for new email" });
               }
               event.completed();
             }
@@ -930,6 +870,8 @@ function onNewMessageComposeHandler(event) {
         console.log({ event: "onNewMessageComposeHandler", status: "New email, requiring manual signature selection" });
         displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
         saveInitialSignatureData(item);
+        localStorage.removeItem("tempSignature_new");
+        console.log({ event: "onNewMessageComposeHandler", status: "Cleared temporary signature for new email" });
         event.completed();
       }
     })
