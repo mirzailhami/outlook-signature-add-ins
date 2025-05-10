@@ -316,7 +316,7 @@ function validateSignature(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
-function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
+async function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
   try {
     item.body.getAsync("html", (result) => {
       if (result.status !== Office.AsyncResultStatus.Succeeded) {
@@ -357,7 +357,9 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
           localStorage.removeItem("tempSignature_new");
           console.log({ event: "validateSignatureChanges", status: "Cleared temporary signature for new email" });
         }
-        event.completed({ allowEvent: true });
+        saveSignatureData(item, matchedSignatureKey).then(() => {
+          event.completed({ allowEvent: true });
+        });
       } else {
         console.log({ event: "validateSignatureChanges", status: "Signature modified" });
         if (isReplyOrForward) {
@@ -557,6 +559,18 @@ function getSignatureKeyForRecipients(item) {
             }
           }
         }
+        console.log({
+          event: "getSignatureKeyForRecipients",
+          signatureDataEntries: signatureDataEntries.map((entry) => ({
+            key: entry.key,
+            conversationId: entry.data.conversationId,
+            recipients: entry.data.recipients,
+            subject: entry.data.subject,
+            signature: entry.data.signature,
+            timestamp: entry.data.timestamp,
+          })),
+        });
+
         signatureDataEntries.sort((a, b) => new Date(b.data.timestamp) - new Date(a.data.timestamp));
 
         let signatureKey = null;
@@ -572,6 +586,7 @@ function getSignatureKeyForRecipients(item) {
                 signatureKey,
                 key: entry.key,
                 storedSubject: data.subject,
+                storedRecipients: data.recipients,
               });
               break;
             }
@@ -595,6 +610,7 @@ function getSignatureKeyForRecipients(item) {
                 signatureKey,
                 key: entry.key,
                 storedSubject,
+                storedRecipients,
               });
               break;
             }
@@ -613,6 +629,7 @@ function getSignatureKeyForRecipients(item) {
                 signatureKey,
                 key: entry.key,
                 storedSubject: data.subject,
+                storedRecipients,
               });
               break;
             }
@@ -728,62 +745,66 @@ function addSignature(signatureKey, event, isAutoApplied = false) {
  * Saves signature data to localStorage, including subject.
  * @param {Office.MessageCompose} item - The email item.
  * @param {string} signatureKey - The signature key.
+ * @returns {Promise<object|null>} The saved data or null if failed.
  */
 function saveSignatureData(item, signatureKey) {
-  item.to.getAsync((result) => {
-    let recipients = [];
-    if (result.status === Office.AsyncResultStatus.Succeeded) {
-      recipients = result.value.map((recipient) => recipient.emailAddress);
-    } else {
-      console.error({ event: "saveSignatureData", error: result.error.message });
-    }
-
-    const conversationId = item.conversationId || null;
-
-    item.subject.getAsync((subjectResult) => {
-      let subject = "";
-      if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
-        subject = subjectResult.value;
+  return new Promise((resolve) => {
+    item.to.getAsync((result) => {
+      let recipients = [];
+      if (result.status === Office.AsyncResultStatus.Succeeded) {
+        recipients = result.value.map((recipient) => recipient.emailAddress.toLowerCase());
       } else {
-        console.error({ event: "saveSignatureData", error: subjectResult.error.message });
+        console.error({ event: "saveSignatureData", error: result.error.message });
       }
 
-      console.log({ event: "saveSignatureData", signatureKey, recipients, conversationId, subject });
+      const conversationId = item.conversationId || null;
 
-      let existingKey = null;
-      if (conversationId) {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key.startsWith("signatureData_")) {
-            try {
-              const data = JSON.parse(localStorage.getItem(key));
-              if (data.conversationId === conversationId) {
-                existingKey = key;
-                break;
+      item.subject.getAsync((subjectResult) => {
+        let subject = "";
+        if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
+          subject = subjectResult.value;
+        } else {
+          console.error({ event: "saveSignatureData", error: subjectResult.error.message });
+        }
+
+        console.log({ event: "saveSignatureData", signatureKey, recipients, conversationId, subject });
+
+        let existingKey = null;
+        if (conversationId) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith("signatureData_")) {
+              try {
+                const data = JSON.parse(localStorage.getItem(key));
+                if (data.conversationId === conversationId) {
+                  existingKey = key;
+                  break;
+                }
+              } catch (error) {
+                console.error({ event: "saveSignatureData", error: error.message, key });
               }
-            } catch (error) {
-              console.error({ event: "saveSignatureData", error: error.message, key });
             }
           }
         }
-      }
 
-      const data = {
-        recipients,
-        signature: signatureKey,
-        conversationId,
-        subject,
-        timestamp: new Date().toISOString(),
-      };
+        const data = {
+          recipients,
+          signature: signatureKey,
+          conversationId,
+          subject,
+          timestamp: new Date().toISOString(),
+        };
 
-      if (existingKey) {
-        localStorage.setItem(existingKey, JSON.stringify(data));
-        console.log({ event: "saveSignatureData", status: "Updated existing entry", key: existingKey, subject });
-      } else {
-        const newKey = `signatureData_${Date.now()}`;
-        localStorage.setItem(newKey, JSON.stringify(data));
-        console.log({ event: "saveSignatureData", status: "Created new entry", key: newKey, subject });
-      }
+        if (existingKey) {
+          localStorage.setItem(existingKey, JSON.stringify(data));
+          console.log({ event: "saveSignatureData", status: "Updated existing entry", key: existingKey, subject });
+        } else {
+          const newKey = `signatureData_${Date.now()}`;
+          localStorage.setItem(newKey, JSON.stringify(data));
+          console.log({ event: "saveSignatureData", status: "Created new entry", key: newKey, subject });
+        }
+        resolve(data);
+      });
     });
   });
 }
@@ -891,7 +912,7 @@ function saveInitialSignatureData(item) {
   item.to.getAsync((result) => {
     let recipients = [];
     if (result.status === Office.AsyncResultStatus.Succeeded) {
-      recipients = result.value.map((recipient) => recipient.emailAddress);
+      recipients = result.value.map((recipient) => recipient.emailAddress.toLowerCase());
     } else {
       console.error({ event: "saveInitialSignatureData", error: result.error.message });
     }
@@ -906,16 +927,16 @@ function saveInitialSignatureData(item) {
         console.error({ event: "saveInitialSignatureData", error: subjectResult.error.message });
       }
 
-      localStorage.setItem(
-        `signatureData_${Date.now()}`,
-        JSON.stringify({
-          recipients,
-          signature: "none",
-          conversationId,
-          subject,
-          timestamp: new Date().toISOString(),
-        })
-      );
+      const data = {
+        recipients,
+        signature: "none",
+        conversationId,
+        subject,
+        timestamp: new Date().toISOString(),
+      };
+
+      const newKey = `signatureData_${Date.now()}`;
+      localStorage.setItem(newKey, JSON.stringify(data));
       console.log({
         event: "saveInitialSignatureData",
         status: "Stored initial signature data",
