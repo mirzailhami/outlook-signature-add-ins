@@ -45,21 +45,22 @@ function displayNotification(type, message, persistent = false) {
     console.log({ event: "displayNotification", type, message, isPersistent, status: "Skipped" });
 
     // Temporarily disable notifications to avoid icon/persistent errors
-    // item.notificationMessages.removeAsync("Err", () => {});
-    // item.notificationMessages.removeAsync("Info", () => {});
-    // item.notificationMessages.replaceAsync(
-    //   messageId,
-    //   {
-    //     type: notificationType,
-    //     message: message,
-    //     persistent: isPersistent,
-    //   },
-    //   (asyncResult) => {
-    //     if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-    //       console.error({ event: "displayNotification", error: asyncResult.error.message });
-    //     }
-    //   }
-    // );
+    item.notificationMessages.removeAsync("Err", () => {});
+    item.notificationMessages.removeAsync("Info", () => {});
+    item.notificationMessages.replaceAsync(
+      messageId,
+      {
+        type: notificationType,
+        message: message,
+        persistent: isPersistent,
+        icon: "Icon.16x16",
+      },
+      (asyncResult) => {
+        if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+          console.error({ event: "displayNotification", error: asyncResult.error.message });
+        }
+      }
+    );
   } catch (error) {
     console.error({ event: "displayNotification", error: error.message });
   }
@@ -449,6 +450,19 @@ function normalizeSignature(sig) {
 }
 
 /**
+ * Normalizes a subject for comparison.
+ * @param {string} subject - The email subject.
+ * @returns {string} The normalized subject.
+ */
+function normalizeSubject(subject) {
+  if (!subject) return "";
+  return subject
+    .replace(/^(re:|fw:|fwd:)\s*/i, "")
+    .trim()
+    .toLowerCase();
+}
+
+/**
  * Checks if the email is external.
  * @param {Office.MessageCompose} item - The email item.
  * @returns {Promise<boolean>} True if external.
@@ -494,7 +508,7 @@ function fetchSignature(signatureKey, callback) {
 }
 
 /**
- * Finds the signature key by matching conversationId or recipient emails in localStorage.
+ * Finds the signature key by matching conversationId, recipient emails, and subject in localStorage.
  * @param {Office.MessageCompose} item - The email item.
  * @returns {Promise<string|null>} The signature key or null if no match.
  */
@@ -509,62 +523,99 @@ function getSignatureKeyForRecipients(item) {
 
       const recipients = result.value.map((recipient) => recipient.emailAddress.toLowerCase());
       const conversationId = item.conversationId || null;
-      console.log({ event: "getSignatureKeyForRecipients", recipients, conversationId });
 
-      // Collect and sort signatureData entries by timestamp (newest first)
-      const signatureDataEntries = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith("signatureData_")) {
-          try {
-            const data = JSON.parse(localStorage.getItem(key));
-            signatureDataEntries.push({ key, data });
-          } catch (error) {
-            console.error({ event: "getSignatureKeyForRecipients", error: error.message, key });
+      // Get current subject for matching
+      item.subject.getAsync((subjectResult) => {
+        if (subjectResult.status !== Office.AsyncResultStatus.Succeeded) {
+          console.error({ event: "getSignatureKeyForRecipients", error: subjectResult.error.message });
+          resolve(null);
+          return;
+        }
+
+        const currentSubject = normalizeSubject(subjectResult.value);
+        console.log({ event: "getSignatureKeyForRecipients", recipients, conversationId, currentSubject });
+
+        // Collect and sort signatureData entries by timestamp (newest first)
+        const signatureDataEntries = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith("signatureData_")) {
+            try {
+              const data = JSON.parse(localStorage.getItem(key));
+              signatureDataEntries.push({ key, data });
+            } catch (error) {
+              console.error({ event: "getSignatureKeyForRecipients", error: error.message, key });
+            }
           }
         }
-      }
-      signatureDataEntries.sort((a, b) => new Date(b.data.timestamp) - new Date(a.data.timestamp));
+        signatureDataEntries.sort((a, b) => new Date(b.data.timestamp) - new Date(a.data.timestamp));
 
-      let signatureKey = null;
+        let signatureKey = null;
 
-      // Prioritize matching by conversationId
-      if (conversationId) {
-        for (const entry of signatureDataEntries) {
-          const data = entry.data;
-          if (data.conversationId === conversationId && data.signature !== "none") {
-            signatureKey = data.signature;
-            console.log({
-              event: "getSignatureKeyForRecipients",
-              status: "Found matching signature by conversationId",
-              signatureKey,
-              key: entry.key,
-            });
-            break;
+        // 1. Prioritize matching by conversationId
+        if (conversationId) {
+          for (const entry of signatureDataEntries) {
+            const data = entry.data;
+            if (data.conversationId === conversationId && data.signature !== "none") {
+              signatureKey = data.signature;
+              console.log({
+                event: "getSignatureKeyForRecipients",
+                status: "Found matching signature by conversationId",
+                signatureKey,
+                key: entry.key,
+                storedSubject: data.subject,
+              });
+              break;
+            }
           }
         }
-      }
 
-      // Fallback to matching by recipients
-      if (!signatureKey) {
-        for (const entry of signatureDataEntries) {
-          const data = entry.data;
-          const storedRecipients = data.recipients.map((email) => email.toLowerCase());
-          if (recipients.some((recipient) => storedRecipients.includes(recipient)) && data.signature !== "none") {
-            signatureKey = data.signature;
-            console.log({
-              event: "getSignatureKeyForRecipients",
-              status: "Found matching signature by recipients",
-              signatureKey,
-              key: entry.key,
-            });
-            break;
+        // 2. Fallback to matching by recipients + subject
+        if (!signatureKey) {
+          for (const entry of signatureDataEntries) {
+            const data = entry.data;
+            const storedRecipients = data.recipients.map((email) => email.toLowerCase());
+            const storedSubject = normalizeSubject(data.subject);
+            if (
+              recipients.some((recipient) => storedRecipients.includes(recipient)) &&
+              storedSubject === currentSubject &&
+              data.signature !== "none"
+            ) {
+              signatureKey = data.signature;
+              console.log({
+                event: "getSignatureKeyForRecipients",
+                status: "Found matching signature by recipients and subject",
+                signatureKey,
+                key: entry.key,
+                storedSubject,
+              });
+              break;
+            }
           }
         }
-      }
 
-      console.log({ event: "getSignatureKeyForRecipients", selectedSignatureKey: signatureKey });
-      resolve(signatureKey);
+        // 3. Fallback to matching by recipients only
+        if (!signatureKey) {
+          for (const entry of signatureDataEntries) {
+            const data = entry.data;
+            const storedRecipients = data.recipients.map((email) => email.toLowerCase());
+            if (recipients.some((recipient) => storedRecipients.includes(recipient)) && data.signature !== "none") {
+              signatureKey = data.signature;
+              console.log({
+                event: "getSignatureKeyForRecipients",
+                status: "Found matching signature by recipients only",
+                signatureKey,
+                key: entry.key,
+                storedSubject: data.subject,
+              });
+              break;
+            }
+          }
+        }
+
+        console.log({ event: "getSignatureKeyForRecipients", selectedSignatureKey: signatureKey });
+        resolve(signatureKey);
+      });
     });
   });
 }
@@ -660,7 +711,7 @@ function addSignature(signatureKey, event, isAutoApplied = false) {
 }
 
 /**
- * Saves signature data to localStorage.
+ * Saves signature data to localStorage, including subject.
  * @param {Office.MessageCompose} item - The email item.
  * @param {string} signatureKey - The signature key.
  */
@@ -674,42 +725,54 @@ function saveSignatureData(item, signatureKey) {
     }
 
     const conversationId = item.conversationId || null;
-    console.log({ event: "saveSignatureData", signatureKey, recipients, conversationId });
 
-    // Update existing entry if conversationId matches
-    let existingKey = null;
-    if (conversationId) {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith("signatureData_")) {
-          try {
-            const data = JSON.parse(localStorage.getItem(key));
-            if (data.conversationId === conversationId) {
-              existingKey = key;
-              break;
+    // Get subject
+    item.subject.getAsync((subjectResult) => {
+      let subject = "";
+      if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
+        subject = subjectResult.value;
+      } else {
+        console.error({ event: "saveSignatureData", error: subjectResult.error.message });
+      }
+
+      console.log({ event: "saveSignatureData", signatureKey, recipients, conversationId, subject });
+
+      // Update existing entry if conversationId matches
+      let existingKey = null;
+      if (conversationId) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith("signatureData_")) {
+            try {
+              const data = JSON.parse(localStorage.getItem(key));
+              if (data.conversationId === conversationId) {
+                existingKey = key;
+                break;
+              }
+            } catch (error) {
+              console.error({ event: "saveSignatureData", error: error.message, key });
             }
-          } catch (error) {
-            console.error({ event: "saveSignatureData", error: error.message, key });
           }
         }
       }
-    }
 
-    const data = {
-      recipients,
-      signature: signatureKey,
-      conversationId,
-      timestamp: new Date().toISOString(),
-    };
+      const data = {
+        recipients,
+        signature: signatureKey,
+        conversationId,
+        subject,
+        timestamp: new Date().toISOString(),
+      };
 
-    if (existingKey) {
-      localStorage.setItem(existingKey, JSON.stringify(data));
-      console.log({ event: "saveSignatureData", status: "Updated existing entry", key: existingKey });
-    } else {
-      const newKey = `signatureData_${Date.now()}`;
-      localStorage.setItem(newKey, JSON.stringify(data));
-      console.log({ event: "saveSignatureData", status: "Created new entry", key: newKey });
-    }
+      if (existingKey) {
+        localStorage.setItem(existingKey, JSON.stringify(data));
+        console.log({ event: "saveSignatureData", status: "Updated existing entry", key: existingKey, subject });
+      } else {
+        const newKey = `signatureData_${Date.now()}`;
+        localStorage.setItem(newKey, JSON.stringify(data));
+        console.log({ event: "saveSignatureData", status: "Created new entry", key: newKey, subject });
+      }
+    });
   });
 }
 
@@ -822,20 +885,33 @@ function saveInitialSignatureData(item) {
     }
 
     const conversationId = item.conversationId || null;
-    localStorage.setItem(
-      `signatureData_${Date.now()}`,
-      JSON.stringify({
+
+    // Get subject
+    item.subject.getAsync((subjectResult) => {
+      let subject = "";
+      if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
+        subject = subjectResult.value;
+      } else {
+        console.error({ event: "saveInitialSignatureData", error: subjectResult.error.message });
+      }
+
+      localStorage.setItem(
+        `signatureData_${Date.now()}`,
+        JSON.stringify({
+          recipients,
+          signature: "none",
+          conversationId,
+          subject,
+          timestamp: new Date().toISOString(),
+        })
+      );
+      console.log({
+        event: "saveInitialSignatureData",
+        status: "Stored initial signature data",
         recipients,
-        signature: "none",
         conversationId,
-        timestamp: new Date().toISOString(),
-      })
-    );
-    console.log({
-      event: "saveInitialSignatureData",
-      status: "Stored initial signature data",
-      recipients,
-      conversationId,
+        subject,
+      });
     });
   });
 }
