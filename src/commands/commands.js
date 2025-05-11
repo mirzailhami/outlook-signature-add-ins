@@ -16,39 +16,61 @@ Sentry.onLoad(function () {
     release: "m3-signatures@1.0.0.13",
   });
   Sentry.configureScope(function (scope) {
-    scope.setTag("context", "taskpane");
+    scope.setTag("context", "commands");
     scope.setTag("userAgent", navigator.userAgent);
   });
-  Sentry.captureMessage("Task pane initialized", "info");
-  console.log({ event: "taskPaneInitialized", environment: initialEnvironment });
+  Sentry.captureMessage("Commands Sentry initialized", "info");
+  console.log({ event: "commandsSentryInitialized", environment: initialEnvironment });
 });
+
+// Capture window errors
+window.onerror = function (message, source, lineno, colno, error) {
+  Sentry.captureException(error || new Error(message));
+  console.error({ event: "windowError", message: message, source: source, lineno: lineno, colno: colno });
+};
+
+// Check Office.js availability
+if (typeof Office === "undefined") {
+  Sentry.captureMessage("Office undefined before onReady", "warning");
+  console.warn({ event: "officeUndefined", status: "Office.js not loaded" });
+}
 
 /**
  * Initializes the Outlook add-in and associates event handlers.
  */
-Office.onReady(() => {
-  Sentry.captureMessage("Commands initialized", "info");
-  var defaultSignature = localStorage.getItem("defaultSignature");
-  if (defaultSignature) {
-    Sentry.captureMessage("Loaded default signature from localStorage: " + defaultSignature, "info");
-    console.log({ event: "loadDefaultSignature", signatureKey: defaultSignature });
-  } else {
-    Sentry.captureMessage("No default signature in localStorage", "warning");
-    console.log({ event: "loadDefaultSignatureError", message: "No default signature found" });
-  }
+try {
+  Office.onReady(() => {
+    Sentry.captureMessage("Commands initialized", "info");
+    console.log({ event: "commandsInitialized", host: Office.context?.mailbox?.diagnostics?.hostName });
 
-  console.log({ event: "Office.onReady", host: Office.context?.mailbox?.diagnostics?.hostName });
+    // Read localStorage
+    var defaultSignature = localStorage.getItem("defaultSignature");
+    if (defaultSignature) {
+      Sentry.captureMessage("Loaded default signature from localStorage: " + defaultSignature, "info");
+      console.log({ event: "loadDefaultSignature", signatureKey: defaultSignature });
+    } else {
+      Sentry.captureMessage("No default signature in localStorage", "warning");
+      console.log({ event: "loadDefaultSignatureError", message: "No default signature found" });
+    }
 
-  Office.actions.associate("addSignatureMona", addSignatureMona);
-  Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
-  Office.actions.associate("addSignatureMorven", addSignatureMorven);
-  Office.actions.associate("addSignatureM2", addSignatureM2);
-  Office.actions.associate("addSignatureM3", addSignatureM3);
-  Office.actions.associate("applyDefaultSignature", applyDefaultSignature);
-  Office.actions.associate("cancelAction", cancelAction);
-  Office.actions.associate("validateSignature", validateSignature);
-  Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
-});
+    // Associate function commands
+    Office.actions.associate("addSignatureMona", addSignatureMona);
+    Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
+    Office.actions.associate("addSignatureMorven", addSignatureMorven);
+    Office.actions.associate("addSignatureM2", addSignatureM2);
+    Office.actions.associate("addSignatureM3", addSignatureM3);
+    Office.actions.associate("applyDefaultSignature", applyDefaultSignature);
+    Office.actions.associate("cancelAction", cancelAction);
+    Office.actions.associate("validateSignature", validateSignature);
+    Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
+  }).catch(function (error) {
+    Sentry.captureException(error);
+    console.error({ event: "Office.onReadyError", error: error.message });
+  });
+} catch (error) {
+  Sentry.captureException(error);
+  console.error({ event: "Office.onReadySetupError", error: error.message });
+}
 
 /**
  * Displays a notification in the Outlook UI.
