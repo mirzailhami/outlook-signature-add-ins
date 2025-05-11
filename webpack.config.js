@@ -87,19 +87,19 @@ module.exports = async (env, options) => {
         "process.env.ASSET_BASE_URL": JSON.stringify(assetBaseUrl),
       }),
       // Taskpane HTML
-      new HtmlWebpackPlugin({
-        template: "./src/taskpane/taskpane.html",
-        filename: "taskpane.html",
-        chunks: ["polyfill", "commands"],
-        publicPath: assetBaseUrl,
-        minify: isProduction
-          ? {
-              removeComments: true,
-              collapseWhitespace: true,
-              removeRedundantAttributes: true,
-            }
-          : false,
-      }),
+      // new HtmlWebpackPlugin({
+      //   template: "./src/taskpane/taskpane.html",
+      //   filename: "taskpane.html",
+      //   chunks: ["polyfill", "commands"],
+      //   publicPath: assetBaseUrl,
+      //   minify: isProduction
+      //     ? {
+      //         removeComments: true,
+      //         collapseWhitespace: true,
+      //         removeRedundantAttributes: true,
+      //       }
+      //     : false,
+      // }),
       new HtmlWebpackPlugin({
         template: "./src/commands/commands.html",
         filename: "commands.html",
@@ -128,6 +128,10 @@ module.exports = async (env, options) => {
           {
             from: "src/index.html",
             to: "index.html",
+          },
+          {
+            from: "src/taskpane/taskpane.html",
+            to: "taskpane.html",
           },
           {
             from: "assets",

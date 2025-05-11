@@ -152,7 +152,7 @@
             </ExtensionPoint>
           </DesktopFormFactor>
           <MobileFormFactor>
-            <FunctionFile resid="Commands.Url"/>
+            <!-- <FunctionFile resid="Commands.Url"/> -->
             <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
               <Group id="mobileMsgRead">
                 <Label resid="GroupLabel"/>

@@ -1,15 +1,301 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <script src='https://js.sentry-cdn.com/9cb6398daefb0df54d63e4da9ff3e7a3.min.js'></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3 Signature Settings</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@fluentui/react@8.106.4/dist/css/fabric.min.css">
+    <script src='https://js.sentry-cdn.com/9cb6398daefb0df54d63e4da9ff3e7a3.min.js' crossorigin="anonymous"></script>
+
+    <style>
+        :root {
+            --background-color: #f3f2f1;
+            --surface-color: #ffffff;
+            --primary-color: #0078d4;
+        }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            background-color: var(--background-color);
+            font-family: 'Segoe UI', 'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: var(--surface-color);
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #252423;
+            margin: 0 0 8px 0;
+        }
+
+        .description {
+            font-size: 14px;
+            color: #605e5c;
+            margin: 0;
+        }
+
+        .choice-group {
+            margin: 16px 0;
+        }
+
+        .choice-field {
+            margin: 8px 0;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+
+        .choice-field label {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+        }
+
+        .choice-field input[type="radio"] {
+            margin: 0 12px 0 0;
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .choice-field:hover {
+            background-color: #f3f2f1;
+        }
+
+        .primary-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 16px;
+                margin: 8px;
+            }
+
+            .title {
+                font-size: 18px;
+            }
+
+            .description {
+                font-size: 13px;
+            }
+
+            .choice-field label {
+                padding: 16px 12px;
+            }
+        }
+    </style>
+
     <script>
-        Sentry.onLoad(function() {
-            Sentry.init({ dsn: 'https://9cb6398daefb0df54d63e4da9ff3e7a3@o4509305237864448.ingest.us.sentry.io/4509305244680192', environment: 'mobile' });
-            Sentry.captureMessage('Minimal task pane loaded', 'info');
+        // Polyfill for agaveHost
+        if (typeof window.agaveHost === 'undefined') {
+            window.agaveHost = {
+                postMessage: function(message) {
+                    console.log({ event: 'agaveHostPolyfill', message: 'postMessage called', data: message });
+                    Sentry.captureMessage('agaveHost postMessage called: ' + message, 'info');
+                }
+            };
+        }
+
+        // Detect Android
+        var isAndroid = navigator.userAgent.toLowerCase().indexOf('android') > -1;
+        var initialEnvironment = isAndroid ? 'mobile' : 'desktop';
+
+        // Initialize Sentry
+        Sentry.onLoad(function () {
+            Sentry.init({
+                dsn: 'https://9cb6398daefb0df54d63e4da9ff3e7a3@o4509305237864448.ingest.us.sentry.io/4509305244680192',
+                tracesSampleRate: 1.0,
+                environment: initialEnvironment,
+                release: 'm3-signatures@1.0.0.13'
+            });
+            Sentry.configureScope(function(scope) {
+                scope.setTag('context', 'taskpane');
+                scope.setTag('userAgent', navigator.userAgent);
+            });
+            Sentry.captureMessage('Sentry initialized (pre-Office)', 'info');
+            console.log({ event: 'Sentry.init', status: 'Initialized (pre-Office)', environment: initialEnvironment });
         });
+
+        // Capture window errors
+        window.onerror = function(message, source, lineno, colno, error) {
+            Sentry.captureException(error || new Error(message));
+            console.error({ event: 'windowError', message: message, source: source, lineno: lineno, colno: colno });
+        };
+
+        // Detect commands.js
+        if (typeof Office !== 'undefined' && typeof Office.actions !== 'undefined') {
+            Sentry.captureMessage('commands.js detected in taskpane', 'warning');
+            console.warn({ event: 'commandsJsDetected', status: 'Unexpected in taskpane' });
+        }
     </script>
 </head>
+
 <body>
-    <button onclick="Sentry.captureMessage('Button clicked', 'info')">Click</button>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Default Signature Settings</h1>
+            <p class="description">Choose your default email signature. This will be automatically applied to new messages.</p>
+        </div>
+
+        <div class="choice-group" id="signatureOptions">
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioMona" name="signatureOption" value="monaSignature">
+                    Mona
+                </label>
+            </div>
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioMorgan" name="signatureOption" value="morganSignature">
+                    Morgan
+                </label>
+            </div>
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioMorven" name="signatureOption" value="morvenSignature">
+                    Morven
+                </label>
+            </div>
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioM2" name="signatureOption" value="m2Signature">
+                    M2
+                </label>
+            </div>
+            <div class="choice-field">
+                <label>
+                    <input type="radio" id="radioM3" name="signatureOption" value="m3Signature">
+                    M3
+                </label>
+            </div>
+        </div>
+
+        <button class="primary-button" id="saveButton">Save Settings</button>
+        <button class="primary-button" id="test-error">Trigger Test Error</button>
+    </div>
+
+    <script>
+        // Initialize task pane
+        function initializeTaskPane(info) {
+            Sentry.configureScope(function(scope) {
+                scope.setTag('environment', info && info.platform && (info.platform === 'Android' || info.platform === 'iOS') ? 'mobile' : initialEnvironment);
+                scope.setTag('platform', info && info.platform || 'unknown');
+                scope.setTag('host', info && info.host || 'unknown');
+            });
+            Sentry.captureMessage('Task pane initialized', 'info');
+            console.log({ event: 'taskPaneInitialized', host: info && info.host, platform: info && info.platform });
+
+            // Load saved settings
+            var defaultSignature = localStorage.getItem('defaultSignature');
+            if (defaultSignature) {
+                var selectedRadio = document.querySelector('input[value="' + defaultSignature + '"]');
+                if (selectedRadio) {
+                    selectedRadio.checked = true;
+                    Sentry.captureMessage('Loaded default signature: ' + defaultSignature, 'info');
+                    console.log({ event: 'loadDefaultSignature', signatureKey: defaultSignature });
+                }
+            }
+
+            // Choice field click handlers
+            document.querySelectorAll('.choice-field').forEach(function(field) {
+                field.addEventListener('click', function(e) {
+                    var radio = field.querySelector('input[type="radio"]');
+                    if (radio && e.target !== radio) {
+                        radio.checked = true;
+                        Sentry.captureMessage('Selected signature: ' + radio.value, 'info');
+                        console.log({ event: 'selectSignature', signatureKey: radio.value });
+                    }
+                });
+            });
+
+            // Save settings handler
+            document.getElementById('saveButton').addEventListener('click', function() {
+                var selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
+                if (selectedRadio) {
+                    var signatureKey = selectedRadio.value;
+                    localStorage.setItem('defaultSignature', signatureKey);
+                    Sentry.captureMessage('Saved default signature: ' + signatureKey, 'info');
+                    console.log({ event: 'saveDefaultSignature', signatureKey: signatureKey });
+                    alert('Signature saved: ' + signatureKey);
+                } else {
+                    Sentry.captureMessage('No signature selected', 'warning');
+                    console.log({ event: 'saveDefaultSignatureError', message: 'No signature selected' });
+                    alert('Please select a signature option');
+                }
+            });
+
+            // Test error button
+            var testButton = document.getElementById('test-error');
+            if (testButton) {
+                testButton.addEventListener('click', function() {
+                    Sentry.captureMessage('Test error button clicked', 'info');
+                    console.log({ event: 'testErrorButton', status: 'Clicked' });
+                    throw new Error('This is a test error');
+                });
+            }
+        }
+
+        // Try Office.js with timeout
+        var officeReadyTimeout = setTimeout(function() {
+            Sentry.captureMessage('Office.onReady timeout after 5s', 'warning');
+            console.log({ event: 'Office.onReadyTimeout', status: 'Fallback triggered' });
+            initializeTaskPane(null);
+        }, 5000);
+
+        try {
+            if (typeof Office === 'undefined') {
+                Sentry.captureMessage('Office undefined before onReady', 'warning');
+                console.warn({ event: 'officeUndefined', status: 'Office.js not loaded' });
+                initializeTaskPane(null);
+            } else {
+                Office.onReady(function(info) {
+                    clearTimeout(officeReadyTimeout);
+                    Sentry.captureMessage('Office.onReady completed', 'info');
+                    console.log({ event: 'Office.onReady', host: info.host, platform: info.platform });
+                    initializeTaskPane(info);
+                }).catch(function(error) {
+                    clearTimeout(officeReadyTimeout);
+                    Sentry.captureException(error);
+                    console.error({ event: 'Office.onReadyError', error: error.message });
+                    initializeTaskPane(null);
+                });
+            }
+        } catch (error) {
+            clearTimeout(officeReadyTimeout);
+            Sentry.captureException(error);
+            console.error({ event: 'Office.onReadySetupError', error: error.message });
+            initializeTaskPane(null);
+        }
+    </script>
 </body>
+
 </html>
