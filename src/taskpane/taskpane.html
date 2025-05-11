@@ -121,7 +121,8 @@
         // }
         Sentry.onLoad(function () {
             Sentry.init({
-                dsn: 'https://9cb6398daefb0df54d63e4da9ff3e7a3@o4506348966576128.ingest.sentry.io/4506348970475520',
+                dsn: "https://9cb6398daefb0df54d63e4da9ff3e7a3@o4509305237864448.ingest.us.sentry.io/4509305244680192",
+                integrations: [Sentry.browserTracingIntegration()],
                 tracesSampleRate: 1.0,
                 environment: Office && Office.context && (Office.context.platform === Office.PlatformType.Android || Office.context.platform === Office.PlatformType.iOS) ? 'mobile' : 'desktop'
             });
