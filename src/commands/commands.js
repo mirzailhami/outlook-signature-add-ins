@@ -4,73 +4,50 @@
  */
 
 // Detect Android
-var isAndroid = navigator.userAgent.toLowerCase().indexOf("android") > -1;
-var initialEnvironment = isAndroid ? "mobile" : "desktop";
+// var isAndroid = navigator.userAgent.toLowerCase().indexOf("android") > -1;
+// var initialEnvironment = isAndroid ? "mobile" : "desktop";
 
 // Initialize Sentry
-Sentry.onLoad(function () {
-  Sentry.init({
-    dsn: "https://9cb6398daefb0df54d63e4da9ff3e7a3@o4509305237864448.ingest.us.sentry.io/4509305244680192",
-    tracesSampleRate: 1.0,
-    environment: initialEnvironment,
-    release: "m3-signatures@1.0.0.13",
-  });
-  Sentry.configureScope(function (scope) {
-    scope.setTag("context", "commands");
-    scope.setTag("userAgent", navigator.userAgent);
-  });
-  Sentry.captureMessage("Commands Sentry initialized", "info");
-  console.log({ event: "commandsSentryInitialized", environment: initialEnvironment });
-});
+// Sentry.onLoad(function () {
+//   Sentry.init({
+//     dsn: "https://9cb6398daefb0df54d63e4da9ff3e7a3@o4509305237864448.ingest.us.sentry.io/4509305244680192",
+//     tracesSampleRate: 1.0,
+//     environment: initialEnvironment,
+//     release: "m3-signatures@1.0.0.13",
+//   });
 
-// Capture window errors
-window.onerror = function (message, source, lineno, colno, error) {
-  Sentry.captureException(error || new Error(message));
-  console.error({ event: "windowError", message: message, source: source, lineno: lineno, colno: colno });
-};
-
-// Check Office.js availability
-if (typeof Office === "undefined") {
-  Sentry.captureMessage("Office undefined before onReady", "warning");
-  console.warn({ event: "officeUndefined", status: "Office.js not loaded" });
-}
+//   Sentry.captureMessage("Commands Sentry initialized", "info");
+//   console.log({ event: "commandsSentryInitialized", environment: initialEnvironment });
+// });
 
 /**
  * Initializes the Outlook add-in and associates event handlers.
  */
-try {
-  Office.onReady(() => {
-    Sentry.captureMessage("Commands initialized", "info");
-    console.log({ event: "commandsInitialized", host: Office.context?.mailbox?.diagnostics?.hostName });
+Office.onReady(() => {
+  // Sentry.captureMessage("Commands initialized", "info");
+  console.log({ event: "commandsInitialized", host: Office.context?.mailbox?.diagnostics?.hostName });
 
-    // Read localStorage
-    var defaultSignature = localStorage.getItem("defaultSignature");
-    if (defaultSignature) {
-      Sentry.captureMessage("Loaded default signature from localStorage: " + defaultSignature, "info");
-      console.log({ event: "loadDefaultSignature", signatureKey: defaultSignature });
-    } else {
-      Sentry.captureMessage("No default signature in localStorage", "warning");
-      console.log({ event: "loadDefaultSignatureError", message: "No default signature found" });
-    }
+  // Read localStorage
+  var defaultSignature = localStorage.getItem("defaultSignature");
+  if (defaultSignature) {
+    // Sentry.captureMessage("Loaded default signature from localStorage: " + defaultSignature, "info");
+    console.log({ event: "loadDefaultSignature", signatureKey: defaultSignature });
+  } else {
+    // Sentry.captureMessage("No default signature in localStorage", "warning");
+    console.log({ event: "loadDefaultSignatureError", message: "No default signature found" });
+  }
 
-    // Associate function commands
-    Office.actions.associate("addSignatureMona", addSignatureMona);
-    Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
-    Office.actions.associate("addSignatureMorven", addSignatureMorven);
-    Office.actions.associate("addSignatureM2", addSignatureM2);
-    Office.actions.associate("addSignatureM3", addSignatureM3);
-    Office.actions.associate("applyDefaultSignature", applyDefaultSignature);
-    Office.actions.associate("cancelAction", cancelAction);
-    Office.actions.associate("validateSignature", validateSignature);
-    Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
-  }).catch(function (error) {
-    Sentry.captureException(error);
-    console.error({ event: "Office.onReadyError", error: error.message });
-  });
-} catch (error) {
-  Sentry.captureException(error);
-  console.error({ event: "Office.onReadySetupError", error: error.message });
-}
+  // Associate function commands
+  Office.actions.associate("addSignatureMona", addSignatureMona);
+  Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
+  Office.actions.associate("addSignatureMorven", addSignatureMorven);
+  Office.actions.associate("addSignatureM2", addSignatureM2);
+  Office.actions.associate("addSignatureM3", addSignatureM3);
+  Office.actions.associate("applyDefaultSignature", applyDefaultSignature);
+  Office.actions.associate("cancelAction", cancelAction);
+  Office.actions.associate("validateSignature", validateSignature);
+  Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
+});
 
 /**
  * Displays a notification in the Outlook UI.
