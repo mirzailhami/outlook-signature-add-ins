@@ -7,6 +7,7 @@
  * Initializes the Outlook add-in and associates event handlers.
  */
 Office.onReady(() => {
+  Sentry.captureMessage("Commands initialized", "info");
   console.log({ event: "Office.onReady", host: Office.context?.mailbox?.diagnostics?.hostName });
 
   Office.actions.associate("addSignatureMona", addSignatureMona);
