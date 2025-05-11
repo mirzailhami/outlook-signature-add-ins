@@ -116,7 +116,7 @@
     </style>
 
     <script>
-        // Polyfill for agaveHost to prevent ReferenceError
+        // Polyfill for agaveHost
         if (typeof window.agaveHost === 'undefined') {
             window.agaveHost = {
                 postMessage: function(message) {
@@ -126,20 +126,31 @@
             };
         }
 
-        // Initialize Sentry early
+        // Detect Android for environment
+        var isAndroid = navigator.userAgent.toLowerCase().indexOf('android') > -1;
+        var initialEnvironment = isAndroid ? 'mobile' : 'desktop';
+
+        // Initialize Sentry
         Sentry.onLoad(function () {
             Sentry.init({
                 dsn: 'https://9cb6398daefb0df54d63e4da9ff3e7a3@o4509305237864448.ingest.us.sentry.io/4509305244680192',
                 tracesSampleRate: 1.0,
-                environment: 'desktop',
+                environment: initialEnvironment,
                 release: 'm3-signatures@1.0.0.13'
             });
             Sentry.configureScope(function(scope) {
                 scope.setTag('context', 'taskpane');
+                scope.setTag('userAgent', navigator.userAgent);
             });
             Sentry.captureMessage('Sentry initialized (pre-Office)', 'info');
-            console.log({ event: 'Sentry.init', status: 'Initialized (pre-Office)' });
+            console.log({ event: 'Sentry.init', status: 'Initialized (pre-Office)', environment: initialEnvironment });
         });
+
+        // Capture window errors
+        window.onerror = function(message, source, lineno, colno, error) {
+            Sentry.captureException(error || new Error(message));
+            console.error({ event: 'windowError', message: message, source: source, lineno: lineno, colno: colno });
+        };
     </script>
 </head>
 
@@ -188,39 +199,10 @@
     </div>
 
     <script>
-        // Fallback if Office.onReady doesn't resolve
-        var officeReadyTimeout = setTimeout(function() {
-            Sentry.captureMessage('Office.onReady timeout after 10s', 'warning');
-            console.log({ event: 'Office.onReadyTimeout', status: 'Fallback triggered' });
-            initializeTaskPane({ host: 'unknown', platform: 'unknown' });
-        }, 10000);
-
-        // Initialize Office.js
-        Office.onReady(function(info) {
-            clearTimeout(officeReadyTimeout);
-            Sentry.captureMessage('Office.onReady completed', 'info');
-            console.log({ event: 'Office.onReady', host: info.host, platform: info.platform, apiVersion: Office.context && Office.context.requirements && Office.context.requirements.isSetSupported('Mailbox', '1.8') });
-            initializeTaskPane(info);
-        }).catch(function(error) {
-            clearTimeout(officeReadyTimeout);
-            Sentry.captureException(error);
-            console.error({ event: 'Office.onReadyError', error: error.message });
-            initializeTaskPane({ host: 'unknown', platform: 'unknown' });
-        });
-
-        // Task pane initialization
-        function initializeTaskPane(info) {
-            var isMobile = typeof Office !== 'undefined' && Office.context && (
-                Office.context.platform === 'Android' ||
-                Office.context.platform === 'iOS'
-            );
-            Sentry.configureScope(function(scope) {
-                scope.setTag('environment', isMobile ? 'mobile' : 'desktop');
-                scope.setTag('platform', info.platform || 'unknown');
-                scope.setTag('host', info.host || 'unknown');
-            });
-            Sentry.captureMessage('Task pane initialized', 'info');
-            console.log({ event: 'taskPaneInitialized', host: info.host, platform: info.platform });
+        // Initialize task pane without Office.js
+        function initializeTaskPane() {
+            Sentry.captureMessage('Task pane initialized (no Office.js)', 'info');
+            console.log({ event: 'taskPaneInitialized', status: 'No Office.js', environment: initialEnvironment });
 
             // Load saved settings
             var defaultSignature = localStorage.getItem('defaultSignature');
@@ -233,7 +215,7 @@
                 }
             }
 
-            // Add click handler for choice fields
+            // Choice field click handlers
             document.querySelectorAll('.choice-field').forEach(function(field) {
                 field.addEventListener('click', function(e) {
                     var radio = field.querySelector('input[type="radio"]');
@@ -262,7 +244,7 @@
             });
 
             // Test error button
-            var testButton = document.getElementById('plats-error');
+            var testButton = document.getElementById('test-error');
             if (testButton) {
                 testButton.addEventListener('click', function() {
                     Sentry.captureMessage('Test error button clicked', 'info');
@@ -270,6 +252,36 @@
                     throw new Error('This is a test error');
                 });
             }
+        }
+
+        // Try Office.js with timeout
+        var officeReadyTimeout = setTimeout(function() {
+            Sentry.captureMessage('Office.onReady timeout after 5s', 'warning');
+            console.log({ event: 'Office.onReadyTimeout', status: 'Fallback triggered' });
+            initializeTaskPane();
+        }, 5000);
+
+        try {
+            Office.onReady(function(info) {
+                clearTimeout(officeReadyTimeout);
+                Sentry.configureScope(function(scope) {
+                    scope.setTag('environment', info.platform === 'Android' || info.platform === 'iOS' ? 'mobile' : 'desktop');
+                    scope.setTag('platform', info.platform || 'unknown');
+                    scope.setTag('host', info.host || 'unknown');
+                });
+                Sentry.captureMessage('Office.onReady completed', 'info');
+                console.log({ event: 'Office.onReady', host: info.host, platform: info.platform, apiVersion: Office.context && Office.context.requirements && Office.context.requirements.isSetSupported('Mailbox', '1.8') });
+                initializeTaskPane();
+            }).catch(function(error) {
+                clearTimeout(officeReadyTimeout);
+                Sentry.captureException(error);
+                console.error({ event: 'Office.onReadyError', error: error.message });
+                initializeTaskPane();
+            });
+        } catch (error) {
+            Sentry.captureException(error);
+            console.error({ event: 'Office.onReadySetupError', error: error.message });
+            initializeTaskPane();
         }
     </script>
 </body>
