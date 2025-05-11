@@ -3,11 +3,40 @@
  * See LICENSE in the project root for license information.
  */
 
+// Detect Android
+var isAndroid = navigator.userAgent.toLowerCase().indexOf("android") > -1;
+var initialEnvironment = isAndroid ? "mobile" : "desktop";
+
+// Initialize Sentry
+Sentry.onLoad(function () {
+  Sentry.init({
+    dsn: "https://9cb6398daefb0df54d63e4da9ff3e7a3@o4509305237864448.ingest.us.sentry.io/4509305244680192",
+    tracesSampleRate: 1.0,
+    environment: initialEnvironment,
+    release: "m3-signatures@1.0.0.13",
+  });
+  Sentry.configureScope(function (scope) {
+    scope.setTag("context", "taskpane");
+    scope.setTag("userAgent", navigator.userAgent);
+  });
+  Sentry.captureMessage("Task pane initialized", "info");
+  console.log({ event: "taskPaneInitialized", environment: initialEnvironment });
+});
+
 /**
  * Initializes the Outlook add-in and associates event handlers.
  */
 Office.onReady(() => {
   Sentry.captureMessage("Commands initialized", "info");
+  var defaultSignature = localStorage.getItem("defaultSignature");
+  if (defaultSignature) {
+    Sentry.captureMessage("Loaded default signature from localStorage: " + defaultSignature, "info");
+    console.log({ event: "loadDefaultSignature", signatureKey: defaultSignature });
+  } else {
+    Sentry.captureMessage("No default signature in localStorage", "warning");
+    console.log({ event: "loadDefaultSignatureError", message: "No default signature found" });
+  }
+
   console.log({ event: "Office.onReady", host: Office.context?.mailbox?.diagnostics?.hostName });
 
   Office.actions.associate("addSignatureMona", addSignatureMona);
