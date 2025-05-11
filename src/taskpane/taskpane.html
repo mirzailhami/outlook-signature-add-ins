@@ -8,7 +8,7 @@
     <title>M3 Signature Settings</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@fluentui/react@8.106.4/dist/css/fabric.min.css">
-    <script src="https://js.sentry-cdn.com/9cb6398daefb0df54d63e4da9ff3e7a3.min.js" crossorigin="anonymous"></script>
+    <script src='https://js.sentry-cdn.com/9cb6398daefb0df54d63e4da9ff3e7a3.min.js' crossorigin="anonymous"></script>
 
     <style>
         :root {
@@ -119,19 +119,23 @@
         // Polyfill for agaveHost to prevent ReferenceError
         if (typeof window.agaveHost === 'undefined') {
             window.agaveHost = {
-                postMessage: function (message) {
+                postMessage: function(message) {
                     console.log({ event: 'agaveHostPolyfill', message: 'postMessage called', data: message });
+                    Sentry.captureMessage('agaveHost postMessage called: ' + message, 'info');
                 }
             };
         }
 
-        // Initialize Sentry early to capture load-time errors
+        // Initialize Sentry early
         Sentry.onLoad(function () {
             Sentry.init({
                 dsn: 'https://9cb6398daefb0df54d63e4da9ff3e7a3@o4509305237864448.ingest.us.sentry.io/4509305244680192',
                 tracesSampleRate: 1.0,
-                environment: 'desktop', // Default, updated in Office.onReady
+                environment: 'desktop',
                 release: 'm3-signatures@1.0.0.13'
+            });
+            Sentry.configureScope(function(scope) {
+                scope.setTag('context', 'taskpane');
             });
             Sentry.captureMessage('Sentry initialized (pre-Office)', 'info');
             console.log({ event: 'Sentry.init', status: 'Initialized (pre-Office)' });
@@ -143,8 +147,7 @@
     <div class="container">
         <div class="header">
             <h1 class="title">Default Signature Settings</h1>
-            <p class="description">Choose your default email signature. This will be automatically applied to new
-                messages.</p>
+            <p class="description">Choose your default email signature. This will be automatically applied to new messages.</p>
         </div>
 
         <div class="choice-group" id="signatureOptions">
@@ -181,25 +184,43 @@
         </div>
 
         <button class="primary-button" id="saveButton">Save Settings</button>
+        <button class="primary-button" id="test-error">Trigger Test Error</button>
     </div>
 
-    <button id="test-error">Trigger Test Error</button>
-
     <script>
-        // Wait for Office.js to initialize
-        Office.onReady(function (info) {
-            // Update Sentry environment based on platform
+        // Fallback if Office.onReady doesn't resolve
+        var officeReadyTimeout = setTimeout(function() {
+            Sentry.captureMessage('Office.onReady timeout after 10s', 'warning');
+            console.log({ event: 'Office.onReadyTimeout', status: 'Fallback triggered' });
+            initializeTaskPane({ host: 'unknown', platform: 'unknown' });
+        }, 10000);
+
+        // Initialize Office.js
+        Office.onReady(function(info) {
+            clearTimeout(officeReadyTimeout);
+            Sentry.captureMessage('Office.onReady completed', 'info');
+            console.log({ event: 'Office.onReady', host: info.host, platform: info.platform, apiVersion: Office.context && Office.context.requirements && Office.context.requirements.isSetSupported('Mailbox', '1.8') });
+            initializeTaskPane(info);
+        }).catch(function(error) {
+            clearTimeout(officeReadyTimeout);
+            Sentry.captureException(error);
+            console.error({ event: 'Office.onReadyError', error: error.message });
+            initializeTaskPane({ host: 'unknown', platform: 'unknown' });
+        });
+
+        // Task pane initialization
+        function initializeTaskPane(info) {
             var isMobile = typeof Office !== 'undefined' && Office.context && (
                 Office.context.platform === 'Android' ||
                 Office.context.platform === 'iOS'
             );
-            Sentry.configureScope(function (scope) {
+            Sentry.configureScope(function(scope) {
                 scope.setTag('environment', isMobile ? 'mobile' : 'desktop');
                 scope.setTag('platform', info.platform || 'unknown');
                 scope.setTag('host', info.host || 'unknown');
             });
-            Sentry.captureMessage('Office.onReady completed', 'info');
-            console.log({ event: 'Office.onReady', host: info.host, platform: info.platform, apiVersion: Office.context && Office.context.requirements && Office.context.requirements.isSetSupported('Mailbox', '1.8') });
+            Sentry.captureMessage('Task pane initialized', 'info');
+            console.log({ event: 'taskPaneInitialized', host: info.host, platform: info.platform });
 
             // Load saved settings
             var defaultSignature = localStorage.getItem('defaultSignature');
@@ -213,8 +234,8 @@
             }
 
             // Add click handler for choice fields
-            document.querySelectorAll('.choice-field').forEach(function (field) {
-                field.addEventListener('click', function (e) {
+            document.querySelectorAll('.choice-field').forEach(function(field) {
+                field.addEventListener('click', function(e) {
                     var radio = field.querySelector('input[type="radio"]');
                     if (radio && e.target !== radio) {
                         radio.checked = true;
@@ -225,16 +246,13 @@
             });
 
             // Save settings handler
-            document.getElementById('saveButton').addEventListener('click', function () {
+            document.getElementById('saveButton').addEventListener('click', function() {
                 var selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
                 if (selectedRadio) {
                     var signatureKey = selectedRadio.value;
                     localStorage.setItem('defaultSignature', signatureKey);
                     Sentry.captureMessage('Saved default signature: ' + signatureKey, 'info');
                     console.log({ event: 'saveDefaultSignature', signatureKey: signatureKey });
-                    // Avoid messageParent/closeContainer to prevent agaveHost issues
-                    Sentry.captureMessage('Task pane save completed', 'info');
-                    console.log({ event: 'saveCompleted', status: 'Success' });
                     alert('Signature saved: ' + signatureKey);
                 } else {
                     Sentry.captureMessage('No signature selected', 'warning');
@@ -242,15 +260,17 @@
                     alert('Please select a signature option');
                 }
             });
-        }).catch(function (error) {
-            Sentry.captureException(error);
-            console.error({ event: 'Office.onReadyError', error: error.message });
-        });
 
-        const button = document.getElementById('test-error');
-        button.addEventListener('click', () => {
-            throw new Error('This is a test error');
-        });
+            // Test error button
+            var testButton = document.getElementById('plats-error');
+            if (testButton) {
+                testButton.addEventListener('click', function() {
+                    Sentry.captureMessage('Test error button clicked', 'info');
+                    console.log({ event: 'testErrorButton', status: 'Clicked' });
+                    throw new Error('This is a test error');
+                });
+            }
+        }
     </script>
 </body>
 
