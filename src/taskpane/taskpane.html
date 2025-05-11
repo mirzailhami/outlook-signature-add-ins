@@ -102,8 +102,7 @@
             }
 
             .title {
-                font 18px;
-                18px;
+                font-size: 18px;
             }
 
             .description {
@@ -122,8 +121,11 @@
         // }
         Sentry.onLoad(function () {
             Sentry.init({
-                console.log({ event: "Sentry.init" });
+                dsn: 'https://9cb6398daefb0df54d63e4da9ff3e7a3@o4506348966576128.ingest.sentry.io/4506348970475520',
+                tracesSampleRate: 1.0,
+                environment: Office && Office.context && (Office.context.platform === Office.PlatformType.Android || Office.context.platform === Office.PlatformType.iOS) ? 'mobile' : 'desktop'
             });
+            console.log({ event: 'Sentry.init', status: 'Initialized' });
         });
     </script>
 </head>
@@ -132,8 +134,7 @@
     <div class="container">
         <div class="header">
             <h1 class="title">Default Signature Settings</h1>
-            <p class="description">Choose your default email signature. This will be automatically applied to new
-                messages.</p>
+            <p class="description">Choose your default email signature. This will be automatically applied to new messages.</p>
         </div>
 
         <div class="choice-group" id="signatureOptions">
@@ -174,7 +175,6 @@
 
     <script>
         Office.onReady().then((info) => {
-            // Load saved settings
             console.log({ event: "Office.onReady", host: info.host, platform: info.platform, apiVersion: Office.context.requirements.isSetSupported("Mailbox", "1.8") });
             const defaultSignature = localStorage.getItem("defaultSignature");
             if (defaultSignature) {
@@ -184,7 +184,6 @@
                 }
             }
 
-            // Add click handler for entire choice field
             document.querySelectorAll('.choice-field').forEach(field => {
                 field.addEventListener('click', (e) => {
                     const radio = field.querySelector('input[type="radio"]');
@@ -194,30 +193,34 @@
                 });
             });
 
-            // Save settings handler
             document.getElementById('saveButton').addEventListener('click', () => {
                 const selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
                 if (selectedRadio) {
-                    localStorage.setItem("defaultSignature", selectedRadio.value);
-                    // Office.addin.close();
+                    const signatureKey = selectedRadio.value;
+                    localStorage.setItem("defaultSignature", signatureKey);
+                    console.log({ event: "saveDefaultSignature", signatureKey });
                     if (Office.context.ui.messageParent) {
                         Office.context.ui.messageParent(signatureKey);
                         console.log({ event: "messageParent", message: signatureKey });
                     } else {
-                        // Fallback for task pane
                         console.log({ event: "closeContainerAttempt" });
                         try {
                             Office.context.ui.closeContainer();
+                            console.log({ event: "closeContainer", status: "Success" });
                         } catch (e) {
+                            Sentry.captureException(e);
                             console.error({ event: "closeContainerError", error: e.message });
                         }
                     }
                 } else {
+                    Sentry.captureMessage("No signature selected", "warning");
+                    console.log({ event: "saveDefaultSignatureError", message: "No signature selected" });
                     alert('Please select a signature option');
                 }
             });
         }).catch(error => {
-            console.error('Office initialization failed:', error);
+            Sentry.captureException(error);
+            console.error({ event: "Office.onReadyError", error: error.message });
         });
     </script>
 </body>
