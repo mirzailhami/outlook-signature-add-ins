@@ -60,7 +60,7 @@ function testFetch(event) {
 /**
  * Initializes the Outlook add-in and associates event handlers.
  */
-Office.onReady(() => {
+Office.onReady((info) => {
   log("commandsInitialized", {
     host: Office.context?.mailbox?.diagnostics?.hostName,
     platform: info?.host,
