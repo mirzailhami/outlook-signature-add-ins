@@ -27,7 +27,7 @@ function log(event, data) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(logMessage),
-      mode: "no-cors",
+      // mode: "no-cors",
     })
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
