@@ -4,38 +4,81 @@
  */
 
 // Detect Android
-// var isAndroid = navigator.userAgent.toLowerCase().indexOf("android") > -1;
-// var initialEnvironment = isAndroid ? "mobile" : "desktop";
+var isAndroid = navigator.userAgent.toLowerCase().indexOf("android") > -1;
+var initialEnvironment = isAndroid ? "mobile" : "desktop";
 
-// Initialize Sentry
-// Sentry.onLoad(function () {
-//   Sentry.init({
-//     dsn: "https://9cb6398daefb0df54d63e4da9ff3e7a3@o4509305237864448.ingest.us.sentry.io/4509305244680192",
-//     tracesSampleRate: 1.0,
-//     environment: initialEnvironment,
-//     release: "m3-signatures@1.0.0.13",
-//   });
+// Base URL for logging
+const logBaseUrl = "https://m3wind-logger-aahvb3ckgmf9e2h2.uksouth-01.azurewebsites.net/api/LogEndpoint";
 
-//   Sentry.captureMessage("Commands Sentry initialized", "info");
-//   console.log({ event: "commandsSentryInitialized", environment: initialEnvironment });
-// });
+// Log function to send debug info to server
+function log(event, data) {
+  const logMessage = {
+    event,
+    data,
+    environment: initialEnvironment,
+    timestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+    url: window.location.href,
+  };
+  console.log("Add-in Log:", logMessage);
+
+  if (typeof fetch !== "undefined") {
+    fetch(logBaseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(logMessage),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        console.log("Log Success:", response.status);
+      })
+      .catch((error) => {
+        console.error("Log Error:", error.message);
+      });
+  } else {
+    console.error("Fetch unavailable");
+  }
+}
+
+// Test fetch function
+function testFetch(event) {
+  log("testFetch", { status: "Triggered" });
+  fetch(logBaseUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: "testFetch", data: { status: "Test" } }),
+  })
+    .then((response) => {
+      log("testFetchSuccess", { status: response.status });
+    })
+    .catch((error) => {
+      log("testFetchError", { error: error.message });
+    });
+  if (event) event.completed();
+}
 
 /**
  * Initializes the Outlook add-in and associates event handlers.
  */
 Office.onReady(() => {
-  // Sentry.captureMessage("Commands initialized", "info");
-  console.log({ event: "commandsInitialized", host: Office.context?.mailbox?.diagnostics?.hostName });
+  log("commandsInitialized", {
+    host: Office.context?.mailbox?.diagnostics?.hostName,
+    platform: info?.host,
+    version: info?.version,
+    isCompose: !!Office.context?.mailbox?.item?.isCompose,
+  });
 
-  // Read localStorage
-  var defaultSignature = localStorage.getItem("defaultSignature");
-  if (defaultSignature) {
-    // Sentry.captureMessage("Loaded default signature from localStorage: " + defaultSignature, "info");
-    console.log({ event: "loadDefaultSignature", signatureKey: defaultSignature });
-  } else {
-    // Sentry.captureMessage("No default signature in localStorage", "warning");
-    console.log({ event: "loadDefaultSignatureError", message: "No default signature found" });
-  }
+  // Test log to confirm execution
+  log("mobileTestLog", { status: "Commands.js loaded" });
+
+  // Network test log
+  fetch(logBaseUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: "networkTest", data: { status: "Ping" } }),
+  })
+    .then(() => log("networkTest", { status: "Server reachable" }))
+    .catch((error) => log("networkTestError", { error: error.message }));
 
   // Associate function commands
   Office.actions.associate("addSignatureMona", addSignatureMona);

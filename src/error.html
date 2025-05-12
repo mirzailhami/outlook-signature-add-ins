@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h1>Error</h1>
+  <p id="message"></p>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById("message").textContent = params.get("message") || "Unknown error";
+  </script>
+</body>
+</html>

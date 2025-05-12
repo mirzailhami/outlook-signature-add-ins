@@ -131,6 +131,10 @@ module.exports = async (env, options) => {
             to: "index.html",
           },
           {
+            from: "src/error.html",
+            to: "error.html",
+          },
+          {
             from: "assets",
             to: "assets",
           },
@@ -149,7 +153,7 @@ module.exports = async (env, options) => {
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
         "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
       },
-      allowedHosts: ["localhost", ".azurewebsites.net", ".ngrok-free.app"],
+      allowedHosts: ["localhost", ".azurewebsites.net"],
       server: {
         type: "https",
         options: httpsOptions,

@@ -13,6 +13,10 @@
     <AppDomain>${ASSET_BASE_URL}</AppDomain>
     <AppDomain>https://m3sigstorage.blob.core.windows.net</AppDomain>
     <AppDomain>https://m3windsignature-bucabmeuhxaafda3.uksouth-01.azurewebsites.net</AppDomain>
+    <AppDomain>https://appsforoffice.microsoft.com</AppDomain>
+    <AppDomain>https://outlook.office.com</AppDomain>
+    <AppDomain>https://outlook.office365.com</AppDomain>
+    <AppDomain>https://m3wind-logger-aahvb3ckgmf9e2h2.uksouth-01.azurewebsites.net</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Mailbox"/>

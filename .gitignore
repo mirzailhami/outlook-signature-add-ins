@@ -1,5 +1,7 @@
+debug.log
 .env
 .env.production
 /public
 /dist
+/certs
 node_modules
