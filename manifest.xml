@@ -27,200 +27,110 @@
     </Sets>
   </Requirements>
   <FormSettings>
-    <Form xsi:type="ItemEdit">
+    <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="${ASSET_BASE_URL}/error.html"/>
+        <SourceLocation DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
+        <RequestedHeight>250</RequestedHeight>
       </DesktopSettings>
     </Form>
   </FormSettings>
-  <Permissions>ReadWriteMailbox</Permissions>
+  <Permissions>ReadWriteItem</Permissions>
   <Rule xsi:type="RuleCollection" Mode="Or">
-    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
   </Rule>
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
-      <Requirements>
-        <bt:Sets DefaultMinVersion="1.8">
-          <bt:Set Name="Mailbox"/>
-        </bt:Sets>
-      </Requirements>
-      <Hosts>
-        <Host xsi:type="MailHost">
-          <Runtimes>
-            <Runtime resid="WebViewRuntime.Url"/>
-          </Runtimes>
-          <DesktopFormFactor>
-            <FunctionFile resid="Commands.Url"/>
-            <ExtensionPoint xsi:type="MessageComposeCommandSurface">
-              <OfficeTab id="TabDefault">
-                <Group id="msgComposeGroup">
-                  <Label resid="GroupLabel"/>
-                  <Control xsi:type="Menu" id="msgComposeMenu">
-                    <Label resid="TaskpaneButton.Label"/>
-                    <Supertip>
-                      <Title resid="TaskpaneButton.Label"/>
-                      <Description resid="TaskpaneButton.Tooltip"/>
-                    </Supertip>
-                    <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
-                      <bt:Image size="16" resid="Icon.16x16"/>
-                      <bt:Image size="32" resid="Icon.32x32"/>
-                      <bt:Image size="80" resid="Icon.80x80"/>
-                    </Icon>
-                    <Items>
-                      <Item id="msgReadMenuItem1">
-                        <Label resid="TaskpaneMenu.Label.Mona"/>
-                        <Supertip>
-                          <Title resid="TaskpaneMenu.Label.Mona"/>
-                          <Description resid="TaskpaneMenu.Tooltip.Mona"/>
-                        </Supertip>
-                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
-                          <bt:Image size="16" resid="Icon.signature" />
-                          <bt:Image size="32" resid="Icon.signature"/>
-                          <bt:Image size="80" resid="Icon.signature"/>
-                        </Icon>
-                        <Action xsi:type="ExecuteFunction">
-                          <FunctionName>addSignatureMona</FunctionName>
-                        </Action>
-                      </Item>
-                      <Item id="msgReadMenuItem2">
-                        <Label resid="TaskpaneMenu.Label.Morgan"/>
-                        <Supertip>
-                          <Title resid="TaskpaneMenu.Label.Morgan"/>
-                          <Description resid="TaskpaneMenu.Tooltip.Morgan"/>
-                        </Supertip>
-                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
-                          <bt:Image size="16" resid="Icon.signature"/>
-                          <bt:Image size="32" resid="Icon.signature"/>
-                          <bt:Image size="80" resid="Icon.signature"/>
-                        </Icon>
-                        <Action xsi:type="ExecuteFunction">
-                          <FunctionName>addSignatureMorgan</FunctionName>
-                        </Action>
-                      </Item>
-                      <Item id="msgReadMenuItem3">
-                        <Label resid="TaskpaneMenu.Label.Morven"/>
-                        <Supertip>
-                          <Title resid="TaskpaneMenu.Label.Morven"/>
-                          <Description resid="TaskpaneMenu.Tooltip.Morven"/>
-                        </Supertip>
-                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
-                          <bt:Image size="16" resid="Icon.signature"/>
-                          <bt:Image size="32" resid="Icon.signature"/>
-                          <bt:Image size="80" resid="Icon.signature"/>
-                        </Icon>
-                        <Action xsi:type="ExecuteFunction">
-                          <FunctionName>addSignatureMorven</FunctionName>
-                        </Action>
-                      </Item>
-                      <Item id="msgReadMenuItem4">
-                        <Label resid="TaskpaneMenu.Label.M2"/>
-                        <Supertip>
-                          <Title resid="TaskpaneMenu.Label.M2"/>
-                          <Description resid="TaskpaneMenu.Tooltip.M2"/>
-                        </Supertip>
-                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
-                          <bt:Image size="16" resid="Icon.signature"/>
-                          <bt:Image size="32" resid="Icon.signature"/>
-                          <bt:Image size="80" resid="Icon.signature"/>
-                        </Icon>
-                        <Action xsi:type="ExecuteFunction">
-                          <FunctionName>addSignatureM2</FunctionName>
-                        </Action>
-                      </Item>
-                      <Item id="msgReadMenuItem5">
-                        <Label resid="TaskpaneMenu.Label.M3"/>
-                        <Supertip>
-                          <Title resid="TaskpaneMenu.Label.M3"/>
-                          <Description resid="TaskpaneMenu.Tooltip.M3"/>
-                        </Supertip>
-                        <Icon xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
-                          <bt:Image size="16" resid="Icon.signature"/>
-                          <bt:Image size="32" resid="Icon.signature"/>
-                          <bt:Image size="80" resid="Icon.signature"/>
-                        </Icon>
-                        <Action xsi:type="ExecuteFunction">
-                          <FunctionName>addSignatureM3</FunctionName>
-                        </Action>
-                      </Item>
-                    </Items>
-                  </Control>
-                </Group>
-              </OfficeTab>
-            </ExtensionPoint>
-            <ExtensionPoint xsi:type="LaunchEvent">
-              <LaunchEvents>
-                <LaunchEvent Type="OnMessageSend" FunctionName="validateSignature" SendMode="SoftBlock"/>
-                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler" SendMode="SoftBlock"/>
-              </LaunchEvents>
-              <SourceLocation resid="WebViewRuntime.Url"/>
-            </ExtensionPoint>
-          </DesktopFormFactor>
-          <MobileFormFactor>
-            <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
-              <Group id="mobileMsgRead">
-                <Label resid="GroupLabel"/>
-                <Control xsi:type="MobileButton" id="TaskPaneBtn">
-                  <Label resid="TaskpaneButton.Label"/>
-                  <Icon xsi:type="bt:MobileIconList">
-                    <bt:Image size="25" scale="1" resid="Icon.32x32" />
-                    <bt:Image size="25" scale="2" resid="Icon.32x32" />
-                    <bt:Image size="25" scale="3" resid="Icon.32x32" />
-
-                    <bt:Image size="32" resid="Icon.32x32" scale="1"/>
-                    <bt:Image size="32" resid="Icon.32x32" scale="2"/>
-                    <bt:Image size="32" resid="Icon.32x32" scale="3"/>
-                    
-                    <bt:Image size="48" resid="Icon.80x80" scale="1"/>
-                    <bt:Image size="48" resid="Icon.80x80" scale="2"/>
-                    <bt:Image size="48" resid="Icon.80x80" scale="3"/>
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <SourceLocation resid="Taskpane.Url" />
-                  </Action>
-                </Control>
-              </Group>
-            </ExtensionPoint>
-            <ExtensionPoint xsi:type="LaunchEvent">
-              <LaunchEvents>
-                <LaunchEvent Type="OnMessageSend" FunctionName="validateSignature" />
-                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler" />
-              </LaunchEvents>
-              <SourceLocation resid="WebViewRuntime.Url"/>
-            </ExtensionPoint>
-          </MobileFormFactor>
-        </Host>
-      </Hosts>
-      <Resources>
-        <bt:Images>
-          <bt:Image id="Icon.16x16" DefaultValue="${ASSET_BASE_URL}/assets/icon-16.png"/>
-          <bt:Image id="Icon.32x32" DefaultValue="${ASSET_BASE_URL}/assets/icon-32.png"/>
-          <bt:Image id="Icon.80x80" DefaultValue="${ASSET_BASE_URL}/assets/icon-80.png"/>
-          <bt:Image id="Icon.signature" DefaultValue="${ASSET_BASE_URL}/assets/signature-16.png"/>
-        </bt:Images>
-        <bt:Urls>
-          <bt:Url id="Commands.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
-          <bt:Url id="WebViewRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
-          <bt:Url id="Taskpane.Url" DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
-        </bt:Urls>
-        <bt:ShortStrings>
-          <bt:String id="GroupLabel" DefaultValue="M3 Signatures"/>
-          <bt:String id="TaskpaneButton.Label" DefaultValue="M3 Signatures"/>
-          <bt:String id="TaskpaneMenu.Label.Mona" DefaultValue="Mona"/>
-          <bt:String id="TaskpaneMenu.Label.Morgan" DefaultValue="Morgan"/>
-          <bt:String id="TaskpaneMenu.Label.Morven" DefaultValue="Morven"/>
-          <bt:String id="TaskpaneMenu.Label.M2" DefaultValue="M2"/>
-          <bt:String id="TaskpaneMenu.Label.M3" DefaultValue="M3"/>
-        </bt:ShortStrings>
-        <bt:LongStrings>
-          <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Attach one of your M3 Signatures to this message."/>
-          <bt:String id="ErrorButton.Tooltip" DefaultValue="Show signature error details."/>
-          <bt:String id="TaskpaneMenu.Tooltip.Mona" DefaultValue="Insert Mona signature"/>
-          <bt:String id="TaskpaneMenu.Tooltip.Morgan" DefaultValue="Insert Morgan signature"/>
-          <bt:String id="TaskpaneMenu.Tooltip.Morven" DefaultValue="Insert Morven signature"/>
-          <bt:String id="TaskpaneMenu.Tooltip.M2" DefaultValue="Insert M2 signature"/>
-          <bt:String id="TaskpaneMenu.Tooltip.M3" DefaultValue="Insert M3 signature"/>
-        </bt:LongStrings>
-      </Resources>
+        <Requirements>
+            <bt:Sets DefaultMinVersion="1.5">
+                <bt:Set Name="Mailbox"/>
+            </bt:Sets>
+        </Requirements>
+        <Hosts>
+            <Host xsi:type="MailHost">
+                <!-- The HTML file that references or contains the JavaScript event handlers.
+                    This is used by Outlook on mobile devices. -->
+                <Runtimes>
+                    <Runtime resid="WebViewRuntime.Url">
+                    </Runtime>
+                </Runtimes>
+                <!-- Defines the add-in for Outlook on Windows (new and classic), on Mac, and on the web. -->
+                <DesktopFormFactor>
+                    <FunctionFile resid="Commands.Url"/>
+                    <ExtensionPoint xsi:type="MessageReadCommandSurface">
+                        <OfficeTab id="TabDefault">
+                            <Group id="msgReadGroup">
+                                <Label resid="GroupLabel"/>
+                                <Control xsi:type="Button" id="msgReadOpenPaneButton">
+                                    <Label resid="TaskpaneButton.Label"/>
+                                    <Supertip>
+                                        <Title resid="TaskpaneButton.Label"/>
+                                        <Description resid="TaskpaneButton.Tooltip"/>
+                                    </Supertip>
+                                    <Icon>
+                                        <bt:Image size="16" resid="Icon.16x16"/>
+                                        <bt:Image size="32" resid="Icon.32x32"/>
+                                        <bt:Image size="80" resid="Icon.80x80"/>
+                                    </Icon>
+                                    <Action xsi:type="ShowTaskpane">
+                                        <SourceLocation resid="Taskpane.Url"/>
+                                    </Action>
+                                </Control>
+                                <Control xsi:type="Button" id="ActionButton">
+                                    <Label resid="ActionButton.Label"/>
+                                    <Supertip>
+                                        <Title resid="ActionButton.Label"/>
+                                        <Description resid="ActionButton.Tooltip"/>
+                                    </Supertip>
+                                    <Icon>
+                                        <bt:Image size="16" resid="Icon.16x16"/>
+                                        <bt:Image size="32" resid="Icon.32x32"/>
+                                        <bt:Image size="80" resid="Icon.80x80"/>
+                                    </Icon>
+                                    <Action xsi:type="ExecuteFunction">
+                                        <FunctionName>action</FunctionName>
+                                    </Action>
+                                </Control>
+                            </Group>
+                        </OfficeTab>
+                    </ExtensionPoint>
+                </DesktopFormFactor>
+                <!-- Defines the add-in for Outlook mobile. -->
+                <MobileFormFactor>
+                    <!-- Configures event-based activation. -->
+                    <ExtensionPoint xsi:type="LaunchEvent">
+                        <LaunchEvents>
+                            <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler"/>
+                        </LaunchEvents>
+                        <!-- Identifies the runtime to be used (also referenced by the Runtime element). -->
+                        <SourceLocation resid="WebViewRuntime.Url"/>
+                    </ExtensionPoint>
+                </MobileFormFactor>
+            </Host>
+        </Hosts>
+        <!-- This manifest uses a fictitious web server, contoso.com, to host the add-in's files.
+             Replace these instances with the information of the web server that hosts your add-in's files. -->
+        <Resources>
+            <bt:Images>
+                <bt:Image id="Icon.16x16" DefaultValue="${ASSET_BASE_URL}/assets/icon-16.png"/>
+                <bt:Image id="Icon.32x32" DefaultValue="${ASSET_BASE_URL}/assets/icon-32.png"/>
+                <bt:Image id="Icon.80x80" DefaultValue="${ASSET_BASE_URL}/assets/icon-80.png"/>
+            </bt:Images>
+            <bt:Urls>
+                <bt:Url id="Commands.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
+                <bt:Url id="Taskpane.Url" DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
+                <bt:Url id="WebViewRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
+            </bt:Urls>
+            <bt:ShortStrings>
+                <bt:String id="GroupLabel" DefaultValue="Event-based activation on mobile"/>
+                <bt:String id="TaskpaneButton.Label" DefaultValue="Show Taskpane"/>
+                <bt:String id="ActionButton.Label" DefaultValue="Perform an action"/>
+            </bt:ShortStrings>
+            <bt:LongStrings>
+                <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens a pane displaying all available properties."/>
+                <bt:String id="ActionButton.Tooltip" DefaultValue="Perform an action when clicked."/>
+            </bt:LongStrings>
+        </Resources>
     </VersionOverrides>
   </VersionOverrides>
 </OfficeApp>

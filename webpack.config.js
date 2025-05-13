@@ -131,10 +131,6 @@ module.exports = async (env, options) => {
             to: "index.html",
           },
           {
-            from: "src/error.html",
-            to: "error.html",
-          },
-          {
             from: "assets",
             to: "assets",
           },
