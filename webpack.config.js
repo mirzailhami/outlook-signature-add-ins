@@ -39,6 +39,7 @@ module.exports = async (env, options) => {
       polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
       commands: "./src/commands/commands.js",
       taskpane: "./src/taskpane/taskpane.js",
+      launchevent: "./src/launchevent/launchevent.js",
     },
 
     output: {
@@ -104,7 +105,7 @@ module.exports = async (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/commands/commands.html",
         filename: "commands.html",
-        chunks: ["polyfill", "commands"],
+        chunks: ["polyfill", "commands", "launchevent"],
         publicPath: assetBaseUrl,
         minify: isProduction
           ? {
