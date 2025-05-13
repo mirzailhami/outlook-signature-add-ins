@@ -156,7 +156,7 @@
             </ExtensionPoint>
           </DesktopFormFactor>
           <MobileFormFactor>
-            <FunctionFile resid="Commands.Url"/>
+            <!-- <FunctionFile resid="Commands.Url"/> -->
             <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
               <Group id="mobileMsgRead">
                 <Label resid="GroupLabel"/>
@@ -183,8 +183,8 @@
             </ExtensionPoint>
             <ExtensionPoint xsi:type="LaunchEvent">
               <LaunchEvents>
-                <LaunchEvent Type="OnMessageSend" FunctionName="validateSignature" SendMode="SoftBlock"/>
-                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler" SendMode="SoftBlock"/>
+                <LaunchEvent Type="OnMessageSend" FunctionName="validateSignature" />
+                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler" />
               </LaunchEvents>
               <SourceLocation resid="WebViewRuntime.Url"/>
             </ExtensionPoint>
