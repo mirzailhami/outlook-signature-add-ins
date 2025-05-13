@@ -4,6 +4,11 @@
  */
 
 // Add start-up logic code here, if any.
+
+Office.initialize = function () {
+  console.log(new Date() + ": Office initialized - first");
+};
+
 Office.onReady((info) => {
   console.log(Office.context?.mailbox?.diagnostics);
   console.log(info);
