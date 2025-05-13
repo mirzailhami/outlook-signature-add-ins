@@ -7,6 +7,8 @@
 Office.onReady();
 
 function onNewMessageComposeHandler(event) {
+  console.log("running script ...");
+  console.log(event);
   const notification = {
     type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
     message: "Company signature added.",
