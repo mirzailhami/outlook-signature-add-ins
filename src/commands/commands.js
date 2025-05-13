@@ -5,7 +5,8 @@
 
 /* global Office */
 
-Office.onReady(() => {
+Office.onReady((info) => {
+  // console.log(info);
   // If needed, Office.js is ready to be called.
 });
 
@@ -22,10 +23,7 @@ function action(event) {
   };
 
   // Show a notification message.
-  Office.context.mailbox.item.notificationMessages.replaceAsync(
-    "ActionPerformanceNotification",
-    message
-  );
+  Office.context.mailbox.item.notificationMessages.replaceAsync("ActionPerformanceNotification", message);
 
   // Be sure to indicate when the add-in command function is complete.
   event.completed();
