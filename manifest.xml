@@ -94,6 +94,13 @@
                             </Group>
                         </OfficeTab>
                     </ExtensionPoint>
+                    <ExtensionPoint xsi:type="LaunchEvent">
+                        <LaunchEvents>
+                            <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler"/>
+                        </LaunchEvents>
+                        <!-- Identifies the runtime to be used (also referenced by the Runtime element). -->
+                        <SourceLocation resid="WebViewRuntime.Url"/>
+                    </ExtensionPoint>
                 </DesktopFormFactor>
                 <!-- Defines the add-in for Outlook mobile. -->
                 <MobileFormFactor>
