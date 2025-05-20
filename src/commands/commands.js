@@ -189,14 +189,13 @@ async function displayError(message, event, restoreSignature = false, signatureK
       cancelLabel: "OK",
     });
   } else {
-    console.log("b");
     displayNotification("Error", message, false);
     event.completed({
       allowEvent: false,
       errorMessage: message,
-      errorMessageMarkdown: markdownMessage,
+      // errorMessageMarkdown: markdownMessage,
       cancelLabel: "OK",
-      commandId: "msgComposeMenu",
+      // commandId: "msgComposeMenu",
     });
   }
 }
