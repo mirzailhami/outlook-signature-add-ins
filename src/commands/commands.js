@@ -530,7 +530,7 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
         if (tempSignature) {
           console.log({ event: "validateSignatureChanges", status: "Restoring temporary signature for reply/forward" });
           displayError(
-            "Selected M3 signature or logo has been modified. Restoring the original signature.",
+            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature is now restored.",
             event,
             true,
             signatureKey,
@@ -539,7 +539,7 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
         } else if (signatureKey) {
           console.log({ event: "validateSignatureChanges", status: "Restoring signature from signatureKey" });
           displayError(
-            "Selected M3 signature or logo has been modified. Restoring the original signature.",
+            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature is now restored.",
             event,
             true,
             signatureKey
@@ -560,7 +560,7 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
         if (tempSignature) {
           console.log({ event: "validateSignatureChanges", status: "Restoring temporary signature for new email" });
           displayError(
-            "Selected M3 signature or logo has been modified. Restoring the original signature.",
+            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature is now restored.",
             event,
             true,
             null,
@@ -569,7 +569,7 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
         } else {
           console.log({ event: "validateSignatureChanges", status: "Restoring default signature for new email" });
           displayError(
-            "Selected M3 signature or logo has been modified. Restoring the original signature.",
+            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature is now restored.",
             event,
             true,
             null,
