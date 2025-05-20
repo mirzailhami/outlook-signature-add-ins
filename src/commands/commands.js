@@ -181,7 +181,7 @@ async function displayError(message, event, restoreSignature = false, signatureK
       return;
     }
 
-    displayNotification("Error", `${message}`, true, event);
+    displayNotification("Error", `${message}`, true);
     event.completed({
       allowEvent: false,
       errorMessage: `${message}`,
@@ -193,9 +193,8 @@ async function displayError(message, event, restoreSignature = false, signatureK
     event.completed({
       allowEvent: false,
       errorMessage: message,
-      // errorMessageMarkdown: markdownMessage,
+      errorMessageMarkdown: markdownMessage,
       cancelLabel: "OK",
-      // commandId: "msgComposeMenu",
     });
   }
 }
@@ -386,18 +385,39 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
       const signatureKeys = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
       let matchedSignatureKey = null;
 
+      // Log the raw and cleaned signature for debugging
+      console.log({
+        event: "validateSignatureChanges",
+        rawNewSignature: newSignature,
+        cleanNewSignature: cleanNewSignature,
+      });
+
       for (const key of signatureKeys) {
         const cachedSignature = localStorage.getItem(`signature_${key}`);
-        if (cachedSignature && cleanNewSignature === normalizeSignature(cachedSignature)) {
-          matchedSignatureKey = key;
-          console.log({ event: "validateSignatureChanges", status: "Matched signature", matchedSignatureKey });
-          break;
+        if (cachedSignature) {
+          const cleanCachedSignature = normalizeSignature(cachedSignature);
+          console.log({
+            event: "validateSignatureChanges",
+            signatureKey: key,
+            rawCachedSignature: cachedSignature,
+            cleanCachedSignature: cleanCachedSignature,
+          });
+          if (cleanNewSignature === cleanCachedSignature) {
+            matchedSignatureKey = key;
+            console.log({ event: "validateSignatureChanges", status: "Matched signature", matchedSignatureKey });
+            break;
+          }
         }
       }
 
       const lastAppliedSignature =
         localStorage.getItem("tempSignature_new") || localStorage.getItem(`signature_${signatureKeys[0]}`);
       const cleanLastAppliedSignature = normalizeSignature(lastAppliedSignature);
+      console.log({
+        event: "validateSignatureChanges",
+        rawLastAppliedSignature: lastAppliedSignature,
+        cleanLastAppliedSignature: cleanLastAppliedSignature,
+      });
 
       if (matchedSignatureKey || cleanNewSignature === cleanLastAppliedSignature) {
         console.log({ event: "validateSignatureChanges", status: "Signature valid", matchedSignatureKey });
@@ -481,16 +501,34 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
  * @returns {string|null} The extracted signature or null.
  */
 function extractSignature(body) {
-  console.log({ event: "extractSignature" });
+  console.log({ event: "extractSignature", bodyLength: body?.length });
+  if (!body) return null;
+
   const marker = "<!-- signature -->";
   const startIndex = body.indexOf(marker);
   if (startIndex !== -1) {
-    return body.slice(startIndex + marker.length).trim();
+    const signature = body.slice(startIndex + marker.length).trim();
+    console.log({ event: "extractSignature", method: "marker", signature });
+    return signature;
   }
 
-  const signatureDivRegex = /<div\s+id="Signature"[^>]*>([\s\S]*?)<\/div>|<table[^>]*>([\s\S]*?)<\/table>/is;
-  const match = body.match(signatureDivRegex);
-  return match ? (match[1] || match[2] || "").trim() : null;
+  const signatureDivRegex = /<div\s+id="Signature"[^>]*>([\s\S]*?)<\/div>/is;
+  const tableRegex = /<table[^>]*>([\s\S]*?)<\/table>/is;
+  let match = body.match(signatureDivRegex);
+  if (match) {
+    const signature = match[1].trim();
+    console.log({ event: "extractSignature", method: "div", signature });
+    return signature;
+  }
+  match = body.match(tableRegex);
+  if (match) {
+    const signature = match[1].trim();
+    console.log({ event: "extractSignature", method: "table", signature });
+    return signature;
+  }
+
+  console.log({ event: "extractSignature", status: "No signature found" });
+  return null;
 }
 
 /**
@@ -499,30 +537,62 @@ function extractSignature(body) {
  * @returns {string|null} The extracted signature or null.
  */
 function extractSignatureForOutlookClassic(body) {
-  console.log({ event: "extractSignatureForOutlookClassic" });
+  console.log({ event: "extractSignatureForOutlookClassic", bodyLength: body?.length });
+  if (!body) return null;
+
   const marker = "<!-- signature -->";
   const startIndex = body.indexOf(marker);
   if (startIndex !== -1) {
-    return body.slice(startIndex + marker.length).trim();
+    const signature = body.slice(startIndex + marker.length).trim();
+    console.log({ event: "extractSignatureForOutlookClassic", method: "marker", signature });
+    return signature;
   }
 
-  const signatureDivRegex = /<table\s+class=MsoNormalTable[^>]*>([\s\S]*?)<\/table>/is;
-  const match = body.match(signatureDivRegex);
-  return match ? match[1].trim() : null;
+  const signatureRegex = /<table\s+class=MsoNormalTable[^>]*>([\s\S]*?)<\/table>/is;
+  const match = body.match(signatureRegex);
+  if (match) {
+    const signature = match[1].trim();
+    console.log({ event: "extractSignatureForOutlookClassic", method: "table", signature });
+    return signature;
+  }
+
+  console.log({ event: "extractSignatureForOutlookClassic", status: "No signature found" });
+  return null;
 }
 
 /**
- * Normalizes a signature for comparison.
+ * Normalizes a signature for comparison by focusing on visible content.
  * @param {string} sig - The signature HTML.
  * @returns {string} The normalized signature.
  */
 function normalizeSignature(sig) {
   if (!sig) return "";
-  return sig
-    .replace(/<[^>]*>?/gm, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+
+  // Step 1: Replace HTML entities with their characters
+  const htmlEntities = {
+    "&nbsp;": " ",
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+  };
+  let normalized = sig;
+  for (const [entity, char] of Object.entries(htmlEntities)) {
+    normalized = normalized.replace(new RegExp(entity, "gi"), char);
+  }
+
+  // Step 2: Remove HTML tags, but preserve content
+  normalized = normalized.replace(/<[^>]+>/g, "");
+
+  // Step 3: Decode any remaining HTML-encoded characters
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = normalized;
+  normalized = textarea.value;
+
+  // Step 4: Normalize whitespace and trim
+  normalized = normalized.replace(/\s+/g, " ").trim().toLowerCase();
+
+  return normalized;
 }
 
 /**
