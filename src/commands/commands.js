@@ -442,7 +442,6 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
     }
 
     const cleanNewSignature = SignatureManager.normalizeSignature(newSignature);
-    console.log(cleanNewSignature);
     const signatureKeys = ["monaSignature", "morganSignature", "morvenSignature", "m2Signature", "m3Signature"];
     let matchedSignatureKey = null;
     let rawMatchedSignature = null;
@@ -454,7 +453,6 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
       const cachedSignature = localStorage.getItem(`signature_${key}`);
       if (cachedSignature) {
         const cleanCachedSignature = SignatureManager.normalizeSignature(cachedSignature);
-        console.log(cleanCachedSignature);
         console.log({
           event: "validateSignatureChanges",
           signatureKey: key,
