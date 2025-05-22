@@ -61,7 +61,6 @@ const SignatureManager = {
    * @returns {string|null} The extracted signature or null.
    */
   extractSignatureForOutlookClassic(body) {
-    console.log({ event: "extractSignatureForOutlookClassic", bodyLength: body?.length });
     if (!body) return null;
 
     const marker = "<!-- signature -->";
