@@ -3,7 +3,7 @@ const webpack = require("webpack");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const dotenv = require("dotenv");
+const Dotenv = require("dotenv-webpack");
 const devCerts = require("office-addin-dev-certs");
 
 const getHttpsOptions = async () => {
@@ -19,15 +19,6 @@ const getHttpsOptions = async () => {
 module.exports = async (env, options) => {
   const isProduction = options.mode === "production";
 
-  // Load environment variables
-  const envPath = path.resolve(__dirname, isProduction ? ".env.production" : ".env");
-  const envVars = dotenv.config({ path: envPath }).parsed || {};
-
-  // Fallback to appropriate URL
-  const assetBaseUrl = isProduction
-    ? envVars.ASSET_BASE_URL || "https://mirzailhami.github.io/outlook-signature-add-ins"
-    : envVars.ASSET_BASE_URL || "https://localhost:3000";
-
   // Get HTTPS options for dev server
   const httpsOptions = await getHttpsOptions();
 
@@ -37,18 +28,18 @@ module.exports = async (env, options) => {
 
     entry: {
       polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
-      commands: "./src/commands/commands.js",
+      taskpane: ["./src/taskpane/taskpane.html"],
+      commands: ["./src/commands/commands.js"],
+      launchevent: "./src/commands/launchevent.js",
     },
 
     output: {
-      path: path.resolve(__dirname, "dist"),
-      filename: "[name].[contenthash:8].js",
-      publicPath: assetBaseUrl,
       clean: true,
     },
 
     resolve: {
       extensions: [".js", ".html"],
+      fallback: { https: require.resolve("https-browserify"), http: require.resolve("stream-http") }, // For fetch compatibility
     },
 
     module: {
@@ -56,6 +47,7 @@ module.exports = async (env, options) => {
         {
           test: /\.js$/,
           exclude: /node_modules/,
+          include: [path.resolve(__dirname, "src")],
           use: {
             loader: "babel-loader",
             options: {
@@ -83,15 +75,17 @@ module.exports = async (env, options) => {
 
     plugins: [
       new CleanWebpackPlugin(),
-      new webpack.DefinePlugin({
-        "process.env.ASSET_BASE_URL": JSON.stringify(assetBaseUrl),
+      new Dotenv({
+        path: path.resolve(__dirname, isProduction ? ".env.production" : ".env"),
+        safe: true,
+        allowEmptyValues: true,
+        systemvars: true,
       }),
-      // Taskpane HTML
       new HtmlWebpackPlugin({
         template: "./src/taskpane/taskpane.html",
         filename: "taskpane.html",
-        chunks: ["polyfill", "commands"],
-        publicPath: assetBaseUrl,
+        chunks: ["polyfill", "launchevent"],
+        publicPath: "auto",
         minify: isProduction
           ? {
               removeComments: true,
@@ -103,8 +97,8 @@ module.exports = async (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/commands/commands.html",
         filename: "commands.html",
-        chunks: ["polyfill", "commands"],
-        publicPath: assetBaseUrl,
+        chunks: ["polyfill", "commands", "launchevent"],
+        publicPath: "auto",
         minify: isProduction
           ? {
               removeComments: true,
@@ -118,21 +112,18 @@ module.exports = async (env, options) => {
           {
             from: "manifest.xml",
             transform(content) {
+              const assetBaseUrl =
+                process.env.ASSET_BASE_URL ||
+                (isProduction ? "https://mirzailhami.github.io/outlook-signature-add-ins" : "https://localhost:3000");
               return content.toString().replace(/\${ASSET_BASE_URL}/g, assetBaseUrl);
             },
           },
-          {
-            from: ".nojekyll",
-            to: ".nojekyll",
-          },
-          {
-            from: "src/index.html",
-            to: "index.html",
-          },
-          {
-            from: "assets",
-            to: "assets",
-          },
+          { from: ".nojekyll", to: ".nojekyll" },
+          { from: "src/index.html", to: "index.html" },
+          { from: "assets", to: "assets" },
+          { from: "src/well-known", to: ".well-known" },
+          { from: "src/commands/authconfig.js", to: "authconfig.js" },
+          { from: "src/commands/helpers.js", to: "helpers.js" },
         ],
       }),
     ],
@@ -148,7 +139,7 @@ module.exports = async (env, options) => {
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
         "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
       },
-      allowedHosts: ["localhost", ".azurewebsites.net", ".ngrok-free.app"],
+      allowedHosts: ["localhost", ".azurewebsites.net"],
       server: {
         type: "https",
         options: httpsOptions,

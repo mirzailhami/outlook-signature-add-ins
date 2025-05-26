@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:mail="http://schemas.microsoft.com/office/mailappversionoverrides/1.0" xsi:type="MailApp">
   <Id>f56e10b6-03a7-4d46-a9e8-42264673b4a8</Id>
+  <!-- <Id>44cb4054-0802-4e2f-8ccb-aba939633fbb</Id> -->
   <Version>1.0.0.12</Version>
   <ProviderName>M3Wind</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
@@ -19,7 +20,7 @@
   </Hosts>
   <Requirements>
     <Sets>
-      <Set Name="Mailbox" MinVersion="1.14"/>
+      <Set Name="Mailbox" MinVersion="1.10"/>
     </Sets>
   </Requirements>
   <FormSettings>
@@ -36,14 +37,19 @@
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <Requirements>
-        <bt:Sets DefaultMinVersion="1.14">
+        <bt:Sets DefaultMinVersion="1.10">
           <bt:Set Name="Mailbox"/>
         </bt:Sets>
       </Requirements>
       <Hosts>
         <Host xsi:type="MailHost">
           <Runtimes>
-            <Runtime resid="WebViewRuntime.Url"/>
+            <!-- HTML file including reference to or inline JavaScript event handlers.
+               This is used by Outlook on the web and on the new Mac UI, and new Outlook on Windows. -->
+            <Runtime resid="WebViewRuntime.Url">
+              <!-- JavaScript file containing event handlers. This is used by classic Outlook on Windows. -->
+              <Override type="javascript" resid="JSRuntime.Url"/>
+            </Runtime>
           </Runtimes>
           <DesktopFormFactor>
             <FunctionFile resid="Commands.Url"/>
@@ -191,6 +197,7 @@
           <bt:Url id="Commands.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
           <bt:Url id="WebViewRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
           <bt:Url id="Taskpane.Url" DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
+          <bt:Url id="JSRuntime.Url" DefaultValue="${ASSET_BASE_URL}/launchevent.js" />
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="M3 Signatures"/>
@@ -211,6 +218,16 @@
           <bt:String id="TaskpaneMenu.Tooltip.M3" DefaultValue="Insert M3 signature"/>
         </bt:LongStrings>
       </Resources>
+      <WebApplicationInfo>
+        <Id>44cb4054-0802-4e2f-8ccb-aba939633fbb</Id>
+        <Resource>api://localhost:3000/44cb4054-0802-4e2f-8ccb-aba939633fbb</Resource>
+        <Scopes>
+          <Scope>Mail.Read</Scope>
+          <Scope>User.Read</Scope>
+          <Scope>profile</Scope>
+          <Scope>openid</Scope>
+        </Scopes>
+      </WebApplicationInfo>
     </VersionOverrides>
   </VersionOverrides>
 </OfficeApp>
