@@ -139,7 +139,7 @@ function displayNotification(type, message, persistent = false) {
       notification.persistent = false;
     }
 
-    item.notificationMessages.addAsync(`notif_${DateTime.now().toMillis()}`, notification, (result) => {
+    item.notificationMessages.addAsync(`notif_${new Date().getTime()}`, notification, (result) => {
       if (result.status === Office.AsyncResultStatus.Failed) {
         logger.log("error", "displayNotification", { error: result.error.message });
       }
