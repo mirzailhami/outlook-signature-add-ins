@@ -218,16 +218,6 @@
           <bt:String id="TaskpaneMenu.Tooltip.M3" DefaultValue="Insert M3 signature"/>
         </bt:LongStrings>
       </Resources>
-      <WebApplicationInfo>
-        <Id>44cb4054-0802-4e2f-8ccb-aba939633fbb</Id>
-        <Resource>api://localhost:3000/44cb4054-0802-4e2f-8ccb-aba939633fbb</Resource>
-        <Scopes>
-          <Scope>Mail.Read</Scope>
-          <Scope>User.Read</Scope>
-          <Scope>profile</Scope>
-          <Scope>openid</Scope>
-        </Scopes>
-      </WebApplicationInfo>
     </VersionOverrides>
   </VersionOverrides>
 </OfficeApp>
