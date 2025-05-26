@@ -41,13 +41,13 @@ async function getGraphAccessToken() {
     logger.log(`info`, `getGraphAccessToken`, { response });
     return response.accessToken;
   } catch (silentError) {
-    logger.log(`error`, `acquireTokenSilent`, `Unable to acquire token silently: ${silentError}`);
+    logger.log(`error`, `acquireTokenSilent`, { silentError });
     try {
       const response = await pca.acquireTokenPopup(tokenRequest);
       logger.log(`info`, `acquireTokenPopup`, { response });
       return response.accessToken;
     } catch (popupError) {
-      logger.log(`error`, `acquireTokenPopup`, `Unable to acquire token interactively: ${popupError}`);
+      logger.log(`error`, `acquireTokenPopup`, { popupError });
       throw new Error("Failed to acquire access token.");
     }
   }
