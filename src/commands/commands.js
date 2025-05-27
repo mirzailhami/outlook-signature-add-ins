@@ -410,7 +410,7 @@ async function onNewMessageComposeHandler(event) {
       });
 
       const filterValue = conversationId; // Use raw conversationId as per Graph Explorer
-      const filterString = `conversationId eq '${filterValue}'`;
+      const filterString = `conversationId eq '${encodeURIComponent(filterValue)}'`;
       logger.log("debug", "onNewMessageComposeHandler", { filterString });
 
       const response = await client
