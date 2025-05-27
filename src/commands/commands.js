@@ -12,7 +12,7 @@ import {
 
 // Mobile needs this initialization
 Office.initialize = () => {
-  logger.log(`info`, `Office.initialize`, { loaded: true });
+  logger.log(`info`, `Office.initialize`, new Date() + ": Office initialized - first");
 };
 
 Office.onReady(() => {
@@ -528,6 +528,21 @@ async function onNewMessageComposeHandler(event) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
       if (isMobile) {
         displayNotification("Info", `Debug: Graph Error - ${error.message}`, false);
+      }
+      // Add filter value to body for debugging on error
+      if (isMobile) {
+        const debugHtml = `<p style="color: #ff0000;">[Debug] Filter Value: ${encodeURIComponent(conversationId)}</p>`;
+        const currentBody = await new Promise((resolve) =>
+          item.body.getAsync("html", (result) => resolve(result.value))
+        );
+        await new Promise((resolve) =>
+          item.body.setAsync(currentBody + debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
+            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+              logger.log("warn", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+            }
+            resolve();
+          })
+        );
       }
       displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
       saveSignatureData(item, "none").then(() => event.completed());
