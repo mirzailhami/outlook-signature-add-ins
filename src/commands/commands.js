@@ -510,7 +510,11 @@ async function onNewMessageComposeHandler(event) {
       if (isMobile) {
         displayNotification("Info", `Debug: Graph Error - ${error.message}`, false);
       }
-      displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
+      displayNotification(
+        "Error",
+        `Failed to fetch signature from Graph: ${error.message} - conversationId eq '${encodeURIComponent(conversationId)}'`,
+        true
+      );
       saveSignatureData(item, "none").then(() => event.completed());
     }
   } else {
