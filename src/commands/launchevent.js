@@ -12,6 +12,10 @@ import { logger } from "./helpers.js";
 let pca = undefined;
 let isPCAInitialized = false;
 
+Office.onReady(() => {
+  console.log("Office.js is ready");
+});
+
 /**
  * Initialize the public client application to work with SSO through NAA.
  */
@@ -21,34 +25,39 @@ async function initializePCA() {
   try {
     pca = await createNestablePublicClientApplication({ auth });
     isPCAInitialized = true;
+    logger.log("info", "initializePCA", { status: "PCA initialized successfully" });
   } catch (error) {
-    logger.log(`error`, `initializePCA`, `Error creating pca: ${error}`);
+    logger.log("error", "initializePCA", { error: error.message });
+    throw error;
   }
 }
 
 /**
  * Fetches an access token for Microsoft Graph API.
  * @returns {Promise<string>} The access token.
+ * @throws {Error} If token acquisition fails.
  */
 async function getGraphAccessToken() {
   await initializePCA();
   const tokenRequest = {
-    scopes: ["Mail.Read", "openid", "profile"],
+    scopes: ["User.Read", "Mail.ReadWrite", "Mail.Read", "openid", "profile"],
   };
 
   try {
+    logger.log("info", "acquireTokenSilent", { status: "Attempting to acquire token silently" });
     const response = await pca.acquireTokenSilent(tokenRequest);
-    logger.log(`info`, `getGraphAccessToken`, { response });
+    logger.log("info", "acquireTokenSilent", { status: "Token acquired silently" });
     return response.accessToken;
   } catch (silentError) {
-    logger.log(`error`, `acquireTokenSilent`, { silentError });
+    logger.log("error", "acquireTokenSilent", { silentError });
     try {
+      logger.log("info", "acquireTokenPopup", { status: "Falling back to interactive token acquisition" });
       const response = await pca.acquireTokenPopup(tokenRequest);
-      logger.log(`info`, `acquireTokenPopup`, { response });
+      logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
       return response.accessToken;
     } catch (popupError) {
-      logger.log(`error`, `acquireTokenPopup`, { popupError });
-      throw new Error("Failed to acquire access token.");
+      logger.log("error", "acquireTokenPopup", { popupError });
+      throw new Error(`Failed to acquire access token: ${popupError.message}`);
     }
   }
 }
