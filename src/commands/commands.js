@@ -12,7 +12,7 @@ import {
 
 // Mobile needs this initialization
 Office.initialize = () => {
-  logger.log(`info`, `Office.initialize`, new Date() + ": Office initialized - first");
+  logger.log(`info`, `Office.initialize`, { loaded: true });
 };
 
 Office.onReady(() => {
@@ -408,13 +408,25 @@ async function onNewMessageComposeHandler(event) {
     try {
       // Log conversationId in notification for mobile debugging
       if (isMobile) {
-        displayNotification("Info", `Debug: conversationId = ${conversationId}`, false);
+        displayNotification("Info", `Debug: Raw conversationId = ${conversationId}`, false);
       }
 
-      // Validate conversationId (basic check for non-empty string and no invalid characters)
-      const validConversationIdPattern = /^[A-Za-z0-9+/=]+$/; // Base64-like characters, common for conversationId
+      // Relaxed validation to allow more characters, log the raw value
+      const validConversationIdPattern = /^[A-Za-z0-9+/=._-]+$/; // Allow dots and hyphens, common in some IDs
       if (!validConversationIdPattern.test(conversationId)) {
-        throw new Error("Invalid conversationId format");
+        if (isMobile) {
+          displayNotification("Info", `Debug: Invalid conversationId format: ${conversationId}`, false);
+        }
+        logger.log("warn", "onNewMessageComposeHandler", { status: "Invalid conversationId", conversationId });
+        // Fallback to getSignatureKeyForRecipients
+        const signatureKey = await getSignatureKeyForRecipients(item);
+        if (signatureKey) {
+          await addSignature(signatureKey, event, true);
+        } else {
+          displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+          saveSignatureData(item, "none").then(() => event.completed());
+        }
+        return;
       }
 
       const accessToken = await getGraphAccessToken();
