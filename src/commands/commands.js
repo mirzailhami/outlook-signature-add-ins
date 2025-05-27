@@ -10,6 +10,11 @@ import {
   saveSignatureData,
 } from "./helpers.js";
 
+// Mobile needs this initialization
+Office.initialize = () => ({
+  logger.log(`info`, `Office.initialize`, new Date() + ": Office initialized - first")
+});
+
 Office.onReady(() => {
   logger.log("info", "Office.onReady", { host: Office.context?.mailbox?.diagnostics?.hostName });
 

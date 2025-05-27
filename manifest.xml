@@ -182,6 +182,12 @@
                 </Control>
               </Group>
             </ExtensionPoint>
+            <ExtensionPoint xsi:type="LaunchEvent">
+              <LaunchEvents>
+                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onMessageComposeHandler"/>
+              </LaunchEvents>
+              <SourceLocation resid="WebViewRuntime.Url"/>
+            </ExtensionPoint>
           </MobileFormFactor>
         </Host>
       </Hosts>
