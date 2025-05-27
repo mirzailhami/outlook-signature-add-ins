@@ -391,80 +391,126 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
 async function onNewMessageComposeHandler(event) {
   const item = Office.context.mailbox.item;
   const isReplyOrForward = await SignatureManager.isReplyOrForward(item);
+  const isMobile = Office.context.mailbox.diagnostics.hostName === "OutlookMobile";
 
   if (isReplyOrForward) {
     const conversationId = item.conversationId;
-    if (conversationId) {
-      try {
-        const accessToken = await getGraphAccessToken();
-        const client = Client.init({
-          authProvider: (done) => {
-            done(null, accessToken);
-          },
-        });
+    if (!conversationId) {
+      logger.log("info", "onNewMessageComposeHandler", { status: "No conversationId available" });
+      if (isMobile) {
+        displayNotification("Info", "Debug: No conversationId available.", false);
+      }
+      displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+      saveSignatureData(item, "none").then(() => event.completed());
+      return;
+    }
 
-        const response = await client
-          .api(`/me/mailFolders/SentItems/messages`)
-          .filter(`conversationId eq '${encodeURIComponent(conversationId)}'`)
-          .select("body")
-          .top(10)
-          .get();
+    try {
+      // Log conversationId in notification for mobile debugging
+      if (isMobile) {
+        displayNotification("Info", `Debug: conversationId = ${conversationId}`, false);
+      }
 
-        if (response.value && response.value.length > 0) {
-          const messages = response.value.sort(
-            (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
-          );
+      // Validate conversationId (basic check for non-empty string and no invalid characters)
+      const validConversationIdPattern = /^[A-Za-z0-9+/=]+$/; // Base64-like characters, common for conversationId
+      if (!validConversationIdPattern.test(conversationId)) {
+        throw new Error("Invalid conversationId format");
+      }
 
-          let extractedSignature = null;
-          for (const message of messages) {
-            const emailBody = message.body?.content || "";
-            extractedSignature = SignatureManager.extractSignature(emailBody);
-            if (extractedSignature) {
-              logger.log("info", "onNewMessageComposeHandler", {
-                status: "Signature extracted from Sent Items",
-                signatureLength: extractedSignature.length,
-              });
-              break;
-            }
-          }
+      const accessToken = await getGraphAccessToken();
+      const client = Client.init({
+        authProvider: (done) => {
+          done(null, accessToken);
+        },
+      });
 
+      const response = await client
+        .api(`/me/mailFolders/SentItems/messages`)
+        .filter(`conversationId eq '${encodeURIComponent(conversationId)}'`)
+        .select("body")
+        .top(10)
+        .get();
+
+      if (response.value && response.value.length > 0) {
+        const messages = response.value.sort(
+          (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
+        );
+
+        let extractedSignature = null;
+        for (const message of messages) {
+          const emailBody = message.body?.content || "";
+          extractedSignature = SignatureManager.extractSignature(emailBody);
           if (extractedSignature) {
-            localStorage.setItem("tempSignature_replyForward", extractedSignature);
-
-            await new Promise((resolve) =>
-              item.body.setSignatureAsync(
-                "<!-- signature -->" + extractedSignature.trim(),
-                { coercionType: Office.CoercionType.Html },
-                (asyncResult) => {
-                  if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                    logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-                    displayNotification("Error", "Failed to apply your signature from conversation.", true);
-                    saveSignatureData(item, "none").then(() => event.completed());
-                  } else {
-                    saveSignatureData(item, "tempSignature_replyForward").then(() => event.completed());
-                  }
-                  resolve();
-                }
-              )
-            );
-          } else {
-            displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-            saveSignatureData(item, "none").then(() => event.completed());
+            logger.log("info", "onNewMessageComposeHandler", {
+              status: "Signature extracted from Sent Items",
+              signatureLength: extractedSignature.length,
+            });
+            break;
           }
+        }
+
+        if (extractedSignature) {
+          localStorage.setItem("tempSignature_replyForward", extractedSignature);
+
+          await new Promise((resolve) =>
+            item.body.setSignatureAsync(
+              "<!-- signature -->" + extractedSignature.trim(),
+              { coercionType: Office.CoercionType.Html },
+              (asyncResult) => {
+                if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                  logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+                  if (isMobile) {
+                    displayNotification(
+                      "Info",
+                      `Debug: Failed to apply signature - ${asyncResult.error.message}`,
+                      false
+                    );
+                  }
+                  displayNotification("Error", "Failed to apply your signature from conversation.", true);
+                  saveSignatureData(item, "none").then(() => event.completed());
+                } else {
+                  saveSignatureData(item, "tempSignature_replyForward").then(() => event.completed());
+                }
+                resolve();
+              }
+            )
+          );
         } else {
+          logger.log("info", "onNewMessageComposeHandler", { status: "No signature found in Sent Items" });
+          if (isMobile) {
+            displayNotification("Info", "Debug: No signature found in Sent Items.", false);
+          }
           displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
           saveSignatureData(item, "none").then(() => event.completed());
         }
-      } catch (error) {
-        logger.log("error", "onNewMessageComposeHandler", { error: error.message });
-        displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
+      } else {
+        logger.log("info", "onNewMessageComposeHandler", {
+          status: "No messages found in Sent Items for this conversation",
+        });
+        if (isMobile) {
+          displayNotification("Info", "Debug: No messages found in Sent Items.", false);
+        }
+        displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
         saveSignatureData(item, "none").then(() => event.completed());
       }
-    } else {
-      displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+    } catch (error) {
+      logger.log("error", "onNewMessageComposeHandler", { error: error.message });
+      if (isMobile) {
+        displayNotification("Info", `Debug: Graph Error - ${error.message}`, false);
+      }
+      displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
+      saveSignatureData(item, "none").then(() => event.completed());
     }
   } else {
+    logger.log("info", "onNewMessageComposeHandler", { status: "New email, no conversationId" });
+    if (isMobile) {
+      displayNotification("Info", "Debug: New email, no conversationId.", false);
+    }
     displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+    saveSignatureData(item, "none").then(() => {
+      localStorage.removeItem("tempSignature_new");
+      event.completed();
+    });
   }
 }
 
