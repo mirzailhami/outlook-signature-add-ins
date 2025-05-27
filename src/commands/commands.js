@@ -440,32 +440,16 @@ async function onNewMessageComposeHandler(event) {
         const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}, encodedConversationId: ${encodedConversationId}</p>`;
         await new Promise((resolve) =>
           item.body.setSignatureAsync(
-            debugHtml + "<!-- signature -->" + extractedSignature.trim(),
+            debugHtml + "<!-- signature -->",
             { coercionType: Office.CoercionType.Html },
-            (asyncResult) => {
-              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-                if (isMobile) {
-                  displayNotification(
-                    "Info",
-                    `Debug: Failed to apply signature with debug info - ${asyncResult.error.message}`,
-                    false
-                  );
-                }
-                displayNotification("Error", "Failed to apply your signature from conversation.", true);
-                saveSignatureData(item, "none").then(() => event.completed());
-              } else {
-                saveSignatureData(item, "tempSignature_replyForward").then(() => event.completed());
-              }
-              resolve();
-            }
+            () => resolve()
           )
         );
       }
 
       const response = await client
         .api(`/me/mailFolders/SentItems/messages`)
-        .filter(`conversationId eq '${encodedConversationId}'`)
+        .filter(`conversationId eq '${conversationId}'`)
         .select("body")
         .top(10)
         .get();
