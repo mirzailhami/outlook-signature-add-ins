@@ -11,9 +11,7 @@ import {
 } from "./helpers.js";
 
 // Mobile needs this initialization
-Office.initialize = () => {
-  logger.log(`info`, `Office.initialize`, new Date() + ": Office initialized - first");
-};
+Office.initialize = () => {};
 
 Office.onReady(() => {
   logger.log("info", "Office.onReady", { host: Office.context?.mailbox?.diagnostics?.hostName });
@@ -399,27 +397,7 @@ async function onNewMessageComposeHandler(event) {
     const conversationId = item.conversationId;
     if (!conversationId) {
       logger.log("info", "onNewMessageComposeHandler", { status: "No conversationId available" });
-      if (isMobile) {
-        displayNotification("Info", "Debug: No conversationId available.", false);
-      }
       displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-      saveSignatureData(item, "none").then(() => event.completed());
-      return;
-    }
-
-    // Validate conversationId
-    const validConversationIdPattern = /^[A-Za-z0-9+/=._-]+$/; // Allow dots and hyphens
-    if (!validConversationIdPattern.test(conversationId)) {
-      if (isMobile) {
-        displayNotification("Info", `Debug: Invalid conversationId format: ${conversationId}`, false);
-      }
-      logger.log("error", "onNewMessageComposeHandler", { status: "Invalid conversationId", conversationId });
-      displayNotification(
-        "Error",
-        "Invalid conversationId format. Please select an M3 signature from the ribbon.",
-        true
-      );
-      saveSignatureData(item, "none").then(() => event.completed());
       return;
     }
 
@@ -431,21 +409,7 @@ async function onNewMessageComposeHandler(event) {
         },
       });
 
-      const encodedConversationId = encodeURIComponent(conversationId);
-      logger.log("debug", "onNewMessageComposeHandler", { encodedConversationId });
-
-      // Display conversationId for mobile debugging with unique ID
-      if (isMobile) {
-        displayNotification("Info", `Debug: conversationId = ${conversationId}`, false);
-        const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}, encodedConversationId: ${encodedConversationId}</p>`;
-        await new Promise((resolve) =>
-          item.body.setSignatureAsync(
-            debugHtml + "<!-- signature -->",
-            { coercionType: Office.CoercionType.Html },
-            () => resolve()
-          )
-        );
-      }
+      const encodedConversationId = isMobile ? conversationId : encodeURIComponent(conversationId);
 
       const response = await client
         .api(`/me/mailFolders/SentItems/messages`)
@@ -481,17 +445,7 @@ async function onNewMessageComposeHandler(event) {
               (asyncResult) => {
                 if (asyncResult.status === Office.AsyncResultStatus.Failed) {
                   logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-                  if (isMobile) {
-                    displayNotification(
-                      "Info",
-                      `Debug: Failed to apply signature - ${asyncResult.error.message}`,
-                      false
-                    );
-                  }
                   displayNotification("Error", "Failed to apply your signature from conversation.", true);
-                  saveSignatureData(item, "none").then(() => event.completed());
-                } else {
-                  saveSignatureData(item, "tempSignature_replyForward").then(() => event.completed());
                 }
                 resolve();
               }
@@ -499,37 +453,21 @@ async function onNewMessageComposeHandler(event) {
           );
         } else {
           logger.log("info", "onNewMessageComposeHandler", { status: "No signature found in Sent Items" });
-          if (isMobile) {
-            displayNotification("Info", "Debug: No signature found in Sent Items.", false);
-          }
           displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-          saveSignatureData(item, "none").then(() => event.completed());
         }
       } else {
         logger.log("info", "onNewMessageComposeHandler", {
           status: "No messages found in Sent Items for this conversation",
         });
-        if (isMobile) {
-          displayNotification("Info", "Debug: No messages found in Sent Items.", false);
-        }
         displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-        saveSignatureData(item, "none").then(() => event.completed());
       }
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
       displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
-      saveSignatureData(item, "none").then(() => event.completed());
     }
   } else {
     logger.log("info", "onNewMessageComposeHandler", { status: "New email, no conversationId" });
-    if (isMobile) {
-      displayNotification("Info", "Debug: New email, no conversationId.", false);
-    }
     displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-    saveSignatureData(item, "none").then(() => {
-      localStorage.removeItem("tempSignature_new");
-      event.completed();
-    });
   }
 }
 
