@@ -439,6 +439,22 @@ async function onNewMessageComposeHandler(event) {
       const encodedConversationId = encodeURIComponent(conversationId);
       logger.log("debug", "onNewMessageComposeHandler", { encodedConversationId });
 
+      // Add conversationId to body for debugging on mobile
+      if (isMobile) {
+        const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}, encodedConversationId: ${encodedConversationId}</p>`;
+        const currentBody = await new Promise((resolve) =>
+          item.body.getAsync("html", (result) => resolve(result.value))
+        );
+        await new Promise((resolve) =>
+          item.body.setAsync(currentBody + debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
+            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+              logger.log("warn", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+            }
+            resolve();
+          })
+        );
+      }
+
       const response = await client
         .api(`/me/mailFolders/SentItems/messages`)
         .filter(`conversationId eq '${encodedConversationId}'`)
@@ -466,22 +482,6 @@ async function onNewMessageComposeHandler(event) {
 
         if (extractedSignature) {
           localStorage.setItem("tempSignature_replyForward", extractedSignature);
-
-          // Add conversationId to body for debugging on mobile
-          if (isMobile) {
-            const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>`;
-            const currentBody = await new Promise((resolve) =>
-              item.body.getAsync("html", (result) => resolve(result.value))
-            );
-            await new Promise((resolve) =>
-              item.body.setAsync(currentBody + debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
-                if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                  logger.log("warn", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-                }
-                resolve();
-              })
-            );
-          }
 
           await new Promise((resolve) =>
             item.body.setSignatureAsync(
