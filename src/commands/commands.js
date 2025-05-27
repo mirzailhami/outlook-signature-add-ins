@@ -409,11 +409,13 @@ async function onNewMessageComposeHandler(event) {
         },
       });
 
-      const encodedConversationId = isMobile ? conversationId : encodeURIComponent(conversationId);
+      const filterValue = conversationId; // Use raw conversationId as per Graph Explorer
+      const filterString = `conversationId eq '${filterValue}'`;
+      logger.log("debug", "onNewMessageComposeHandler", { filterString });
 
       const response = await client
         .api(`/me/mailFolders/SentItems/messages`)
-        .filter(`conversationId eq '${encodedConversationId}'`)
+        .filter(filterString)
         .select("body")
         .top(10)
         .get();
@@ -438,6 +440,7 @@ async function onNewMessageComposeHandler(event) {
 
         if (extractedSignature) {
           localStorage.setItem("tempSignature_replyForward", extractedSignature);
+
           await new Promise((resolve) =>
             item.body.setSignatureAsync(
               "<!-- signature -->" + extractedSignature.trim(),
