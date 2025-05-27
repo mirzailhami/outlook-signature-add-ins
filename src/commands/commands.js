@@ -407,11 +407,6 @@ async function onNewMessageComposeHandler(event) {
       return;
     }
 
-    // Display conversationId for mobile debugging with unique ID
-    if (isMobile) {
-      displayNotification("Info", `Debug: conversationId = ${conversationId}`, false);
-    }
-
     // Validate conversationId
     const validConversationIdPattern = /^[A-Za-z0-9+/=._-]+$/; // Allow dots and hyphens
     if (!validConversationIdPattern.test(conversationId)) {
@@ -439,17 +434,34 @@ async function onNewMessageComposeHandler(event) {
       const encodedConversationId = encodeURIComponent(conversationId);
       logger.log("debug", "onNewMessageComposeHandler", { encodedConversationId });
 
-      // Add conversationId to body for debugging on mobile
-      const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}, encodedConversationId: ${encodedConversationId}</p>`;
-      const currentBody = await new Promise((resolve) => item.body.getAsync("html", (result) => resolve(result.value)));
-      await new Promise((resolve) =>
-        item.body.setAsync(currentBody + debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
-          if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-            logger.log("warn", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-          }
-          resolve();
-        })
-      );
+      // Display conversationId for mobile debugging with unique ID
+      if (isMobile) {
+        displayNotification("Info", `Debug: conversationId = ${conversationId}`, false);
+        const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}, encodedConversationId: ${encodedConversationId}</p>`;
+        await new Promise((resolve) =>
+          item.body.setSignatureAsync(
+            debugHtml + "<!-- signature -->" + extractedSignature.trim(),
+            { coercionType: Office.CoercionType.Html },
+            (asyncResult) => {
+              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+                if (isMobile) {
+                  displayNotification(
+                    "Info",
+                    `Debug: Failed to apply signature with debug info - ${asyncResult.error.message}`,
+                    false
+                  );
+                }
+                displayNotification("Error", "Failed to apply your signature from conversation.", true);
+                saveSignatureData(item, "none").then(() => event.completed());
+              } else {
+                saveSignatureData(item, "tempSignature_replyForward").then(() => event.completed());
+              }
+              resolve();
+            }
+          )
+        );
+      }
 
       const response = await client
         .api(`/me/mailFolders/SentItems/messages`)
@@ -478,7 +490,6 @@ async function onNewMessageComposeHandler(event) {
 
         if (extractedSignature) {
           localStorage.setItem("tempSignature_replyForward", extractedSignature);
-
           await new Promise((resolve) =>
             item.body.setSignatureAsync(
               "<!-- signature -->" + extractedSignature.trim(),
@@ -525,14 +536,11 @@ async function onNewMessageComposeHandler(event) {
       if (isMobile) {
         displayNotification("Info", `Debug: Graph Error - ${error.message}`, false);
       }
-      // Add filter value to body for debugging on error
+      // Add filter value to signature area for debugging on error
       if (isMobile) {
-        const debugHtml = `<p style="color: #ff0000;">[Debug] Filter Value: ${encodeURIComponent(conversationId)}</p>`;
-        const currentBody = await new Promise((resolve) =>
-          item.body.getAsync("html", (result) => resolve(result.value))
-        );
+        const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p><p style="color: #ff0000;">[Debug] Filter Value: ${encodeURIComponent(conversationId)}</p>`;
         await new Promise((resolve) =>
-          item.body.setAsync(currentBody + debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
+          item.body.setSignatureAsync(debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
             if (asyncResult.status === Office.AsyncResultStatus.Failed) {
               logger.log("warn", "onNewMessageComposeHandler", { error: asyncResult.error.message });
             }
@@ -540,11 +548,7 @@ async function onNewMessageComposeHandler(event) {
           })
         );
       }
-      displayNotification(
-        "Error",
-        `Failed to fetch signature from Graph: ${error.message} - ${Office.context.mailbox.diagnostics.hostName}`,
-        true
-      );
+      displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
       saveSignatureData(item, "none").then(() => event.completed());
     }
   } else {
