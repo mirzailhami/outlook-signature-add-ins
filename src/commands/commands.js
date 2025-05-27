@@ -449,7 +449,7 @@ async function onNewMessageComposeHandler(event) {
 
       const response = await client
         .api(`/me/mailFolders/SentItems/messages`)
-        .filter(`conversationId eq '${conversationId}'`)
+        .filter(`conversationId eq '${encodedConversationId}'`)
         .select("body")
         .top(10)
         .get();
