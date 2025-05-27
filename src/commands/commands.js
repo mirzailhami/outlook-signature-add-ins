@@ -440,20 +440,16 @@ async function onNewMessageComposeHandler(event) {
       logger.log("debug", "onNewMessageComposeHandler", { encodedConversationId });
 
       // Add conversationId to body for debugging on mobile
-      if (isMobile) {
-        const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}, encodedConversationId: ${encodedConversationId}</p>`;
-        const currentBody = await new Promise((resolve) =>
-          item.body.getAsync("html", (result) => resolve(result.value))
-        );
-        await new Promise((resolve) =>
-          item.body.setAsync(currentBody + debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
-            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-              logger.log("warn", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-            }
-            resolve();
-          })
-        );
-      }
+      const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}, encodedConversationId: ${encodedConversationId}</p>`;
+      const currentBody = await new Promise((resolve) => item.body.getAsync("html", (result) => resolve(result.value)));
+      await new Promise((resolve) =>
+        item.body.setAsync(currentBody + debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
+          if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+            logger.log("warn", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+          }
+          resolve();
+        })
+      );
 
       const response = await client
         .api(`/me/mailFolders/SentItems/messages`)
@@ -544,7 +540,11 @@ async function onNewMessageComposeHandler(event) {
           })
         );
       }
-      displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
+      displayNotification(
+        "Error",
+        `Failed to fetch signature from Graph: ${error.message} - ${Office.context.mailbox.diagnostics.hostName}`,
+        true
+      );
       saveSignatureData(item, "none").then(() => event.completed());
     }
   } else {
