@@ -12,7 +12,7 @@ import {
 
 // Mobile needs this initialization
 Office.initialize = () => {
-  logger.log(`info`, `Office.initialize`, { loaded: true });
+  logger.log(`info`, `Office.initialize`, new Date() + ": Office initialized - first");
 };
 
 Office.onReady(() => {
@@ -405,30 +405,30 @@ async function onNewMessageComposeHandler(event) {
       return;
     }
 
-    try {
-      // Log conversationId in notification for mobile debugging
+    // Always display the conversationId for mobile debugging
+    if (isMobile) {
+      displayNotification("Info", `Debug: conversationId = ${conversationId}`, false);
+    }
+
+    // Validate conversationId
+    const validConversationIdPattern = /^[A-Za-z0-9+/=._-]+$/; // Allow dots and hyphens
+    if (!validConversationIdPattern.test(conversationId)) {
       if (isMobile) {
-        displayNotification("Info", `Debug: Raw conversationId = ${conversationId}`, false);
+        displayNotification("Info", `Debug: Invalid conversationId format: ${conversationId}`, false);
       }
-
-      // Relaxed validation to allow more characters, log the raw value
-      const validConversationIdPattern = /^[A-Za-z0-9+/=._-]+$/; // Allow dots and hyphens, common in some IDs
-      if (!validConversationIdPattern.test(conversationId)) {
-        if (isMobile) {
-          displayNotification("Info", `Debug: Invalid conversationId format: ${conversationId}`, false);
-        }
-        logger.log("warn", "onNewMessageComposeHandler", { status: "Invalid conversationId", conversationId });
-        // Fallback to getSignatureKeyForRecipients
-        const signatureKey = await getSignatureKeyForRecipients(item);
-        if (signatureKey) {
-          await addSignature(signatureKey, event, true);
-        } else {
-          displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-          saveSignatureData(item, "none").then(() => event.completed());
-        }
-        return;
+      logger.log("warn", "onNewMessageComposeHandler", { status: "Invalid conversationId", conversationId });
+      // Fallback to getSignatureKeyForRecipients
+      const signatureKey = await getSignatureKeyForRecipients(item);
+      if (signatureKey) {
+        await addSignature(signatureKey, event, true);
+      } else {
+        displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+        saveSignatureData(item, "none").then(() => event.completed());
       }
+      return;
+    }
 
+    try {
       const accessToken = await getGraphAccessToken();
       const client = Client.init({
         authProvider: (done) => {
@@ -510,11 +510,7 @@ async function onNewMessageComposeHandler(event) {
       if (isMobile) {
         displayNotification("Info", `Debug: Graph Error - ${error.message}`, false);
       }
-      displayNotification(
-        "Error",
-        `Failed to fetch signature from Graph: ${error.message} - conversationId eq '${encodeURIComponent(conversationId)}'`,
-        true
-      );
+      displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
       saveSignatureData(item, "none").then(() => event.completed());
     }
   } else {
