@@ -12,7 +12,7 @@ import {
 
 // Mobile needs this initialization
 Office.initialize = () => {
-  logger.log(`info`, `Office.initialize`, new Date() + ": Office initialized - first");
+  logger.log(`info`, `Office.initialize`, { loaded: true });
 };
 
 Office.onReady(() => {
@@ -407,7 +407,7 @@ async function onNewMessageComposeHandler(event) {
       return;
     }
 
-    // Always display the conversationId for mobile debugging
+    // Display conversationId for mobile debugging with unique ID
     if (isMobile) {
       displayNotification("Info", `Debug: conversationId = ${conversationId}`, false);
     }
@@ -418,15 +418,13 @@ async function onNewMessageComposeHandler(event) {
       if (isMobile) {
         displayNotification("Info", `Debug: Invalid conversationId format: ${conversationId}`, false);
       }
-      logger.log("warn", "onNewMessageComposeHandler", { status: "Invalid conversationId", conversationId });
-      // Fallback to getSignatureKeyForRecipients
-      const signatureKey = await getSignatureKeyForRecipients(item);
-      if (signatureKey) {
-        await addSignature(signatureKey, event, true);
-      } else {
-        displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-        saveSignatureData(item, "none").then(() => event.completed());
-      }
+      logger.log("error", "onNewMessageComposeHandler", { status: "Invalid conversationId", conversationId });
+      displayNotification(
+        "Error",
+        "Invalid conversationId format. Please select an M3 signature from the ribbon.",
+        true
+      );
+      saveSignatureData(item, "none").then(() => event.completed());
       return;
     }
 
@@ -438,9 +436,12 @@ async function onNewMessageComposeHandler(event) {
         },
       });
 
+      const encodedConversationId = encodeURIComponent(conversationId);
+      logger.log("debug", "onNewMessageComposeHandler", { encodedConversationId });
+
       const response = await client
         .api(`/me/mailFolders/SentItems/messages`)
-        .filter(`conversationId eq '${encodeURIComponent(conversationId)}'`)
+        .filter(`conversationId eq '${encodedConversationId}'`)
         .select("body")
         .top(10)
         .get();
@@ -465,6 +466,22 @@ async function onNewMessageComposeHandler(event) {
 
         if (extractedSignature) {
           localStorage.setItem("tempSignature_replyForward", extractedSignature);
+
+          // Add conversationId to body for debugging on mobile
+          if (isMobile) {
+            const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>`;
+            const currentBody = await new Promise((resolve) =>
+              item.body.getAsync("html", (result) => resolve(result.value))
+            );
+            await new Promise((resolve) =>
+              item.body.setAsync(currentBody + debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
+                if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                  logger.log("warn", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+                }
+                resolve();
+              })
+            );
+          }
 
           await new Promise((resolve) =>
             item.body.setSignatureAsync(
