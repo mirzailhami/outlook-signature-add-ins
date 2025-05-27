@@ -517,21 +517,6 @@ async function onNewMessageComposeHandler(event) {
       }
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
-      if (isMobile) {
-        displayNotification("Info", `Debug: Graph Error - ${error.message}`, false);
-      }
-      // Add filter value to signature area for debugging on error
-      if (isMobile) {
-        const debugHtml = `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p><p style="color: #ff0000;">[Debug] Filter Value: ${encodeURIComponent(conversationId)}</p>`;
-        await new Promise((resolve) =>
-          item.body.setSignatureAsync(debugHtml, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
-            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-              logger.log("warn", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-            }
-            resolve();
-          })
-        );
-      }
       displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
       saveSignatureData(item, "none").then(() => event.completed());
     }
