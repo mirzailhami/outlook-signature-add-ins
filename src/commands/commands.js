@@ -391,7 +391,9 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
 async function onNewMessageComposeHandler(event) {
   const item = Office.context.mailbox.item;
   const isReplyOrForward = await SignatureManager.isReplyOrForward(item);
-  const isMobile = Office.context.mailbox.diagnostics.hostName === "OutlookMobile";
+  const isMobile =
+    Office.context.mailbox.diagnostics.hostName === "OutlookAndroid" ||
+    Office.context.mailbox.diagnostics.hostName === "OutlookIOS";
 
   if (isReplyOrForward) {
     const conversationId = item.conversationId;
