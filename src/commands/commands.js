@@ -413,6 +413,7 @@ async function onNewMessageComposeHandler(event) {
   };
 
   if (isReplyOrForward) {
+    logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
     const conversationId = item.conversationId;
     if (!conversationId && !isMobile) {
       logger.log("info", "onNewMessageComposeHandler", { status: "No conversationId available" });
@@ -504,22 +505,15 @@ async function onNewMessageComposeHandler(event) {
           );
         }
       } else {
-        logger.log("info", "onNewMessageComposeHandler", {
-          status: "No messages found in Sent Items for this conversation",
-        });
-        await completeWithState(
-          "none",
-          "Info",
-          "No messages found in Sent Items. Please select an M3 signature from the ribbon."
-        );
+        await completeWithState("none", "Info", "Please select an M3 signature from the ribbon.");
       }
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
       await completeWithState("none", "Error", `Failed to fetch signature from Graph: ${error.message}`);
     }
   } else {
-    logger.log("info", "onNewMessageComposeHandler", { status: "New email, no conversationId" });
-    await completeWithState("none", "Info", "New email detected. Please select an M3 signature from the ribbon.");
+    logger.log("info", "onNewMessageComposeHandler", { status: "Processing new email" });
+    await completeWithState("none", "Info", "Please select an M3 signature from the ribbon.");
   }
 }
 
