@@ -414,7 +414,8 @@ async function onNewMessageComposeHandler(event) {
           .api(`/me/mailFolders/SentItems/messages`)
           .filter(filterString)
           .select("body")
-          .top(10)
+          .top(1)
+          .orderby("sentDateTime desc")
           .get();
       } else {
         // Mobile uses 'to' email to search
@@ -449,10 +450,7 @@ async function onNewMessageComposeHandler(event) {
       logger.log("debug", "onNewMessageComposeHandler", { response });
 
       if (response.value && response.value.length > 0) {
-        const messages = response.value.sort(
-          (a, b) => new Date(b.lastModifiedDateTime) - new Date(a.lastModifiedDateTime)
-        );
-
+        const messages = response.value;
         let extractedSignature = null;
         for (const message of messages) {
           const emailBody = message.body?.content || "";
