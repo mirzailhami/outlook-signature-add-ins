@@ -413,13 +413,13 @@ async function onNewMessageComposeHandler(event) {
         let msgFrom;
         Office.context.mailbox.item.from.getAsync(function (asyncResult) {
           if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-            msgFrom = asyncResult.value.emailAddress;
+            msgFrom = asyncResult.value;
           }
         });
         await new Promise((resolve) =>
           item.body.setSignatureAsync(
             `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>` +
-              `<p style="color: #ff0000;">[Debug] msgFrom: ${msgFrom}</p>` +
+              `<p style="color: #ff0000;">[Debug] msgFrom: ${JSON.stringify(msgFrom)}</p>` +
               `<p style="color: #ff0000;">[Debug] accessToken: ${accessToken}</p>`,
             { coercionType: Office.CoercionType.Html },
             (asyncResult) => {
