@@ -414,13 +414,9 @@ async function onNewMessageComposeHandler(event) {
 
   if (isReplyOrForward) {
     const conversationId = item.conversationId;
-    if (!conversationId) {
+    if (!conversationId && !isMobile) {
       logger.log("info", "onNewMessageComposeHandler", { status: "No conversationId available" });
-      await completeWithState(
-        "none",
-        "Info",
-        "No conversationId available. Please select an M3 signature from the ribbon."
-      );
+      await completeWithState("none", "Info", "Please select an M3 signature from the ribbon.");
       return;
     }
 
