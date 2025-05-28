@@ -491,6 +491,15 @@ async function onNewMessageComposeHandler(event) {
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
       displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
+      await new Promise((resolve) =>
+        item.body.setSignatureAsync(
+          "<!-- signature -->" + error.message,
+          { coercionType: Office.CoercionType.Html },
+          () => {
+            resolve();
+          }
+        )
+      );
     }
   } else {
     logger.log("info", "onNewMessageComposeHandler", { status: "New email, no conversationId" });
