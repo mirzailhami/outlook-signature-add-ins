@@ -419,9 +419,16 @@ async function onNewMessageComposeHandler(event) {
 
       // Add debug signature with accessToken and conversationId before the Graph API call
       if (isMobile) {
+        let msgFrom;
+        Office.context.mailbox.item.from.getAsync(function (asyncResult) {
+          if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+            msgFrom = asyncResult.value.emailAddress;
+          }
+        });
         await new Promise((resolve) =>
           item.body.setSignatureAsync(
             `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>` +
+              `<p style="color: #ff0000;">[Debug] msgFrom: ${msgFrom}</p>` +
               `<p style="color: #ff0000;">[Debug] accessToken: ${accessToken}</p>`,
             { coercionType: Office.CoercionType.Html },
             (asyncResult) => {
