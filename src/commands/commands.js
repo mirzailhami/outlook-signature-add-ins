@@ -471,21 +471,14 @@ async function onNewMessageComposeHandler(event) {
       logger.log("debug", "onNewMessageComposeHandler", { response });
 
       if (response.value && response.value.length > 0) {
-        const messages = response.value; // No sorting needed with top(1)
-        let extractedSignature = null;
-        for (const message of messages) {
-          const emailBody = message.body?.content || "";
-          extractedSignature = SignatureManager.extractSignature(emailBody);
-          if (extractedSignature) {
-            logger.log("info", "onNewMessageComposeHandler", {
-              status: "Signature extracted from Sent Items",
-              signatureLength: extractedSignature.length,
-            });
-            break;
-          }
-        }
-
+        const message = response.value[0]; // Single message with top(1)
+        const emailBody = message.body?.content || "";
+        const extractedSignature = SignatureManager.extractSignature(emailBody);
         if (extractedSignature) {
+          logger.log("info", "onNewMessageComposeHandler", {
+            status: "Signature extracted from Sent Items",
+            signatureLength: extractedSignature.length,
+          });
           localStorage.setItem("tempSignature_replyForward", extractedSignature);
 
           await new Promise((resolve) =>
@@ -522,21 +515,6 @@ async function onNewMessageComposeHandler(event) {
       }
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
-      await new Promise((resolve) =>
-        item.body.setSignatureAsync(
-          `<p style="color: #ff0000;">[Error] Failed to fetch signature: ${error.message}</p>`,
-          { coercionType: Office.CoercionType.Html },
-          (asyncResult) => {
-            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-              logger.log("error", "onNewMessageComposeHandler", {
-                error: "Failed to set error debug signature",
-                details: asyncResult.error.message,
-              });
-            }
-            resolve();
-          }
-        )
-      );
       await completeWithState("none", "Error", `Failed to fetch signature from Graph: ${error.message}`);
     }
   } else {
