@@ -496,14 +496,14 @@ async function onNewMessageComposeHandler(event) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
       displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
 
-      // Set debug signature with 'to' email
-      await new Promise((resolve) =>
-        item.body.setSignatureAsync(
-          `<p style="color: #ff0000;">[Error] to: ${error.message}</p>`,
-          { coercionType: Office.CoercionType.Html },
-          () => resolve()
-        )
-      );
+      // // Set debug signature with 'to' email
+      // await new Promise((resolve) =>
+      //   item.body.setSignatureAsync(
+      //     `<p style="color: #ff0000;">[Error] to: ${error.message}</p>`,
+      //     { coercionType: Office.CoercionType.Html },
+      //     () => resolve()
+      //   )
+      // );
       event.completed();
     }
   } else {
