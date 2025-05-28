@@ -442,7 +442,7 @@ async function onNewMessageComposeHandler(event) {
           .search(`to:${recipientEmail}`)
           .select("body")
           .top(1)
-          .orderBy("sentDateTime desc")
+          .orderby("sentDateTime desc")
           .get();
       }
 
