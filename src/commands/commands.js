@@ -412,6 +412,19 @@ async function onNewMessageComposeHandler(event) {
     event.completed();
   };
 
+  // Helper function to wrap fetchSignature in a Promise
+  const getSignature = (signatureKey) => {
+    return new Promise((resolve, reject) => {
+      fetchSignature(signatureKey, (template, error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(template);
+        }
+      });
+    });
+  };
+
   if (isReplyOrForward) {
     logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
     const conversationId = item.conversationId;
@@ -513,7 +526,49 @@ async function onNewMessageComposeHandler(event) {
     }
   } else {
     logger.log("info", "onNewMessageComposeHandler", { status: "Processing new email" });
-    await completeWithState("none", "Info", "Please select an M3 signature from the ribbon.");
+    if (isMobile) {
+      const defaultSignatureKey = localStorage.getItem("defaultSignature");
+      if (defaultSignatureKey) {
+        logger.log("info", "onNewMessageComposeHandler", { status: "Applying default signature", defaultSignatureKey });
+        try {
+          const signature = await getSignature(defaultSignatureKey);
+          if (signature) {
+            await new Promise((resolve) =>
+              item.body.setSignatureAsync(
+                "<!-- signature -->" + signature.trim(),
+                { coercionType: Office.CoercionType.Html },
+                (asyncResult) => {
+                  if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                    logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+                    displayNotification("Error", "Failed to apply default signature.", true);
+                  }
+                  resolve();
+                }
+              )
+            );
+            await completeWithState(defaultSignatureKey, null, null);
+          } else {
+            logger.log("warn", "onNewMessageComposeHandler", {
+              status: "Default signature not found",
+              defaultSignatureKey,
+            });
+            await completeWithState(
+              "none",
+              "Info",
+              "Default signature not found. Please select an M3 signature from the task pane."
+            );
+          }
+        } catch (error) {
+          logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
+          await completeWithState("none", "Error", `Failed to fetch default signature: ${error.message}`);
+        }
+      } else {
+        logger.log("info", "onNewMessageComposeHandler", { status: "No default signature set" });
+        await completeWithState("none", "Info", "Please select an M3 signature from the task pane.");
+      }
+    } else {
+      await completeWithState("none", "Info", "Please select an M3 signature from the ribbon.");
+    }
   }
 }
 
