@@ -404,61 +404,47 @@ async function onNewMessageComposeHandler(event) {
         },
       });
 
-      const filterValue = conversationId;
-      const filterString = `conversationId eq '${encodeURIComponent(filterValue)}'`;
-      logger.log("debug", "onNewMessageComposeHandler", { filterString });
-
-      // Add debug signature with accessToken and conversationId before the Graph API call
-      if (isMobile) {
-        let recipients = "Unknown";
-
-        // Get the 'to' recipients
-        try {
-          const toResult = await new Promise((resolve) =>
-            Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
-          );
-          if (toResult.status === Office.AsyncResultStatus.Succeeded) {
-            recipients = toResult.value.map((r) => r.emailAddress).join(", ") || "No recipients";
-          } else {
-            logger.log("error", "onNewMessageComposeHandler", {
-              error: "Failed to get 'to'",
-              details: toResult.error.message,
-            });
-            recipients = `Error: ${toResult.error.message}`;
-          }
-        } catch (error) {
+      // Determine the filter based on platform
+      let filterString;
+      let response;
+      if (!isMobile) {
+        // OWA uses conversationId
+        filterString = `conversationId eq '${encodeURIComponent(conversationId)}'`;
+        response = await client
+          .api(`/me/mailFolders/SentItems/messages`)
+          .filter(filterString)
+          .select("body")
+          .top(10)
+          .get();
+      } else {
+        // Mobile uses 'to' email to search
+        const toResult = await new Promise((resolve) =>
+          Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
+        );
+        let recipientEmail = "Unknown";
+        if (toResult.status === Office.AsyncResultStatus.Succeeded && toResult.value.length > 0) {
+          recipientEmail = toResult.value[0].emailAddress;
+          logger.log("info", "onNewMessageComposeHandler", { debug: `Using recipient email: ${recipientEmail}` });
+        } else {
           logger.log("error", "onNewMessageComposeHandler", {
-            error: "Exception getting 'to'",
-            details: error.message,
+            error: "Failed to get 'to'",
+            details: toResult.error.message,
           });
-          recipients = `Exception: ${error.message}`;
+          recipientEmail = `Error: ${toResult.error.message}`;
         }
 
         // Set debug signature with 'to' email
-        await new Promise((resolve) =>
-          item.body.setSignatureAsync(
-            `<p style="color: #ff0000;">[Debug] to: ${recipients}</p>`,
-            { coercionType: Office.CoercionType.Html },
-            (asyncResult) => {
-              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-                displayNotification("Error", `Failed to apply debug signature: ${asyncResult.error.message}`, true);
-                saveSignatureData(item, "none").then(() => event.completed());
-              } else {
-                logger.log("info", "onNewMessageComposeHandler", { debug: `Set signature with to: ${recipients}` });
-              }
-              resolve();
-            }
-          )
-        );
-      }
+        displayNotification("Info", `[Debug]: Recipient email - ${recipientEmail}`, false);
 
-      const response = await client
-        .api(`/me/mailFolders/SentItems/messages`)
-        .filter(filterString)
-        .select("body")
-        .top(10)
-        .get();
+        // Graph API search using 'to' email
+        response = await client
+          .api(`/me/mailFolders/SentItems/messages`)
+          .search(`to:${encodeURIComponent(recipientEmail)}`)
+          .select("body")
+          .top(1)
+          .orderBy("sentDateTime desc")
+          .get();
+      }
 
       logger.log("debug", "onNewMessageComposeHandler", { response });
 
@@ -490,13 +476,6 @@ async function onNewMessageComposeHandler(event) {
               (asyncResult) => {
                 if (asyncResult.status === Office.AsyncResultStatus.Failed) {
                   logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-                  if (isMobile) {
-                    displayNotification(
-                      "Info",
-                      `Debug: Failed to apply signature - ${asyncResult.error.message}`,
-                      false
-                    );
-                  }
                   displayNotification("Error", "Failed to apply your signature from conversation.", true);
                 }
                 resolve();
