@@ -457,28 +457,8 @@ async function onNewMessageComposeHandler(event) {
           recipientEmail = `Error: ${toResult.error.message}`;
         }
 
-        // Set debug signature with 'to' email
-        await new Promise((resolve) =>
-          item.body.setSignatureAsync(
-            `<p style="color: #ff0000;">[Debug] to: ${recipientEmail}</p>`,
-            { coercionType: Office.CoercionType.Html },
-            (asyncResult) => {
-              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                logger.log("error", "onNewMessageComposeHandler", {
-                  error: "Failed to set debug signature",
-                  details: asyncResult.error.message,
-                });
-                displayNotification("Error", `Failed to apply debug signature: ${asyncResult.error.message}`, true);
-              } else {
-                displayNotification("Info", `[Debug]: Recipient email - ${recipientEmail}`, false);
-              }
-              resolve();
-            }
-          )
-        );
-
-        // Graph API search using plain email address (without 'to:' prefix)
-        const searchQuery = encodeURIComponent(recipientEmail);
+        // Graph API search using raw email address with quotes
+        const searchQuery = `"${recipientEmail}"`; // Use quotes to treat as a phrase
         logger.log("debug", "onNewMessageComposeHandler", { searchQuery });
         response = await client
           .api(`/me/mailFolders/SentItems/messages`)
