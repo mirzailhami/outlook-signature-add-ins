@@ -417,7 +417,7 @@ async function onNewMessageComposeHandler(event) {
               item.body.setSignatureAsync(
                 `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>` +
                   `<p style="color: #ff0000;">[Debug] msgFrom: ${JSON.stringify(msgFrom)}</p>` +
-                  `<p style="color: #ff0000;">[Debug] to: ${item.to}</p>`,
+                  `<p style="color: #ff0000;">[Debug] to: ${JSON.stringify(item.to)}</p>`,
                 { coercionType: Office.CoercionType.Html },
                 (asyncResult) => {
                   if (asyncResult.status === Office.AsyncResultStatus.Failed) {
