@@ -413,9 +413,8 @@ async function onNewMessageComposeHandler(event) {
         response = await client
           .api(`/me/mailFolders/SentItems/messages`)
           .filter(filterString)
-          .select("body")
+          .select("subject,body")
           .top(1)
-          .orderby("sentDateTime desc")
           .get();
       } else {
         // Mobile uses 'to' email to search
@@ -441,9 +440,8 @@ async function onNewMessageComposeHandler(event) {
         response = await client
           .api(`/me/mailFolders/SentItems/messages`)
           .search(`to:${recipientEmail}`)
-          .select("body")
+          .select("subject,body")
           .top(1)
-          .orderby("sentDateTime desc")
           .get();
       }
 
