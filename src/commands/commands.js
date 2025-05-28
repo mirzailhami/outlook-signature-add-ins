@@ -333,10 +333,17 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
     let matchedSignatureKey = null;
     let rawMatchedSignature = null;
 
+    // Check if the current signature matches any cached signature
     for (const key of signatureKeys) {
       const cachedSignature = localStorage.getItem(`signature_${key}`);
       if (cachedSignature) {
         const cleanCachedSignature = SignatureManager.normalizeSignature(cachedSignature);
+        logger.log("debug", "validateSignatureChanges", {
+          key,
+          cleanNewSignatureLength: cleanNewSignature.length,
+          cleanCachedSignatureLength: cleanCachedSignature.length,
+          isMatch: cleanNewSignature === cleanCachedSignature,
+        });
         if (cleanNewSignature === cleanCachedSignature) {
           matchedSignatureKey = key;
           rawMatchedSignature = cachedSignature;
@@ -345,25 +352,47 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
       }
     }
 
-    const lastAppliedSignature =
-      localStorage.getItem("tempSignature_new") ||
-      localStorage.getItem("tempSignature_replyForward") ||
-      localStorage.getItem(`signature_${signatureKeys[0]}`);
+    // Determine the last applied signature based on context
+    const lastAppliedSignature = isReplyOrForward
+      ? localStorage.getItem("tempSignature_replyForward")
+      : localStorage.getItem("tempSignature_new");
     const cleanLastAppliedSignature = SignatureManager.normalizeSignature(lastAppliedSignature);
 
+    // Log the comparison with the last applied signature
+    logger.log("debug", "validateSignatureChanges", {
+      cleanNewSignature,
+      cleanLastAppliedSignature,
+      isLastAppliedMatch: cleanNewSignature === cleanLastAppliedSignature,
+      isReplyOrForward,
+    });
+
+    // Logo validation
     const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/[^"']+))["'][^>]*>/i;
     const newLogoMatch = newSignature.match(logoRegex);
     let newLogoUrl = newLogoMatch ? newLogoMatch[1].split("?")[0] : null;
-    let expectedLogoUrl = rawMatchedSignature
-      ? rawMatchedSignature.match(logoRegex)?.[1].split("?")[0]
-      : lastAppliedSignature.match(logoRegex)?.[1].split("?")[0];
+    let expectedLogoUrl = null;
 
-    const isTextValid = matchedSignatureKey || cleanNewSignature === cleanLastAppliedSignature;
-    const isLogoValid = !expectedLogoUrl || (newLogoUrl && newLogoUrl === expectedLogoUrl);
+    if (rawMatchedSignature) {
+      const match = rawMatchedSignature.match(logoRegex);
+      expectedLogoUrl = match ? match[1].split("?")[0] : null;
+    } else if (lastAppliedSignature) {
+      const match = lastAppliedSignature.match(logoRegex);
+      expectedLogoUrl = match ? match[1].split("?")[0] : null;
+    }
+
+    logger.log("debug", "validateSignatureChanges", {
+      newLogoUrl,
+      expectedLogoUrl,
+      logoMatch: !expectedLogoUrl || newLogoUrl === expectedLogoUrl,
+    });
+
+    const isTextValid =
+      matchedSignatureKey || (lastAppliedSignature && cleanNewSignature === cleanLastAppliedSignature);
+    const isLogoValid = !expectedLogoUrl || !newLogoUrl || newLogoUrl === expectedLogoUrl; // Allow missing logos in new signature
 
     if (isTextValid && isLogoValid) {
       if (!isReplyOrForward) localStorage.removeItem("tempSignature_new");
-      await saveSignatureData(item, matchedSignatureKey || signatureKeys[0]);
+      await saveSignatureData(item, matchedSignatureKey || (lastAppliedSignature ? "tempSignature" : signatureKeys[0]));
       event.completed({ allowEvent: true });
     } else {
       const tempSignature =
@@ -378,7 +407,7 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
       );
     }
   } catch (error) {
-    logger.log("error", "validateSignatureChanges", { error: error.message });
+    logger.log("error", "validateSignatureChanges", { error: error.message, stack: error.stack });
     displayError("Unexpected error validating signature changes.", event);
   }
 }
