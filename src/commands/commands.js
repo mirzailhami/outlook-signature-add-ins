@@ -11,7 +11,9 @@ import {
 } from "./helpers.js";
 
 // Mobile needs this initialization
-Office.initialize = () => {};
+Office.initialize = () => {
+  logger.log(`info`, `Office.initialize`, new Date() + ": Office initialized - first");
+};
 
 Office.onReady(() => {
   logger.log("info", "Office.onReady", { host: Office.context?.mailbox?.diagnostics?.hostName });
@@ -397,8 +399,19 @@ async function onNewMessageComposeHandler(event) {
     const conversationId = item.conversationId;
     if (!conversationId) {
       logger.log("info", "onNewMessageComposeHandler", { status: "No conversationId available" });
+      if (isMobile) {
+        displayNotification("Info", "Debug: No conversationId available.", false);
+      }
       displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+      saveSignatureData(item, "none").then(() => event.completed());
       return;
+    }
+
+    // Display conversationId for mobile debugging with unique ID
+    if (isMobile) {
+      displayNotification("Info", `Debug: conversationId = ${conversationId}`, false);
+      const encodedConversationId = encodeURIComponent(conversationId);
+      displayNotification("Info", `Debug: encodedConversationId = ${encodedConversationId}`, false);
     }
 
     try {
@@ -410,7 +423,7 @@ async function onNewMessageComposeHandler(event) {
       });
 
       const filterValue = conversationId; // Use raw conversationId as per Graph Explorer
-      const filterString = `conversationId eq '${encodeURIComponent(filterValue)}'`;
+      const filterString = `conversationId eq '${filterValue}'`;
       logger.log("debug", "onNewMessageComposeHandler", { filterString });
 
       const response = await client
@@ -448,7 +461,17 @@ async function onNewMessageComposeHandler(event) {
               (asyncResult) => {
                 if (asyncResult.status === Office.AsyncResultStatus.Failed) {
                   logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+                  if (isMobile) {
+                    displayNotification(
+                      "Info",
+                      `Debug: Failed to apply signature - ${asyncResult.error.message}`,
+                      false
+                    );
+                  }
                   displayNotification("Error", "Failed to apply your signature from conversation.", true);
+                  saveSignatureData(item, "none").then(() => event.completed());
+                } else {
+                  saveSignatureData(item, "tempSignature_replyForward").then(() => event.completed());
                 }
                 resolve();
               }
@@ -456,7 +479,11 @@ async function onNewMessageComposeHandler(event) {
           );
         } else {
           logger.log("info", "onNewMessageComposeHandler", { status: "No signature found in Sent Items" });
+          if (isMobile) {
+            displayNotification("Info", "Debug: No signature found in Sent Items.", false);
+          }
           displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+          saveSignatureData(item, "none").then(() => event.completed());
         }
       } else {
         logger.log("info", "onNewMessageComposeHandler", {
