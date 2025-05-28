@@ -439,7 +439,7 @@ async function onNewMessageComposeHandler(event) {
         // Graph API search using 'to' email
         response = await client
           .api(`/me/mailFolders/SentItems/messages`)
-          .search(`to:${encodeURIComponent(recipientEmail)}`)
+          .search(`to:${recipientEmail}`)
           .select("body")
           .top(1)
           .orderBy("sentDateTime desc")
