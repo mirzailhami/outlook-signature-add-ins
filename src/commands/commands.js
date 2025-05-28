@@ -405,13 +405,6 @@ async function onNewMessageComposeHandler(event) {
       return;
     }
 
-    // Display conversationId for mobile debugging with unique ID
-    if (isMobile) {
-      displayNotification("Info", `Debug: conversationId = ${conversationId}`, false);
-      const encodedConversationId = encodeURIComponent(conversationId);
-      displayNotification("Info", `Debug: encodedConversationId = ${encodedConversationId}`, false);
-    }
-
     try {
       const accessToken = await getGraphAccessToken();
       const client = Client.init({
@@ -423,6 +416,24 @@ async function onNewMessageComposeHandler(event) {
       const filterValue = conversationId;
       const filterString = `conversationId eq '${encodeURIComponent(filterValue)}'`;
       logger.log("debug", "onNewMessageComposeHandler", { filterString });
+
+      // Add debug signature with accessToken and conversationId before the Graph API call
+      if (isMobile) {
+        await new Promise((resolve) =>
+          item.body.setSignatureAsync(
+            `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>` +
+              `<p style="color: #ff0000;">[Debug] accessToken: ${accessToken}</p>`,
+            { coercionType: Office.CoercionType.Html },
+            (asyncResult) => {
+              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+                displayNotification("Error", "Failed to apply debug signature.", true);
+              }
+              resolve();
+            }
+          )
+        );
+      }
 
       const response = await client
         .api(`/me/mailFolders/SentItems/messages`)
@@ -469,9 +480,6 @@ async function onNewMessageComposeHandler(event) {
                     );
                   }
                   displayNotification("Error", "Failed to apply your signature from conversation.", true);
-                  saveSignatureData(item, "none").then(() => event.completed());
-                } else {
-                  saveSignatureData(item, "tempSignature_replyForward").then(() => event.completed());
                 }
                 resolve();
               }
@@ -479,40 +487,21 @@ async function onNewMessageComposeHandler(event) {
           );
         } else {
           logger.log("info", "onNewMessageComposeHandler", { status: "No signature found in Sent Items" });
-          if (isMobile) {
-            displayNotification("Info", "Debug: No signature found in Sent Items.", false);
-          }
           displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-          saveSignatureData(item, "none").then(() => event.completed());
         }
       } else {
         logger.log("info", "onNewMessageComposeHandler", {
           status: "No messages found in Sent Items for this conversation",
         });
-        if (isMobile) {
-          displayNotification("Info", "Debug: No messages found in Sent Items.", false);
-        }
         displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-        saveSignatureData(item, "none").then(() => event.completed());
       }
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
-      if (isMobile) {
-        displayNotification("Info", `Debug: Graph Error - ${error.message}`, false);
-      }
       displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
-      saveSignatureData(item, "none").then(() => event.completed());
     }
   } else {
     logger.log("info", "onNewMessageComposeHandler", { status: "New email, no conversationId" });
-    if (isMobile) {
-      displayNotification("Info", "Debug: New email, no conversationId.", false);
-    }
     displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-    saveSignatureData(item, "none").then(() => {
-      localStorage.removeItem("tempSignature_new");
-      event.completed();
-    });
   }
 }
 
