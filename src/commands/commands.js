@@ -475,6 +475,7 @@ async function onNewMessageComposeHandler(event) {
                   logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
                   displayNotification("Error", "Failed to apply your signature from conversation.", true);
                 }
+                event.completed();
                 resolve();
               }
             )
@@ -482,16 +483,28 @@ async function onNewMessageComposeHandler(event) {
         } else {
           logger.log("info", "onNewMessageComposeHandler", { status: "No signature found in Sent Items" });
           displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+          event.completed();
         }
       } else {
         logger.log("info", "onNewMessageComposeHandler", {
           status: "No messages found in Sent Items for this conversation",
         });
         displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+        event.completed();
       }
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
       displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
+
+      // Set debug signature with 'to' email
+      await new Promise((resolve) =>
+        item.body.setSignatureAsync(
+          `<p style="color: #ff0000;">[Error] to: ${error.message}</p>`,
+          { coercionType: Office.CoercionType.Html },
+          () => resolve()
+        )
+      );
+      event.completed();
     }
   } else {
     logger.log("info", "onNewMessageComposeHandler", { status: "New email, no conversationId" });
