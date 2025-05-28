@@ -410,26 +410,71 @@ async function onNewMessageComposeHandler(event) {
 
       // Add debug signature with accessToken and conversationId before the Graph API call
       if (isMobile) {
-        Office.context.mailbox.item.from.getAsync(async function (asyncResult) {
-          if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-            const msgFrom = asyncResult.value;
-            await new Promise((resolve) =>
-              item.body.setSignatureAsync(
-                `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>` +
-                  `<p style="color: #ff0000;">[Debug] msgFrom: ${JSON.stringify(msgFrom)}</p>` +
-                  `<p style="color: #ff0000;">[Debug] to: ${JSON.stringify(item.to)}</p>`,
-                { coercionType: Office.CoercionType.Html },
-                (asyncResult) => {
-                  if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                    logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-                    displayNotification("Error", "Failed to apply debug signature.", true);
-                  }
-                  resolve();
-                }
-              )
-            );
+        let msgFrom = "Unknown";
+        let msgTo = "Unknown";
+
+        // Get the 'from' property
+        try {
+          const fromResult = await new Promise((resolve) =>
+            Office.context.mailbox.item.from.getAsync((asyncResult) => resolve(asyncResult))
+          );
+          if (fromResult.status === Office.AsyncResultStatus.Succeeded) {
+            msgFrom = fromResult.value;
+          } else {
+            logger.log("error", "onNewMessageComposeHandler", {
+              error: "Failed to get 'from'",
+              details: fromResult.error.message,
+            });
+            msgFrom = `Error: ${fromResult.error.message}`;
           }
-        });
+        } catch (error) {
+          logger.log("error", "onNewMessageComposeHandler", {
+            error: "Exception getting 'from'",
+            details: error.message,
+          });
+          msgFrom = `Exception: ${error.message}`;
+        }
+
+        // Get the 'to' property
+        try {
+          const toResult = await new Promise((resolve) =>
+            Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
+          );
+          if (toResult.status === Office.AsyncResultStatus.Succeeded) {
+            msgTo = toResult.value;
+          } else {
+            logger.log("error", "onNewMessageComposeHandler", {
+              error: "Failed to get 'to'",
+              details: toResult.error.message,
+            });
+            msgTo = `Error: ${toResult.error.message}`;
+          }
+        } catch (error) {
+          logger.log("error", "onNewMessageComposeHandler", {
+            error: "Exception getting 'to'",
+            details: error.message,
+          });
+          msgTo = `Exception: ${error.message}`;
+        }
+
+        // Set debug signature
+        await new Promise((resolve) =>
+          item.body.setSignatureAsync(
+            `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>` +
+              `<p style="color: #ff0000;">[Debug] msgFrom: ${JSON.stringify(msgFrom)}</p>` +
+              `<p style="color: #ff0000;">[Debug] to: ${JSON.stringify(msgTo)}</p>` +
+              `<p style="color: #ff0000;">[Debug] accessToken: ${accessToken}</p>`,
+            { coercionType: Office.CoercionType.Html },
+            (asyncResult) => {
+              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+                displayNotification("Error", "Failed to apply debug signature.", true);
+                saveSignatureData(item, "none").then(() => event.completed());
+              }
+              resolve();
+            }
+          )
+        );
       }
 
       const response = await client
