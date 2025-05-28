@@ -11,9 +11,7 @@ import {
 } from "./helpers.js";
 
 // Mobile needs this initialization
-Office.initialize = () => {
-  logger.log(`info`, `Office.initialize`, new Date() + ": Office initialized - first");
-};
+Office.initialize = () => {};
 
 Office.onReady(() => {
   logger.log("info", "Office.onReady", { host: Office.context?.mailbox?.diagnostics?.hostName });
@@ -422,8 +420,8 @@ async function onNewMessageComposeHandler(event) {
         },
       });
 
-      const filterValue = conversationId; // Use raw conversationId as per Graph Explorer
-      const filterString = `conversationId eq '${filterValue}'`;
+      const filterValue = conversationId;
+      const filterString = `conversationId eq '${encodeURIComponent(filterValue)}'`;
       logger.log("debug", "onNewMessageComposeHandler", { filterString });
 
       const response = await client
@@ -432,6 +430,8 @@ async function onNewMessageComposeHandler(event) {
         .select("body")
         .top(10)
         .get();
+
+      logger.log("debug", "onNewMessageComposeHandler", { response });
 
       if (response.value && response.value.length > 0) {
         const messages = response.value.sort(
@@ -489,15 +489,30 @@ async function onNewMessageComposeHandler(event) {
         logger.log("info", "onNewMessageComposeHandler", {
           status: "No messages found in Sent Items for this conversation",
         });
+        if (isMobile) {
+          displayNotification("Info", "Debug: No messages found in Sent Items.", false);
+        }
         displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+        saveSignatureData(item, "none").then(() => event.completed());
       }
     } catch (error) {
-      logger.log("error", "onNewMessageComposeHandler", { error: error.message });
+      logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
+      if (isMobile) {
+        displayNotification("Info", `Debug: Graph Error - ${error.message}`, false);
+      }
       displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
+      saveSignatureData(item, "none").then(() => event.completed());
     }
   } else {
     logger.log("info", "onNewMessageComposeHandler", { status: "New email, no conversationId" });
+    if (isMobile) {
+      displayNotification("Info", "Debug: New email, no conversationId.", false);
+    }
     displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+    saveSignatureData(item, "none").then(() => {
+      localStorage.removeItem("tempSignature_new");
+      event.completed();
+    });
   }
 }
 
