@@ -410,27 +410,26 @@ async function onNewMessageComposeHandler(event) {
 
       // Add debug signature with accessToken and conversationId before the Graph API call
       if (isMobile) {
-        let msgFrom;
-        Office.context.mailbox.item.from.getAsync(function (asyncResult) {
+        Office.context.mailbox.item.from.getAsync(async function (asyncResult) {
           if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-            msgFrom = asyncResult.value;
+            const msgFrom = asyncResult.value;
+            await new Promise((resolve) =>
+              item.body.setSignatureAsync(
+                `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>` +
+                  `<p style="color: #ff0000;">[Debug] msgFrom: ${JSON.stringify(msgFrom)}</p>` +
+                  `<p style="color: #ff0000;">[Debug] accessToken: ${accessToken}</p>`,
+                { coercionType: Office.CoercionType.Html },
+                (asyncResult) => {
+                  if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                    logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
+                    displayNotification("Error", "Failed to apply debug signature.", true);
+                  }
+                  resolve();
+                }
+              )
+            );
           }
         });
-        await new Promise((resolve) =>
-          item.body.setSignatureAsync(
-            `<p style="color: #ff0000;">[Debug] conversationId: ${conversationId}</p>` +
-              `<p style="color: #ff0000;">[Debug] msgFrom: ${JSON.stringify(msgFrom)}</p>` +
-              `<p style="color: #ff0000;">[Debug] accessToken: ${accessToken}</p>`,
-            { coercionType: Office.CoercionType.Html },
-            (asyncResult) => {
-              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
-                displayNotification("Error", "Failed to apply debug signature.", true);
-              }
-              resolve();
-            }
-          )
-        );
       }
 
       const response = await client
