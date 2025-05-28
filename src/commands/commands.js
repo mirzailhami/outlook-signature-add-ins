@@ -394,6 +394,12 @@ async function onNewMessageComposeHandler(event) {
     Office.context.mailbox.diagnostics.hostName === "OutlookAndroid" ||
     Office.context.mailbox.diagnostics.hostName === "OutlookIOS";
 
+  logger.log("info", "onNewMessageComposeHandler", {
+    isReplyOrForward,
+    isMobile,
+    hostName: Office.context.mailbox.diagnostics.hostName,
+  });
+
   if (isReplyOrForward) {
     const conversationId = item.conversationId;
 
@@ -435,12 +441,29 @@ async function onNewMessageComposeHandler(event) {
         }
 
         // Set debug signature with 'to' email
-        displayNotification("Info", `[Debug]: Recipient email - ${recipientEmail}`, false);
+        await new Promise((resolve) =>
+          item.body.setSignatureAsync(
+            `<p style="color: #ff0000;">[Debug] to: ${recipientEmail}</p>`,
+            { coercionType: Office.CoercionType.Html },
+            (asyncResult) => {
+              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                logger.log("error", "onNewMessageComposeHandler", {
+                  error: "Failed to set debug signature",
+                  details: asyncResult.error.message,
+                });
+                displayNotification("Error", `Failed to apply debug signature: ${asyncResult.error.message}`, true);
+              } else {
+                displayNotification("Info", `[Debug]: Recipient email - ${recipientEmail}`, false);
+              }
+              resolve();
+            }
+          )
+        );
 
         // Graph API search using 'to' email
         response = await client
           .api(`/me/mailFolders/SentItems/messages`)
-          .search(`to: ${encodeURIComponent(recipientEmail)}`)
+          .search(`to:${encodeURIComponent(recipientEmail)}`)
           .select("subject,body")
           .top(1)
           .get();
@@ -449,7 +472,7 @@ async function onNewMessageComposeHandler(event) {
       logger.log("debug", "onNewMessageComposeHandler", { response });
 
       if (response.value && response.value.length > 0) {
-        const messages = response.value;
+        const messages = response.value; // No sorting needed with top(1)
         let extractedSignature = null;
         for (const message of messages) {
           const emailBody = message.body?.content || "";
@@ -475,40 +498,60 @@ async function onNewMessageComposeHandler(event) {
                   logger.log("error", "onNewMessageComposeHandler", { error: asyncResult.error.message });
                   displayNotification("Error", "Failed to apply your signature from conversation.", true);
                 }
-                event.completed();
                 resolve();
               }
             )
           );
+          saveSignatureData(item, "tempSignature_replyForward").then(() => event.completed());
         } else {
           logger.log("info", "onNewMessageComposeHandler", { status: "No signature found in Sent Items" });
-          displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-          event.completed();
+          displayNotification(
+            "Info",
+            "No signature found in Sent Items. Please select an M3 signature from the ribbon.",
+            false
+          );
+          saveSignatureData(item, "none").then(() => event.completed());
         }
       } else {
         logger.log("info", "onNewMessageComposeHandler", {
           status: "No messages found in Sent Items for this conversation",
         });
-        displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-        event.completed();
+        displayNotification(
+          "Info",
+          "No messages found in Sent Items. Please select an M3 signature from the ribbon.",
+          false
+        );
+        saveSignatureData(item, "none").then(() => event.completed());
       }
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
       displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
 
-      // // Set debug signature with 'to' email
-      // await new Promise((resolve) =>
-      //   item.body.setSignatureAsync(
-      //     `<p style="color: #ff0000;">[Error] to: ${error.message}</p>`,
-      //     { coercionType: Office.CoercionType.Html },
-      //     () => resolve()
-      //   )
-      // );
-      event.completed();
+      // Set debug signature with error message
+      await new Promise((resolve) =>
+        item.body.setSignatureAsync(
+          `<p style="color: #ff0000;">[Error] Failed to fetch signature: ${error.message}</p>`,
+          { coercionType: Office.CoercionType.Html },
+          (asyncResult) => {
+            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+              logger.log("error", "onNewMessageComposeHandler", {
+                error: "Failed to set error debug signature",
+                details: asyncResult.error.message,
+              });
+            }
+            resolve();
+          }
+        )
+      );
+      saveSignatureData(item, "none").then(() => event.completed());
     }
   } else {
     logger.log("info", "onNewMessageComposeHandler", { status: "New email, no conversationId" });
-    displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
+    displayNotification("Info", "New email detected. Please select an M3 signature from the ribbon.", false);
+    saveSignatureData(item, "none").then(() => {
+      localStorage.removeItem("tempSignature_new");
+      event.completed();
+    });
   }
 }
 
