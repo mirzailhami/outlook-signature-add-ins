@@ -400,8 +400,29 @@ async function onNewMessageComposeHandler(event) {
     hostName: Office.context.mailbox.diagnostics.hostName,
   });
 
+  // Helper function to save state and complete the event
+  const completeWithState = async (signatureKey, notificationType, notificationMessage) => {
+    if (notificationMessage) {
+      displayNotification(notificationType, notificationMessage, notificationType === "Error");
+    }
+    await saveSignatureData(item, signatureKey);
+    if (signatureKey === "none") {
+      localStorage.removeItem("tempSignature_new");
+    }
+    event.completed();
+  };
+
   if (isReplyOrForward) {
     const conversationId = item.conversationId;
+    if (!conversationId) {
+      logger.log("info", "onNewMessageComposeHandler", { status: "No conversationId available" });
+      await completeWithState(
+        "none",
+        "Info",
+        "No conversationId available. Please select an M3 signature from the ribbon."
+      );
+      return;
+    }
 
     try {
       const accessToken = await getGraphAccessToken();
@@ -460,10 +481,12 @@ async function onNewMessageComposeHandler(event) {
           )
         );
 
-        // Graph API search using 'to' email
+        // Graph API search using plain email address (without 'to:' prefix)
+        const searchQuery = encodeURIComponent(recipientEmail);
+        logger.log("debug", "onNewMessageComposeHandler", { searchQuery });
         response = await client
           .api(`/me/mailFolders/SentItems/messages`)
-          .search(`to:${encodeURIComponent(recipientEmail)}`)
+          .search(searchQuery)
           .select("subject,body")
           .top(1)
           .get();
@@ -502,32 +525,27 @@ async function onNewMessageComposeHandler(event) {
               }
             )
           );
-          saveSignatureData(item, "tempSignature_replyForward").then(() => event.completed());
+          await completeWithState("tempSignature_replyForward", null, null);
         } else {
           logger.log("info", "onNewMessageComposeHandler", { status: "No signature found in Sent Items" });
-          displayNotification(
+          await completeWithState(
+            "none",
             "Info",
-            "No signature found in Sent Items. Please select an M3 signature from the ribbon.",
-            false
+            "No signature found in Sent Items. Please select an M3 signature from the ribbon."
           );
-          saveSignatureData(item, "none").then(() => event.completed());
         }
       } else {
         logger.log("info", "onNewMessageComposeHandler", {
           status: "No messages found in Sent Items for this conversation",
         });
-        displayNotification(
+        await completeWithState(
+          "none",
           "Info",
-          "No messages found in Sent Items. Please select an M3 signature from the ribbon.",
-          false
+          "No messages found in Sent Items. Please select an M3 signature from the ribbon."
         );
-        saveSignatureData(item, "none").then(() => event.completed());
       }
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
-      displayNotification("Error", `Failed to fetch signature from Graph: ${error.message}`, true);
-
-      // Set debug signature with error message
       await new Promise((resolve) =>
         item.body.setSignatureAsync(
           `<p style="color: #ff0000;">[Error] Failed to fetch signature: ${error.message}</p>`,
@@ -543,15 +561,11 @@ async function onNewMessageComposeHandler(event) {
           }
         )
       );
-      saveSignatureData(item, "none").then(() => event.completed());
+      await completeWithState("none", "Error", `Failed to fetch signature from Graph: ${error.message}`);
     }
   } else {
     logger.log("info", "onNewMessageComposeHandler", { status: "New email, no conversationId" });
-    displayNotification("Info", "New email detected. Please select an M3 signature from the ribbon.", false);
-    saveSignatureData(item, "none").then(() => {
-      localStorage.removeItem("tempSignature_new");
-      event.completed();
-    });
+    await completeWithState("none", "Info", "New email detected. Please select an M3 signature from the ribbon.");
   }
 }
 
