@@ -395,15 +395,6 @@ async function onNewMessageComposeHandler(event) {
 
   if (isReplyOrForward) {
     const conversationId = item.conversationId;
-    if (!conversationId) {
-      logger.log("info", "onNewMessageComposeHandler", { status: "No conversationId available" });
-      if (isMobile) {
-        displayNotification("Info", "Debug: No conversationId available.", false);
-      }
-      displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-      saveSignatureData(item, "none").then(() => event.completed());
-      return;
-    }
 
     try {
       const accessToken = await getGraphAccessToken();
