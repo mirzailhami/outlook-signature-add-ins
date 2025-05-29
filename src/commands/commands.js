@@ -501,14 +501,13 @@ async function onNewMessageComposeHandler(event) {
       const subjectResult = await new Promise((resolve) => item.subject.getAsync((result) => resolve(result)));
       let emailSubject = "Unknown";
       if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
-        emailSubject = SignatureManager.normalizeSubject(subjectResult.value);
+        emailSubject = subjectResult.value; // SignatureManager.normalizeSubject(subjectResult.value);
         logger.log("info", "onNewMessageComposeHandler", { debug: `Using subject: ${emailSubject}` });
       } else {
         logger.log("error", "onNewMessageComposeHandler", {
           error: "Failed to get subject",
           details: subjectResult.error.message,
         });
-        emailSubject = `Error: ${subjectResult.error.message}`;
       }
 
       const toResult = await new Promise((resolve) =>
@@ -523,37 +522,37 @@ async function onNewMessageComposeHandler(event) {
           error: "Failed to get 'to'",
           details: toResult.error.message,
         });
-        recipientEmail = `Error: ${toResult.error.message}`;
       }
 
       // Construct Graph API query with $search for subject
-      const searchQuery = `"${emailSubject}"`; // Search for the normalized subject
-      logger.log("debug", "onNewMessageComposeHandler", { searchQuery });
-
+      const searchQuery = `sentDateTime ge 2023-05-17T07:28:08Z and sender/emailAddress/address eq '${recipientEmail}' and subject eq '${emailSubject}'`; //`"${emailSubject}"`; // Search for the normalized subject
+      // logger.log("debug", "onNewMessageComposeHandler", { searchQuery });
+      console.log(item);
       const response = await client
-        .api(`/me/mailFolders/SentItems/messages`)
-        .search(searchQuery)
-        .select("subject,body,sentDateTime,toRecipients,ccRecipients,bccRecipients")
-        .top(10) // Fetch multiple results for sorting
+        .api(`/me/messages`)
+        .filter(searchQuery)
+        .select("subject,body,from,sentDateTime")
+        .orderby("sentDateTime desc")
+        .top(2)
         .get();
 
       logger.log("debug", "onNewMessageComposeHandler", { response });
 
       if (response.value && response.value.length > 0) {
         // Sort by sentDateTime descending to get the latest email
-        const sortedMessages = response.value.sort((a, b) => {
-          return new Date(b.sentDateTime) - new Date(a.sentDateTime);
-        });
+        // const sortedMessages = response.value.sort((a, b) => {
+        //   return new Date(b.sentDateTime) - new Date(a.sentDateTime);
+        // });
 
         // Find the first email that matches the recipient
-        let matchedMessage = null;
-        for (const message of sortedMessages) {
-          const recipients = [...(message.toRecipients || []).map((r) => r.emailAddress.address.toLowerCase())];
-          if (recipients.includes(recipientEmail)) {
-            matchedMessage = message;
-            break;
-          }
-        }
+        let matchedMessage = response.value[0];
+        // for (const message of sortedMessages) {
+        //   const recipients = [...(message.from || []).map((r) => r.emailAddress.address.toLowerCase())];
+        //   if (recipients.includes(recipientEmail)) {
+        //     matchedMessage = message;
+        //     break;
+        //   }
+        // }
 
         if (matchedMessage) {
           const emailBody = matchedMessage.body?.content || "";
