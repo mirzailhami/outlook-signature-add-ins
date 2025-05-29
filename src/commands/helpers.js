@@ -38,7 +38,7 @@ const SignatureManager = {
    * @returns {string|null} The extracted signature, or null if not found.
    */
   extractSignature(body) {
-    logger.log("info", "extractSignature", { bodyLength: body?.length });
+    console.log({ event: "extractSignature", bodyLength: body?.length });
     if (!body) return null;
 
     const marker = "<!-- signature -->";
@@ -46,7 +46,7 @@ const SignatureManager = {
     if (startIndex !== -1) {
       const endIndex = body.indexOf("</body>", startIndex);
       const signature = body.slice(startIndex + marker.length, endIndex !== -1 ? endIndex : undefined).trim();
-      logger.log("info", "extractSignature", { method: "marker", signatureLength: signature.length });
+      console.log({ event: "extractSignature", method: "marker", signature });
       return signature;
     }
 
@@ -59,12 +59,12 @@ const SignatureManager = {
       const match = body.match(regex);
       if (match) {
         const signature = match[0].trim();
-        logger.log("info", "extractSignature", { method: regex.source, signatureLength: signature.length });
+        console.log({ event: "extractSignature", method: regex.source, signature });
         return signature;
       }
     }
 
-    logger.log("info", "extractSignature", { status: "No signature found" });
+    console.log({ event: "extractSignature", status: "No signature found" });
     return null;
   },
 
@@ -113,14 +113,14 @@ const SignatureManager = {
     const textarea = document.createElement("textarea");
     textarea.innerHTML = normalized;
     normalized = textarea.value
-      .replace(/[\r\n]+/g, " ")
-      .replace(/\s*([.,:;])\s*/g, "$1")
-      .replace(/\s+/g, " ")
-      .replace(/\s*:\s*/g, ":")
-      .replace(/\s+(email:)/gi, "$1")
-      .trim()
+      .replace(/[\r\n]+/g, " ") // Replace newlines with a single space
+      .replace(/\s*([.,:;])\s*/g, "$1") // Remove spaces around punctuation (e.g., "attachment. mona" -> "attachment.mona")
+      .replace(/\s+/g, " ") // Collapse multiple spaces into one
+      .replace(/\s*:\s*/g, ":") // Remove spaces around colons
+      .replace(/\s+(email:)/gi, "$1") // Remove spaces before "email:"
+      .trim() // Remove leading/trailing spaces
       .toLowerCase();
-    logger.log("info", "normalizeSignature", { rawLength: sig.length, normalizedLength: normalized.length });
+    console.log({ event: "normalizeSignature", raw: sig, normalized });
     return normalized;
   },
 
@@ -179,37 +179,47 @@ const SignatureManager = {
         status: "Falling back to signatureKey",
         fallbackLength: signature?.length,
       });
-      if (!signature) return false;
-    }
-
-    const success = await new Promise((resolve) =>
-      item.body.setSignatureAsync(
-        "<!-- signature -->" + signature.trim(),
-        { coercionType: Office.CoercionType.Html },
-        (asyncResult) => (asyncResult.status === Office.AsyncResultStatus.Failed ? resolve(false) : resolve(true))
-      )
-    );
-
-    if (success) {
-      const body = await new Promise((resolve) =>
-        item.body.getAsync("html", (result) =>
-          resolve(result.status === Office.AsyncResultStatus.Succeeded ? result.value : null)
-        )
-      );
-      if (body) {
-        const extracted = this.extractSignature(body);
-        logger.log("info", "restoreSignatureAsync", {
-          status: "Body refreshed",
-          extractedSignatureLength: extracted?.length,
-        });
-        const normalizedExtracted = this.normalizeSignature(extracted);
-        const normalizedSignature = this.normalizeSignature(signature);
-        return success || (extracted && normalizedExtracted === normalizedSignature);
+      if (!signature) {
+        logger.log("error", "restoreSignatureAsync", { error: "No signature available" });
+        return false;
       }
     }
 
-    logger.log("error", "restoreSignatureAsync", { error: "Failed to refresh body" });
-    return false;
+    const signatureWithMarker = "<!-- signature -->" + signature.trim();
+    let success = false;
+
+    const currentBody = await new Promise((resolve) =>
+      item.body.getAsync("html", (result) =>
+        resolve(result.status === Office.AsyncResultStatus.Succeeded ? result.value : null)
+      )
+    );
+    if (!currentBody) {
+      logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
+      return false;
+    }
+
+    const startIndex = currentBody.indexOf("<!-- signature -->");
+    if (startIndex === -1) {
+      logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
+      success = await new Promise((resolve) =>
+        item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) =>
+          resolve(asyncResult.status !== Office.AsyncResultStatus.Failed)
+        )
+      );
+    } else {
+      const endIndex =
+        currentBody.indexOf("</body>", startIndex) !== -1
+          ? currentBody.indexOf("</body>", startIndex)
+          : currentBody.length;
+      const newBody = currentBody.substring(0, startIndex) + signatureWithMarker + currentBody.substring(endIndex);
+      success = await new Promise((resolve) =>
+        item.body.setAsync(newBody, { coercionType: Office.CoercionType.Html }, (asyncResult) =>
+          resolve(asyncResult.status !== Office.AsyncResultStatus.Failed)
+        )
+      );
+    }
+
+    return success;
   },
 };
 
