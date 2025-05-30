@@ -38,7 +38,6 @@ const SignatureManager = {
    * @returns {string|null} The extracted signature, or null if not found.
    */
   extractSignature(body) {
-    console.log({ event: "extractSignature", bodyLength: body?.length });
     if (!body) return null;
 
     const marker = "<!-- signature -->";
@@ -46,7 +45,6 @@ const SignatureManager = {
     if (startIndex !== -1) {
       const endIndex = body.indexOf("</body>", startIndex);
       const signature = body.slice(startIndex + marker.length, endIndex !== -1 ? endIndex : undefined).trim();
-      console.log({ event: "extractSignature", method: "marker", signature });
       return signature;
     }
 
@@ -59,12 +57,10 @@ const SignatureManager = {
       const match = body.match(regex);
       if (match) {
         const signature = match[0].trim();
-        console.log({ event: "extractSignature", method: regex.source, signature });
         return signature;
       }
     }
 
-    console.log({ event: "extractSignature", status: "No signature found" });
     return null;
   },
 
@@ -77,7 +73,7 @@ const SignatureManager = {
     if (!body) return null;
 
     const marker = "<!-- signature -->";
-    const startIndex = body.indexOf(marker);
+    const startIndex = body.lastIndexOf(marker);
     if (startIndex !== -1) {
       const endIndex = body.indexOf("</body>", startIndex);
       const signature = body.slice(startIndex + marker.length, endIndex !== -1 ? endIndex : undefined).trim();
@@ -85,10 +81,11 @@ const SignatureManager = {
       return signature;
     }
 
-    const regex = /<table\s+class=MsoNormalTable[^>]*>([\s\S]*?)$/is;
+    const regex =
+      /<table\s+class=MsoNormalTable[^>]*>([\s\S]*?)(?=(?:<div\s+id="[^"]*appendonsend"|>?\s*<(?:table|hr)\b)|$)/is;
     const match = body.match(regex);
     if (match) {
-      const signature = match[0].trim();
+      const signature = match[1].trim();
       logger.log("info", "extractSignatureForOutlookClassic", { method: "table", signatureLength: signature.length });
       return signature;
     }
@@ -104,23 +101,28 @@ const SignatureManager = {
    */
   normalizeSignature(sig) {
     if (!sig) return "";
+
+    // Decode HTML entities first
+    const textarea = document.createElement("textarea");
+    textarea.innerHTML = sig;
+    let normalized = textarea.value;
+
+    // Replace HTML entities
     const htmlEntities = { " ": " ", "&": "&", "<": "<", ">": ">", '"': '"' };
-    let normalized = sig;
     for (const [entity, char] of Object.entries(htmlEntities)) {
       normalized = normalized.replace(new RegExp(entity, "gi"), char);
     }
-    normalized = normalized.replace(/<[^>]+>/g, "");
-    const textarea = document.createElement("textarea");
-    textarea.innerHTML = normalized;
-    normalized = textarea.value
+    // Remove HTML tags
+    normalized = normalized.replace(/<[^>]+>/g, " ");
+    // Clean up text
+    normalized = normalized
       .replace(/[\r\n]+/g, " ") // Replace newlines with a single space
-      .replace(/\s*([.,:;])\s*/g, "$1") // Remove spaces around punctuation (e.g., "attachment. mona" -> "attachment.mona")
+      .replace(/\s*([.,:;])\s*/g, "$1") // Remove spaces around punctuation
       .replace(/\s+/g, " ") // Collapse multiple spaces into one
       .replace(/\s*:\s*/g, ":") // Remove spaces around colons
       .replace(/\s+(email:)/gi, "$1") // Remove spaces before "email:"
       .trim() // Remove leading/trailing spaces
       .toLowerCase();
-    console.log({ event: "normalizeSignature", raw: sig, normalized });
     return normalized;
   },
 
@@ -159,7 +161,6 @@ const SignatureManager = {
     }
     const subject = await new Promise((resolve) => item.subject.getAsync((result) => resolve(result.value || "")));
     const isReplyOrForward = ["re:", "fw:", "fwd:"].some((prefix) => subject.toLowerCase().includes(prefix));
-    logger.log("info", "checkForReplyOrForward", { status: "Subject checked", isReplyOrForward });
     return isReplyOrForward;
   },
 
@@ -224,6 +225,46 @@ const SignatureManager = {
 };
 
 /**
+ * Detects the signature key based on content keywords and logo URL.
+ * @param {string} signatureText - The signature text to analyze.
+ * @returns {string|null} The matched signature key, or null if no match.
+ */
+function detectSignatureKey(signatureText) {
+  const signatureKeyMapping = {
+    "mona offshore wind limited": "monaSignature",
+    "morgan offshore wind limited": "morganSignature",
+    "morven offshore wind limited": "morvenSignature",
+    "m2 offshore wind limited": "m2Signature",
+    "m3 offshore wind limited": "m3Signature",
+  };
+
+  // Extract logo URL to determine the signature
+  const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/([^"']+)))["'][^>]*>/i;
+  const logoMatch = signatureText.match(logoRegex);
+  let logoFile = logoMatch ? logoMatch[2] : null;
+  if (logoFile) {
+    const logoToKey = {
+      "morven_v1.png": "morvenSignature",
+      "morgan_v1.png": "morganSignature",
+      "mona_v1.png": "monaSignature",
+      "m2_v1.png": "m2Signature",
+      "m3_v1.png": "m3Signature",
+    };
+    const keyFromLogo = logoToKey[logoFile];
+    if (keyFromLogo) return keyFromLogo;
+  }
+
+  // Fallback to text-based detection, prioritizing the last match
+  let detectedKey = null;
+  for (const [keyword, key] of Object.entries(signatureKeyMapping)) {
+    if (signatureText.toLowerCase().includes(keyword)) {
+      detectedKey = key; // Store the last match
+    }
+  }
+  return detectedKey;
+}
+
+/**
  * Fetches a signature template from the API and applies user-specific replacements.
  * @async
  * @param {string} signatureKey - The signature key (e.g., "m3Signature").
@@ -257,201 +298,4 @@ async function fetchSignature(signatureKey, callback) {
     .catch((err) => callback(null, err));
 }
 
-/**
- * Finds the signature key by matching conversationId, recipient emails, and subject in localStorage.
- * @async
- * @param {Office.MessageCompose} item - The email item.
- * @returns {Promise<string|null>} The signature key, or null if no match or signature is "none".
- */
-async function getSignatureKeyForRecipients(item) {
-  return new Promise((resolve) => {
-    item.to.getAsync((result) => {
-      if (result.status !== Office.AsyncResultStatus.Succeeded) {
-        logger.log("error", "getSignatureKeyForRecipients", { error: result.error.message });
-        resolve(null);
-        return;
-      }
-
-      const recipients = result.value.map((recipient) => recipient.emailAddress.toLowerCase());
-      const conversationId = item.conversationId || null;
-
-      item.subject.getAsync((subjectResult) => {
-        if (subjectResult.status !== Office.AsyncResultStatus.Succeeded) {
-          logger.log("error", "getSignatureKeyForRecipients", { error: subjectResult.error.message });
-          resolve(null);
-          return;
-        }
-
-        const currentSubject = SignatureManager.normalizeSubject(subjectResult.value);
-        logger.log("info", "getSignatureKeyForRecipients", { recipients, conversationId, currentSubject });
-
-        const signatureDataEntries = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key.startsWith("signatureData_")) {
-            try {
-              const data = JSON.parse(localStorage.getItem(key));
-              signatureDataEntries.push({ key, data });
-            } catch (error) {
-              logger.log("error", "getSignatureKeyForRecipients", { error: error.message, key });
-            }
-          }
-        }
-
-        signatureDataEntries.sort((a, b) => new Date(b.data.timestamp) - new Date(a.data.timestamp));
-        let signatureKey = null;
-
-        if (conversationId) {
-          for (const entry of signatureDataEntries) {
-            if (entry.data.conversationId === conversationId && entry.data.signature !== "none") {
-              signatureKey = entry.data.signature;
-              break;
-            }
-          }
-        }
-
-        if (!signatureKey) {
-          for (const entry of signatureDataEntries) {
-            const storedRecipients = entry.data.recipients.map((email) => email.toLowerCase());
-            const storedSubject = SignatureManager.normalizeSubject(entry.data.subject);
-            if (
-              recipients.some((recipient) => storedRecipients.includes(recipient)) &&
-              storedSubject === currentSubject &&
-              entry.data.signature !== "none"
-            ) {
-              signatureKey = entry.data.signature;
-              break;
-            }
-          }
-        }
-
-        resolve(signatureKey);
-      });
-    });
-  });
-}
-
-/**
- * Saves signature data to localStorage, including recipients, signature, and subject.
- * @async
- * @param {Office.MessageCompose} item - The email item.
- * @param {string} signatureKey - The signature key.
- * @returns {Promise<Object|null>} The saved data, or null if failed.
- */
-async function saveSignatureData(item, signatureKey) {
-  return new Promise((resolve) => {
-    item.to.getAsync((result) => {
-      const recipients =
-        result.status === Office.AsyncResultStatus.Succeeded
-          ? result.value.map((r) => r.emailAddress.toLowerCase())
-          : [];
-      if (result.status !== Office.AsyncResultStatus.Succeeded)
-        logger.log("error", "saveSignatureData", { error: result.error.message });
-
-      const conversationId = item.conversationId || null;
-
-      item.subject.getAsync((subjectResult) => {
-        const subject = subjectResult.status === Office.AsyncResultStatus.Succeeded ? subjectResult.value : "";
-        if (subjectResult.status !== Office.AsyncResultStatus.Succeeded)
-          logger.log("error", "saveSignatureData", { error: subjectResult.error.message });
-
-        logger.log("info", "saveSignatureData", { signatureKey, recipients, conversationId, subject });
-
-        let existingKey = null;
-        if (conversationId) {
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith("signatureData_")) {
-              try {
-                const data = JSON.parse(localStorage.getItem(key));
-                if (data.conversationId === conversationId) {
-                  existingKey = key;
-                  break;
-                }
-              } catch (error) {
-                logger.log("error", "saveSignatureData", { error: error.message, key });
-              }
-            }
-          }
-        }
-
-        const data = {
-          recipients,
-          signature: signatureKey,
-          conversationId,
-          subject,
-          timestamp: DateTime.now().toISO(),
-        };
-
-        if (existingKey) {
-          localStorage.setItem(existingKey, JSON.stringify(data));
-          logger.log("info", "saveSignatureData", { status: "Updated existing entry", key: existingKey, subject });
-        } else {
-          const newKey = `signatureData_${DateTime.now().toMillis()}`;
-          localStorage.setItem(newKey, JSON.stringify(data));
-          logger.log("info", "saveSignatureData", { status: "Created new entry", key: newKey, subject });
-        }
-        resolve(data);
-      });
-    });
-  });
-}
-
-/**
- * Saves initial signature data with "none" for new or reply/forward emails.
- * @async
- * @param {Office.MessageCompose} item - The email item.
- * @returns {Promise<void>}
- */
-async function saveInitialSignatureData(item) {
-  item.to.getAsync((result) => {
-    const recipients =
-      result.status === Office.AsyncResultStatus.Succeeded ? result.value.map((r) => r.emailAddress.toLowerCase()) : [];
-    if (result.status !== Office.AsyncResultStatus.Succeeded)
-      logger.log("error", "saveInitialSignatureData", { error: result.error.message });
-
-    const conversationId = item.conversationId || null;
-
-    item.subject.getAsync((subjectResult) => {
-      const subject = subjectResult.status === Office.AsyncResultStatus.Succeeded ? subjectResult.value : "";
-      if (subjectResult.status !== Office.AsyncResultStatus.Succeeded)
-        logger.log("error", "saveInitialSignatureData", { error: subjectResult.error.message });
-
-      const data = { recipients, signature: "none", conversationId, subject, timestamp: DateTime.now().toISO() };
-      const newKey = `signatureData_${DateTime.now().toMillis()}`;
-      localStorage.setItem(newKey, JSON.stringify(data));
-      logger.log("info", "saveInitialSignatureData", {
-        status: "Stored initial signature data",
-        recipients,
-        conversationId,
-        subject,
-      });
-    });
-  });
-}
-
-/**
- * Checks if the email is external based on host and reply details.
- * @async
- * @param {Office.MessageCompose} item - The email item.
- * @returns {Promise<boolean>} True if the email is external, false otherwise.
- */
-function isExternalEmail(item) {
-  return new Promise((resolve) =>
-    resolve(
-      Office.context.mailbox.diagnostics.hostName !== "Outlook" &&
-        item.inReplyTo &&
-        item.inReplyTo.indexOf("OUTLOOK.COM") === -1
-    )
-  );
-}
-
-export {
-  logger,
-  SignatureManager,
-  fetchSignature,
-  getSignatureKeyForRecipients,
-  saveSignatureData,
-  saveInitialSignatureData,
-  isExternalEmail,
-};
+export { logger, SignatureManager, fetchSignature, detectSignatureKey };
