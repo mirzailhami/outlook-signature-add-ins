@@ -161,12 +161,18 @@
     <script>
         Office.onReady().then((info) => {
             console.log({ event: "Office.onReady", host: info.host, platform: info.platform, apiVersion: Office.context.requirements.isSetSupported("Mailbox", "1.8") });
-            const defaultSignature = localStorage.getItem("mobileDefaultSignature");
-            if (defaultSignature) {
-                const selectedRadio = document.querySelector(`input[value="${defaultSignature}"]`);
+            const mobileDefaultSignature = localStorage.getItem("mobileDefaultSignature");
+            if (mobileDefaultSignature) {
+                const selectedRadio = document.querySelector(`input[value="${mobileDefaultSignature}"]`);
                 if (selectedRadio) {
                     selectedRadio.checked = true;
+                } else {
+                    console.warn({ event: "loadDefaultSignature", warning: `No radio option found for mobileDefaultSignature: ${mobileDefaultSignature}` });
+                    alert("The saved default signature is invalid. Please select a new signature and save.");
                 }
+            } else {
+                console.log({ event: "loadDefaultSignature", message: "No mobile default signature set yet" });
+                alert("No default signature set. Please select a signature and click 'Save Settings'.");
             }
 
             document.querySelectorAll('.choice-field').forEach(field => {
@@ -183,6 +189,7 @@
                 if (selectedRadio) {
                     const signatureKey = selectedRadio.value;
                     localStorage.setItem("mobileDefaultSignature", signatureKey);
+                    console.log({ event: "saveDefaultSignature", mobileDefaultSignature: signatureKey });
                     alert(`Default signature set to ${signatureKey.replace('Signature', '')}.`);
                     if (Office.context.ui.messageParent) {
                         Office.context.ui.messageParent(signatureKey);
