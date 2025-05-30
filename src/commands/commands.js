@@ -288,6 +288,13 @@ async function onNewMessageComposeHandler(event) {
     hostName: Office.context.mailbox.diagnostics.hostName,
   });
 
+  // Debug: Notify initial state
+  displayNotification(
+    "Info",
+    `Debug: isReplyOrForward=${isReplyOrForward}, isMobile=${isMobile}, itemType=${item.itemType || "undefined"}`,
+    false
+  );
+
   const completeWithState = async (signatureKey, notificationType, notificationMessage) => {
     if (notificationMessage) {
       displayNotification(notificationType, notificationMessage, notificationType === "Error");
