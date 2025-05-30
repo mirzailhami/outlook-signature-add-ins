@@ -3,7 +3,7 @@
 import { getGraphAccessToken } from "./launchevent.js";
 import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
-import { logger, SignatureManager, fetchSignature, detectSignatureKey } from "./helpers.js";
+import { logger, SignatureManager, fetchSignature, detectSignatureKey, appendDebugLogToBody } from "./helpers.js";
 
 // Mobile needs this initialization
 Office.initialize = () => {};
@@ -287,13 +287,6 @@ async function onNewMessageComposeHandler(event) {
     isMobile,
     hostName: Office.context.mailbox.diagnostics.hostName,
   });
-
-  // Debug: Notify initial state
-  displayNotification(
-    "Info",
-    `Debug: isReplyOrForward=${isReplyOrForward}, isMobile=${isMobile}, itemType=${item.itemType || "undefined"}`,
-    false
-  );
 
   const completeWithState = async (signatureKey, notificationType, notificationMessage) => {
     if (notificationMessage) {

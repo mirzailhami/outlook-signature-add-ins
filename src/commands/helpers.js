@@ -148,20 +148,57 @@ const SignatureManager = {
    * @returns {Promise<boolean>} True if the email is a reply or forward, false otherwise.
    */
   async isReplyOrForward(item) {
-    if (item.itemType === Office.MailboxEnums.ItemType.Message && item.conversationId) {
-      logger.log("info", "checkForReplyOrForward", {
-        status: "Reply/forward detected",
-        conversationId: item.conversationId,
-      });
-      return true;
-    }
+    // Debug: Log item properties
+    await appendDebugLogToBody(
+      item,
+      "itemType",
+      item.itemType,
+      "conversationId",
+      item.conversationId,
+      "inReplyTo",
+      item.inReplyTo
+    );
+
+    // Check 1: inReplyTo (reliable indicator of a reply)
     if (item.inReplyTo) {
-      logger.log("info", "checkForReplyOrForward", { status: "Reply detected", inReplyTo: item.inReplyTo });
+      await appendDebugLogToBody(item, "Status", "Reply detected via inReplyTo", "inReplyTo", item.inReplyTo);
       return true;
     }
-    const subject = await new Promise((resolve) => item.subject.getAsync((result) => resolve(result.value || "")));
-    const isReplyOrForward = ["re:", "fw:", "fwd:"].some((prefix) => subject.toLowerCase().includes(prefix));
-    return isReplyOrForward;
+
+    // Check 2: Subject prefix
+    const subjectResult = await new Promise((resolve) => item.subject.getAsync((result) => resolve(result)));
+    let subject = "";
+    if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
+      subject = subjectResult.value || "";
+    } else {
+      await appendDebugLogToBody(
+        item,
+        "Warning",
+        "Failed to get subject in isReplyOrForward",
+        "Error",
+        subjectResult.error?.message
+      );
+    }
+    const hasReplyOrForwardPrefix = ["re:", "fw:", "fwd:"].some((prefix) => subject.toLowerCase().includes(prefix));
+    await appendDebugLogToBody(
+      item,
+      "SubjectCheck",
+      `subject="${subject}", hasReplyOrForwardPrefix=${hasReplyOrForwardPrefix}`
+    );
+
+    // Check 3: conversationId (only if subject indicates reply/forward)
+    if (item.itemType === Office.MailboxEnums.ItemType.Message && item.conversationId && hasReplyOrForwardPrefix) {
+      await appendDebugLogToBody(
+        item,
+        "Status",
+        "Reply/forward detected via conversationId",
+        "conversationId",
+        item.conversationId
+      );
+      return true;
+    }
+
+    return false;
   },
 
   /**
@@ -298,4 +335,53 @@ async function fetchSignature(signatureKey, callback) {
     .catch((err) => callback(null, err));
 }
 
-export { logger, SignatureManager, fetchSignature, detectSignatureKey };
+/**
+ * Appends debug logs to the email body using setSignatureAsync for mobile debugging.
+ * @param {Office.MessageCompose} item - The Outlook message item.
+ * @param {...(string|any)} args - Variable arguments: label-value pairs or messages (e.g., "label", value, "label2", value2).
+ */
+async function appendDebugLogToBody(item, ...args) {
+  const timestamp = new Date().toISOString();
+  let logContent = `<div style="font-family: Arial, sans-serif; font-size: 12px; color: #333; margin: 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;">`;
+  logContent += `<strong>[${timestamp}]</strong><br>`;
+
+  // Process arguments into key-value pairs or messages
+  for (let i = 0; i < args.length; i += 2) {
+    const label = args[i];
+    const value = i + 1 < args.length ? args[i + 1] : "";
+    if (typeof label === "string") {
+      logContent += `<span style="color: #0055aa;"><strong>${label}:</strong></span> ${
+        value !== undefined && value !== null ? JSON.stringify(value) : "undefined"
+      }<br>`;
+    } else {
+      logContent += `<span>${label}</span><br>`;
+    }
+  }
+  logContent += `</div>`;
+
+  // Append the log to the existing body
+  return new Promise((resolve) => {
+    item.body.getAsync("html", { asyncContext: logContent }, (result) => {
+      if (result.status === Office.AsyncResultStatus.Succeeded) {
+        const currentBody = result.value || "";
+        item.body.setSignatureAsync(
+          currentBody + logContent,
+          { coercionType: Office.CoercionType.Html },
+          (asyncResult) => {
+            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+              // Fallback: Try setting the log alone if append fails
+              item.body.setSignatureAsync(logContent, { coercionType: Office.CoercionType.Html }, () => resolve());
+            } else {
+              resolve();
+            }
+          }
+        );
+      } else {
+        // Fallback if getAsync fails
+        item.body.setSignatureAsync(logContent, { coercionType: Office.CoercionType.Html }, () => resolve());
+      }
+    });
+  });
+}
+
+export { logger, SignatureManager, fetchSignature, detectSignatureKey, appendDebugLogToBody };
