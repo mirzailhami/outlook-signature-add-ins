@@ -156,10 +156,10 @@
         </div>
 
         <button class="primary-button" id="saveButton">Save Settings</button>
-    </div>
+    </div>  
 
     <script>
-        Office.onReady().then((info) => {
+        Office.initialize = function(){
             const mobileDefaultSignature = localStorage.getItem("mobileDefaultSignature");
             if (mobileDefaultSignature) {
                 const selectedRadio = document.querySelector(`input[value="${mobileDefaultSignature}"]`);
@@ -207,7 +207,7 @@
             });
         }).catch(error => {
             console.error('Office initialization failed:', error);
-        });
+        };
     </script>
 </body>
 
