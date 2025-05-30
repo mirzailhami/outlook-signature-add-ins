@@ -307,7 +307,7 @@ async function onNewMessageComposeHandler(event) {
       const subjectResult = await new Promise((resolve) => item.subject.getAsync((result) => resolve(result)));
       let emailSubject = "Unknown";
       if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
-        emailSubject = subjectResult.value;
+        emailSubject = SignatureManager.normalizeSubject(subjectResult.value);
         logger.log("info", "onNewMessageComposeHandler", { debug: `Using subject: ${emailSubject}` });
       } else {
         logger.log("error", "onNewMessageComposeHandler", {
@@ -330,12 +330,11 @@ async function onNewMessageComposeHandler(event) {
         });
       }
 
-      // const searchQuery = `"to:${recipientEmail}" and "subject:${emailSubject}"`;
       const response = await client
         .api(`/me/mailFolders('SentItems')/messages`)
-        // .search(searchQuery)
-        .filter(`subject eq '${emailSubject}'`)
+        .filter(`sentDateTime ge 2023-01-11T07:28:08Z and subject eq '${emailSubject}'`)
         .select("subject,body,sentDateTime,toRecipients")
+        .orderby("sentDateTime desc")
         .top(10)
         .get();
 
