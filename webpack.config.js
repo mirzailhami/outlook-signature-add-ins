@@ -84,7 +84,7 @@ module.exports = async (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/taskpane/taskpane.html",
         filename: "taskpane.html",
-        chunks: ["polyfill", "launchevent"],
+        chunks: ["polyfill", "commands"],
         publicPath: "auto",
         minify: isProduction
           ? {
