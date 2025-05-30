@@ -27,12 +27,8 @@ Office.onReady(() => {
  * @param {boolean} isAutoApplied - Whether the signature is auto-applied.
  */
 async function addSignature(signatureKey, event, isAutoApplied = false) {
-  logger.log("info", "addSignature", { signatureKey, isAutoApplied });
-
   try {
     const item = Office.context.mailbox.item;
-    localStorage.removeItem("tempSignature");
-    localStorage.setItem("tempSignature", signatureKey);
     const cachedSignature = localStorage.getItem(`signature_${signatureKey}`);
 
     if (cachedSignature && !isAutoApplied) {
@@ -40,21 +36,15 @@ async function addSignature(signatureKey, event, isAutoApplied = false) {
       await new Promise((resolve) =>
         item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
           if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-            logger.log("error", "addSignature", { error: asyncResult.error.message });
-            displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
+            appendDebugLogToBody(item, "setSignatureAsync Failed (Cached)", "Error", asyncResult.error.message);
             if (!isAutoApplied) event.completed();
             else {
-              displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-              event.completed();
+              await completeWithState("none", "Info", "Please select an M3 signature from the ribbon.");
             }
           } else {
-            // Verify the signature was applied
             item.body.getAsync("html", (result) => {
               if (result.status === Office.AsyncResultStatus.Succeeded) {
-                logger.log("debug", "addSignature", {
-                  bodyContainsMarker: result.value.includes("<!-- signature -->"),
-                  bodyLength: result.value.length,
-                });
+                appendDebugLogToBody(item, "SignatureApplied (Cached)", "BodyContainsMarker", result.value.includes("<!-- signature -->"), "BodyLength", result.value.length);
               }
               event.completed();
             });
@@ -65,12 +55,10 @@ async function addSignature(signatureKey, event, isAutoApplied = false) {
     } else {
       fetchSignature(signatureKey, async (template, error) => {
         if (error) {
-          logger.log("error", "addSignature", { error: error.message });
-          displayNotification("Error", `Failed to fetch ${signatureKey}.`, true);
+          await appendDebugLogToBody(item, "fetchSignature Failed", "Error", error.message);
           if (!isAutoApplied) event.completed();
           else {
-            displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-            event.completed();
+            await completeWithState("none", "Info", "Please select an M3 signature from the ribbon.");
           }
           return;
         }
@@ -82,25 +70,14 @@ async function addSignature(signatureKey, event, isAutoApplied = false) {
             { coercionType: Office.CoercionType.Html },
             (asyncResult) => {
               if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                logger.log("error", "addSignature", { error: asyncResult.error.message });
-                displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
+                appendDebugLogToBody(item, "setSignatureAsync Failed (Fetched)", "Error", asyncResult.error.message);
                 if (!isAutoApplied) event.completed();
                 else {
-                  displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-                  event.completed();
+                  await completeWithState("none", "Info", "Please select an M3 signature from the ribbon.");
                 }
               } else {
-                // Verify the signature was applied
-                item.body.getAsync("html", (result) => {
-                  if (result.status === Office.AsyncResultStatus.Succeeded) {
-                    logger.log("debug", "addSignature", {
-                      bodyContainsMarker: result.value.includes("<!-- signature -->"),
-                      bodyLength: result.value.length,
-                    });
-                  }
-                  localStorage.setItem(`signature_${signatureKey}`, template);
-                  event.completed();
-                });
+                localStorage.setItem(`signature_${signatureKey}`, template);
+                event.completed();
               }
               resolve();
             }
@@ -109,12 +86,10 @@ async function addSignature(signatureKey, event, isAutoApplied = false) {
       });
     }
   } catch (error) {
-    logger.log("error", "addSignature", { error: error.message });
-    displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
+    await appendDebugLogToBody(item, "addSignature Error", "Message", error.message);
     if (!isAutoApplied) event.completed();
     else {
-      displayNotification("Info", "Please select an M3 signature from the ribbon.", false);
-      event.completed();
+      await completeWithState("none", "Info", "Please select an M3 signature from the ribbon.");
     }
   }
 }
@@ -438,24 +413,20 @@ async function onNewMessageComposeHandler(event) {
     }
   } else {
     if (isMobile) {
-      const defaultSignatureKey = localStorage.getItem("defaultSignature");
+      const defaultSignatureKey = localStorage.getItem("mobileDefaultSignature");
+      await appendDebugLogToBody(item, "Mobile DefaultSignatureKey", defaultSignatureKey || "Not Set");
+    
       if (defaultSignatureKey) {
-        logger.log("info", "onNewMessageComposeHandler", {
-          status: "Applying default signature for mobile",
-          defaultSignatureKey,
-        });
         try {
-          // Clear and set tempSignature for new email
           localStorage.removeItem("tempSignature");
           localStorage.setItem("tempSignature", defaultSignatureKey);
           await addSignature(defaultSignatureKey, event, true);
           await completeWithState(defaultSignatureKey, null, null);
         } catch (error) {
-          logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
+          await appendDebugLogToBody(item, "Error Applying Default Signature", "Message", error.message);
           await completeWithState("none", "Error", `Failed to fetch default signature: ${error.message}`);
         }
       } else {
-        logger.log("info", "onNewMessageComposeHandler", { status: "No default signature set" });
         await completeWithState("none", "Info", "Please select an M3 signature from the task pane.");
       }
     } else {

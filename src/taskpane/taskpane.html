@@ -7,7 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M3 Signature Settings</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-    <!-- <script src="http://192.168.1.4:8080/target/target-script-min.js#anonymous"></script> -->
     <link rel="stylesheet" href="https://unpkg.com/@fluentui/react@8.106.4/dist/css/fabric.min.css">
 
     <style>
@@ -102,8 +101,7 @@
             }
 
             .title {
-                font 18px;
-                18px;
+                font-size: 18px;
             }
 
             .description {
@@ -121,8 +119,7 @@
     <div class="container">
         <div class="header">
             <h1 class="title">Default Signature Settings</h1>
-            <p class="description">Choose your default email signature. This will be automatically applied to new
-                messages.</p>
+            <p class="description">Choose your default email signature. This will be automatically applied to new messages.</p>
         </div>
 
         <div class="choice-group" id="signatureOptions">
@@ -163,9 +160,8 @@
 
     <script>
         Office.onReady().then((info) => {
-            // Load saved settings
             console.log({ event: "Office.onReady", host: info.host, platform: info.platform, apiVersion: Office.context.requirements.isSetSupported("Mailbox", "1.8") });
-            const defaultSignature = localStorage.getItem("defaultSignature");
+            const defaultSignature = localStorage.getItem("mobileDefaultSignature");
             if (defaultSignature) {
                 const selectedRadio = document.querySelector(`input[value="${defaultSignature}"]`);
                 if (selectedRadio) {
@@ -173,7 +169,6 @@
                 }
             }
 
-            // Add click handler for entire choice field
             document.querySelectorAll('.choice-field').forEach(field => {
                 field.addEventListener('click', (e) => {
                     const radio = field.querySelector('input[type="radio"]');
@@ -183,17 +178,15 @@
                 });
             });
 
-            // Save settings handler
             document.getElementById('saveButton').addEventListener('click', () => {
                 const selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
                 if (selectedRadio) {
-                    localStorage.setItem("defaultSignature", selectedRadio.value);
-                    // Office.addin.close();
+                    const signatureKey = selectedRadio.value;
+                    localStorage.setItem("defaultSignature", signatureKey);
                     if (Office.context.ui.messageParent) {
                         Office.context.ui.messageParent(signatureKey);
                         console.log({ event: "messageParent", message: signatureKey });
                     } else {
-                        // Fallback for task pane
                         console.log({ event: "closeContainerAttempt" });
                         try {
                             Office.context.ui.closeContainer();

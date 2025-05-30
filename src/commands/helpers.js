@@ -148,20 +148,8 @@ const SignatureManager = {
    * @returns {Promise<boolean>} True if the email is a reply or forward, false otherwise.
    */
   async isReplyOrForward(item) {
-    // Debug: Log item properties
-    await appendDebugLogToBody(
-      item,
-      "itemType",
-      item.itemType,
-      "conversationId",
-      item.conversationId,
-      "inReplyTo",
-      item.inReplyTo
-    );
-
     // Check 1: inReplyTo (reliable indicator of a reply)
     if (item.inReplyTo) {
-      await appendDebugLogToBody(item, "Status", "Reply detected via inReplyTo", "inReplyTo", item.inReplyTo);
       return true;
     }
 
@@ -170,31 +158,11 @@ const SignatureManager = {
     let subject = "";
     if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
       subject = subjectResult.value || "";
-    } else {
-      await appendDebugLogToBody(
-        item,
-        "Warning",
-        "Failed to get subject in isReplyOrForward",
-        "Error",
-        subjectResult.error?.message
-      );
     }
     const hasReplyOrForwardPrefix = ["re:", "fw:", "fwd:"].some((prefix) => subject.toLowerCase().includes(prefix));
-    await appendDebugLogToBody(
-      item,
-      "SubjectCheck",
-      `subject="${subject}", hasReplyOrForwardPrefix=${hasReplyOrForwardPrefix}`
-    );
 
     // Check 3: conversationId (only if subject indicates reply/forward)
     if (item.itemType === Office.MailboxEnums.ItemType.Message && item.conversationId && hasReplyOrForwardPrefix) {
-      await appendDebugLogToBody(
-        item,
-        "Status",
-        "Reply/forward detected via conversationId",
-        "conversationId",
-        item.conversationId
-      );
       return true;
     }
 
