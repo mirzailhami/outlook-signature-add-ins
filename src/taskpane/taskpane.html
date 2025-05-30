@@ -160,7 +160,6 @@
 
     <script>
         Office.onReady().then((info) => {
-            console.log({ event: "Office.onReady", host: info.host, platform: info.platform, apiVersion: Office.context.requirements.isSetSupported("Mailbox", "1.8") });
             const mobileDefaultSignature = localStorage.getItem("mobileDefaultSignature");
             if (mobileDefaultSignature) {
                 const selectedRadio = document.querySelector(`input[value="${mobileDefaultSignature}"]`);
