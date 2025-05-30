@@ -343,11 +343,11 @@ async function onNewMessageComposeHandler(event) {
           email.toRecipients.some((recipient) => recipient.emailAddress.address.toLowerCase() === recipientEmail)
         );
 
-        logger.log("debug", "onNewMessageComposeHandler", {
-          status: "Filtered emails by toRecipients",
-          matchingEmailsCount: matchingEmails.length,
-          matchingEmails,
-        });
+        // logger.log("debug", "onNewMessageComposeHandler", {
+        //   status: "Filtered emails by toRecipients",
+        //   matchingEmailsCount: matchingEmails.length,
+        //   matchingEmails,
+        // });
 
         if (matchingEmails.length === 0) {
           logger.log("warn", "onNewMessageComposeHandler", {
@@ -363,12 +363,12 @@ async function onNewMessageComposeHandler(event) {
           return;
         }
 
-        matchingEmails.sort((a, b) => new Date(b.sentDateTime) - new Date(a.sentDateTime));
+        // matchingEmails.sort((a, b) => new Date(b.sentDateTime) - new Date(a.sentDateTime));
 
-        logger.log("debug", "onNewMessageComposeHandler", {
-          status: "Sorted emails by sentDateTime desc",
-          sortedEmails: matchingEmails,
-        });
+        // logger.log("debug", "onNewMessageComposeHandler", {
+        //   status: "Sorted emails by sentDateTime desc",
+        //   sortedEmails: matchingEmails,
+        // });
 
         let matchedMessage = matchingEmails[0];
 
