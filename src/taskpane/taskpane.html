@@ -183,10 +183,10 @@
                 if (selectedRadio) {
                     const signatureKey = selectedRadio.value;
                     localStorage.setItem("mobileDefaultSignature", signatureKey);
+                    alert(`Default signature set to ${signatureKey.replace('Signature', '')}.`);
                     if (Office.context.ui.messageParent) {
                         Office.context.ui.messageParent(signatureKey);
                         console.log({ event: "messageParent", message: signatureKey });
-                        alert(`Default signature set to ${signatureKey.replace('Signature', '')}.`);
                     } else {
                         console.log({ event: "closeContainerAttempt" });
                         try {
