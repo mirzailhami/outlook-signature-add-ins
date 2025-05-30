@@ -469,7 +469,6 @@ async function onNewMessageComposeHandler(event) {
         await completeWithState(event, "none", "Info", "Please select an M3 signature from the task pane.");
       }
     } else {
-      await appendDebugLogToBody(item, "Info", "Non-mobile new email");
       await completeWithState(event, "none", "Info", "Please select an M3 signature from the ribbon.");
     }
   }
