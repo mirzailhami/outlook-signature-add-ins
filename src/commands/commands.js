@@ -450,22 +450,18 @@ async function onNewMessageComposeHandler(event) {
   } else {
     if (isMobile) {
       const mobileDefaultSignatureKey = localStorage.getItem("mobileDefaultSignature");
-      await appendDebugLogToBody(item, "Mobile DefaultSignatureKey", mobileDefaultSignatureKey || "Not Set");
-
       if (mobileDefaultSignatureKey) {
         try {
           localStorage.removeItem("tempSignature");
           localStorage.setItem("tempSignature", mobileDefaultSignatureKey);
-          await appendDebugLogToBody(item, "tempSignature Set", mobileDefaultSignatureKey);
+
           await addSignature(mobileDefaultSignatureKey, event, completeWithState, true);
-          await appendDebugLogToBody(item, "addSignature Completed", "SignatureKey", mobileDefaultSignatureKey);
           await completeWithState(event, mobileDefaultSignatureKey, null, null);
         } catch (error) {
           await appendDebugLogToBody(item, "Error Applying Default Signature", "Message", error.message);
           await completeWithState(event, "none", "Error", `Failed to fetch default signature: ${error.message}`);
         }
       } else {
-        await appendDebugLogToBody(item, "Info", "No default signature set");
         await completeWithState(event, "none", "Info", "Please select an M3 signature from the task pane.");
       }
     } else {
