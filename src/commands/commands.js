@@ -54,17 +54,20 @@ async function addSignature(signatureKey, event, completeWithStateFn, isAutoAppl
 
     if (cachedSignature && !isAutoApplied) {
       const signatureWithMarker = "<!-- signature -->" + cachedSignature.trim();
-      await new Promise((resolve) =>
-        item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, async (asyncResult) => {
+      await new Promise((resolve, reject) => {
+        item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
           if (asyncResult.status === Office.AsyncResultStatus.Failed) {
             if (isMobile) {
               appendDebugLogToBody(item, "addSignature Error (Cached)", "Message", asyncResult.error.message);
             }
             logger.log("error", "addSignature", { error: asyncResult.error.message });
             displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
-            if (!isAutoApplied) event.completed();
-            else {
-              await completeWithStateFn(event, "none", "Info", "Please select an M3 signature from the ribbon.");
+            if (!isAutoApplied) {
+              event.completed();
+              resolve();
+            } else {
+              // Move the completeWithStateFn call outside the callback
+              reject(new Error("setSignatureAsync failed for cached signature"));
             }
           } else {
             item.body.getAsync("html", (result) => {
@@ -75,28 +78,32 @@ async function addSignature(signatureKey, event, completeWithStateFn, isAutoAppl
                 });
               }
               event.completed();
+              resolve();
             });
           }
-          resolve();
-        })
-      );
+        });
+      });
+      // If rejected due to error and isAutoApplied, handle it here
+      throw new Error("setSignatureAsync failed for cached signature");
     } else {
-      fetchSignature(signatureKey, async (template, error) => {
-        if (error) {
-          if (isMobile) {
-            appendDebugLogToBody(item, "addSignature Error (Fetch)", "Message", error.message);
+      await new Promise((resolve, reject) => {
+        fetchSignature(signatureKey, (template, error) => {
+          if (error) {
+            if (isMobile) {
+              appendDebugLogToBody(item, "addSignature Error (Fetch)", "Message", error.message);
+            }
+            logger.log("error", "addSignature", { error: error.message });
+            displayNotification("Error", `Failed to fetch ${signatureKey}.`, true);
+            if (!isAutoApplied) {
+              event.completed();
+              resolve();
+            } else {
+              reject(new Error("fetchSignature failed"));
+            }
+            return;
           }
-          logger.log("error", "addSignature", { error: error.message });
-          displayNotification("Error", `Failed to fetch ${signatureKey}.`, true);
-          if (!isAutoApplied) event.completed();
-          else {
-            await completeWithStateFn(event, "none", "Info", "Please select an M3 signature from the ribbon.");
-          }
-          return;
-        }
 
-        const signatureWithMarker = "<!-- signature -->" + template.trim();
-        await new Promise((resolve) =>
+          const signatureWithMarker = "<!-- signature -->" + template.trim();
           item.body.setSignatureAsync(
             signatureWithMarker,
             { coercionType: Office.CoercionType.Html },
@@ -107,9 +114,11 @@ async function addSignature(signatureKey, event, completeWithStateFn, isAutoAppl
                 }
                 logger.log("error", "addSignature", { error: asyncResult.error.message });
                 displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
-                if (!isAutoApplied) event.completed();
-                else {
-                  await completeWithStateFn(event, "none", "Info", "Please select an M3 signature from the ribbon.");
+                if (!isAutoApplied) {
+                  event.completed();
+                  resolve();
+                } else {
+                  reject(new Error("setSignatureAsync failed for fetched signature"));
                 }
               } else {
                 item.body.getAsync("html", (result) => {
@@ -121,23 +130,24 @@ async function addSignature(signatureKey, event, completeWithStateFn, isAutoAppl
                   }
                   localStorage.setItem(`signature_${signatureKey}`, template);
                   event.completed();
+                  resolve();
                 });
               }
-              resolve();
             }
-          )
-        );
+          );
+        });
       });
     }
   } catch (error) {
     if (isMobile) {
-      appendDebugLogToBody(item, "addSignature Error (Catch)", "Message", error.message);
+      await appendDebugLogToBody(item, "addSignature Error (Catch)", "Message", error.message);
     }
     logger.log("error", "addSignature", { error: error.message });
     displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
-    if (!isAutoApplied) event.completed();
-    else {
+    if (isAutoApplied) {
       await completeWithStateFn(event, "none", "Info", "Please select an M3 signature from the ribbon.");
+    } else {
+      event.completed();
     }
   }
 }
