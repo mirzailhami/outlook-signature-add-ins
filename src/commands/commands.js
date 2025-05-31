@@ -194,11 +194,15 @@ function displayNotification(type, message, persistent = false) {
 async function displayError(message, event) {
   logger.log("info", "displayError", { message });
 
+  const markdownMessage = message.includes("modified")
+    ? `${message}\n\n**Tip**: Ensure the M3 signature is not edited before sending.`
+    : `${message}\n\n**Tip**: Select an M3 signature from the ribbon under "M3 Signatures".`;
+
   displayNotification("Error", message, true);
   event.completed({
     allowEvent: false,
     errorMessage: message,
-    errorMessageMarkdown: `${message}`,
+    errorMessageMarkdown: markdownMessage,
     cancelLabel: "OK",
   });
 }
@@ -328,7 +332,7 @@ async function onNewMessageComposeHandler(event) {
       const subjectResult = await new Promise((resolve) => item.subject.getAsync((result) => resolve(result)));
       let emailSubject = "Unknown";
       if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
-        emailSubject = SignatureManager.normalizeSubject(subjectResult.value);
+        emailSubject = subjectResult.value.trim();
         logger.log("info", "onNewMessageComposeHandler", { debug: `Using subject: ${emailSubject}` });
       } else {
         logger.log("error", "onNewMessageComposeHandler", {
