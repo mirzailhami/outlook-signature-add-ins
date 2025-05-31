@@ -333,7 +333,7 @@ async function onNewMessageComposeHandler(event) {
       let emailSubject = "Unknown";
       if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
         emailSubject = subjectResult.value.trim();
-        logger.log("info", "onNewMessageComposeHandler", { debug: `Using subject: ${emailSubject}` });
+        logger.log("info", "onNewMessageComposeHandler", { debug: emailSubject });
       } else {
         logger.log("error", "onNewMessageComposeHandler", {
           error: "Failed to get subject",
@@ -347,7 +347,7 @@ async function onNewMessageComposeHandler(event) {
       let recipientEmail = "Unknown";
       if (toResult.status === Office.AsyncResultStatus.Succeeded && toResult.value.length > 0) {
         recipientEmail = toResult.value[0].emailAddress.toLowerCase();
-        logger.log("info", "onNewMessageComposeHandler", { debug: `Using recipient email: ${recipientEmail}` });
+        logger.log("info", "onNewMessageComposeHandler", { debug: recipientEmail });
       } else {
         logger.log("error", "onNewMessageComposeHandler", {
           error: "Failed to get 'to'",
@@ -356,7 +356,7 @@ async function onNewMessageComposeHandler(event) {
       }
 
       const response = await client
-        .api(`/me/mailFolders('SentItems')/messages`)
+        .api("/me/mailFolders/SentItems/messages")
         .filter(`sentDateTime ge 2023-01-11T07:28:08Z and subject eq '${emailSubject}'`)
         .select("subject,body,sentDateTime,toRecipients")
         .orderby("sentDateTime desc")
@@ -367,6 +367,8 @@ async function onNewMessageComposeHandler(event) {
         const matchingEmails = response.value.filter((email) =>
           email.toRecipients.some((recipient) => recipient.emailAddress.address.toLowerCase() === recipientEmail)
         );
+
+        console.log(matchingEmails);
 
         if (matchingEmails.length === 0) {
           logger.log("warn", "onNewMessageComposeHandler", {
