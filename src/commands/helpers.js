@@ -235,44 +235,37 @@ const SignatureManager = {
  * @returns {string|null} The matched signature key, or null if no match.
  */
 function detectSignatureKey(signatureText) {
-  const signatureKeyMapping = {
-    "mona offshore wind limited": "monaSignature",
-    "morgan offshore wind limited": "morganSignature",
-    "morven offshore wind limited": "morvenSignature",
-    "m2 offshore wind limited": "m2Signature",
-    "m3 offshore wind limited": "m3Signature",
-  };
-
-  // Extract logo URL to determine the signature
-  const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/([^"']+)))["'][^>]*>/i;
+  // Step 1: Logo-based detection
+  const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/([^?"']+))(?:\?[^"']*)?)["'][^>]*>/i;
   const logoMatch = signatureText.match(logoRegex);
   let logoFile = logoMatch ? logoMatch[2] : null;
+
   if (logoFile) {
-    const logoToKey = {
-      "morven_v1.png": "morvenSignature",
-      "morgan_v1.png": "morganSignature",
-      "mona_v1.png": "monaSignature",
-      "m2_v1.png": "m2Signature",
-      "m3_v1.png": "m3Signature",
-    };
-    const keyFromLogo = logoToKey[logoFile];
-    if (keyFromLogo) {
-      console.log({ event: "logoDetection", logoFile, keyFromLogo }); // Debug log
-      return keyFromLogo; // Return logo-based key if valid
+    // Extract the prefix (e.g., "m3" from "m3_v1.png")
+    const logoPrefixMatch = logoFile.match(/^([a-z0-9]+)(?:_v\d+)?\.png$/i);
+    const logoPrefix = logoPrefixMatch ? logoPrefixMatch[1] : null;
+
+    if (logoPrefix) {
+      const logoPrefixToKey = {
+        morven: "morvenSignature",
+        morgan: "morganSignature",
+        mona: "monaSignature",
+        m2: "m2Signature",
+        m3: "m3Signature",
+      };
+      const keyFromLogo = logoPrefixToKey[logoPrefix.toLowerCase()];
+      if (keyFromLogo) {
+        console.log({ event: "logoDetection", logoFile, logoPrefix, keyFromLogo });
+        return keyFromLogo;
+      }
+      console.log({ event: "logoDetection", warning: `No key match for logoPrefix: ${logoPrefix}` });
+    } else {
+      console.log({ event: "logoDetection", warning: `Invalid logo file name format: ${logoFile}` });
     }
-    console.log({ event: "logoDetection", warning: `No key match for logoFile: ${logoFile}` }); // Debug log
+  } else {
+    console.log({ event: "logoDetection", warning: "No logo found in signatureText" });
   }
 
-  // Fallback to text-based detection, prioritize specific signature name
-  if (signatureText.toLowerCase().includes("<b>m3 signature</b>")) {
-    return "m3Signature"; // Prioritize explicit signature name
-  }
-  for (const [keyword, key] of Object.entries(signatureKeyMapping)) {
-    if (signatureText.toLowerCase().includes(keyword)) {
-      console.log({ event: "textDetection", keyword, key }); // Debug log
-      return key; // Return the first match
-    }
-  }
   return null;
 }
 
