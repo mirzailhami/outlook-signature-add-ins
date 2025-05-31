@@ -256,17 +256,16 @@ function detectSignatureKey(signatureText) {
       "m3_v1.png": "m3Signature",
     };
     const keyFromLogo = logoToKey[logoFile];
-    if (keyFromLogo) return keyFromLogo;
+    if (keyFromLogo) return keyFromLogo; // Prioritize logo if found
   }
 
-  // Fallback to text-based detection, prioritizing the last match
-  let detectedKey = null;
+  // Fallback to text-based detection, return the first match or null
   for (const [keyword, key] of Object.entries(signatureKeyMapping)) {
     if (signatureText.toLowerCase().includes(keyword)) {
-      detectedKey = key; // Store the last match
+      return key; // Return the first match instead of the last
     }
   }
-  return detectedKey;
+  return null;
 }
 
 /**
