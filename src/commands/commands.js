@@ -389,8 +389,8 @@ async function onNewMessageComposeHandler(event) {
 
         if (matchedMessage) {
           const emailBody = matchedMessage.body?.content || "";
-          console.log(emailBody);
           const extractedSignature = SignatureManager.extractSignature(emailBody);
+          console.log(extractedSignature);
 
           if (extractedSignature) {
             logger.log("info", "onNewMessageComposeHandler", {
