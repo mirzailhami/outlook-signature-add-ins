@@ -255,15 +255,19 @@ function detectSignatureKey(signatureText) {
       };
       const keyFromLogo = logoPrefixToKey[logoPrefix.toLowerCase()];
       if (keyFromLogo) {
-        console.log({ event: "logoDetection", logoFile, logoPrefix, keyFromLogo });
+        logger.log("info", "logoDetection", {
+          logoFile,
+          logoPrefix,
+          keyFromLogo,
+        });
         return keyFromLogo;
       }
-      console.log({ event: "logoDetection", warning: `No key match for logoPrefix: ${logoPrefix}` });
     } else {
-      console.log({ event: "logoDetection", warning: `Invalid logo file name format: ${logoFile}` });
+      logger.log("error", "logoDetection", {
+        status: "Invalid logo file name format",
+        logoFile,
+      });
     }
-  } else {
-    console.log({ event: "logoDetection", warning: "No logo found in signatureText" });
   }
 
   return null;

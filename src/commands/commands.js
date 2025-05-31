@@ -356,7 +356,7 @@ async function onNewMessageComposeHandler(event) {
       }
 
       const response = await client
-        .api("/me/mailFolders/SentItems/messages")
+        .api("/me/messages")
         .filter(`sentDateTime ge 2023-01-11T07:28:08Z and subject eq '${emailSubject}'`)
         .select("subject,body,sentDateTime,toRecipients")
         .orderby("sentDateTime desc")
@@ -367,8 +367,6 @@ async function onNewMessageComposeHandler(event) {
         const matchingEmails = response.value.filter((email) =>
           email.toRecipients.some((recipient) => recipient.emailAddress.address.toLowerCase() === recipientEmail)
         );
-
-        console.log(matchingEmails);
 
         if (matchingEmails.length === 0) {
           logger.log("warn", "onNewMessageComposeHandler", {
@@ -390,7 +388,6 @@ async function onNewMessageComposeHandler(event) {
         if (matchedMessage) {
           const emailBody = matchedMessage.body?.content || "";
           const extractedSignature = SignatureManager.extractSignature(emailBody);
-          console.log(extractedSignature);
 
           if (extractedSignature) {
             logger.log("info", "onNewMessageComposeHandler", {
