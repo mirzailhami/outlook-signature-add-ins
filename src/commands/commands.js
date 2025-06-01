@@ -414,6 +414,9 @@ async function onNewMessageComposeHandler(event) {
               localStorage.removeItem("tempSignature");
               localStorage.setItem("tempSignature", matchedSignatureKey);
               await addSignature(matchedSignatureKey, event, completeWithState, true);
+              if (isMobile) {
+                await completeWithState(event, matchedSignatureKey, "Info", Office.context.mailbox.item.inReplyTo);
+              }
               await completeWithState(event, matchedSignatureKey, null, null);
             } else {
               logger.log("warn", "onNewMessageComposeHandler", { status: "Could not detect signature key" });
