@@ -1,12 +1,8 @@
 /* global Office */
 
-import { getGraphAccessToken } from "./launchevent.js";
+import { searchEmailsByConversationId, fetchEmailById } from "./graph.js";
 import "isomorphic-fetch";
-import { Client } from "@microsoft/microsoft-graph-client";
 import { logger, SignatureManager, fetchSignature, detectSignatureKey, appendDebugLogToBody } from "./helpers.js";
-
-// Mobile needs this initialization
-Office.initialize = () => {};
 
 Office.onReady(() => {
   logger.log("info", "Office.onReady", { host: Office.context?.mailbox?.diagnostics?.hostName });
@@ -307,6 +303,10 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
  * Handles new message compose event.
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
+/**
+ * Handles the new message compose event, applying the appropriate signature for reply/forward or new messages.
+ * @param {Object} event - The event object from Office.js.
+ */
 async function onNewMessageComposeHandler(event) {
   const item = Office.context.mailbox.item;
   const isReplyOrForward = await SignatureManager.isReplyOrForward(item);
@@ -320,174 +320,90 @@ async function onNewMessageComposeHandler(event) {
     hostName: Office.context.mailbox.diagnostics.hostName,
   });
 
-  if (isReplyOrForward) {
-    logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
+  try {
+    if (isReplyOrForward) {
+      logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
 
-    try {
-      const accessToken = await getGraphAccessToken();
-      const client = Client.init({
-        authProvider: (done) => done(null, accessToken),
-      });
-
-      // const subjectResult = await new Promise((resolve) => item.subject.getAsync((result) => resolve(result)));
-      // let emailSubject = "Unknown";
-      // if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
-      //   emailSubject = subjectResult.value.trim();
-      //   logger.log("info", "onNewMessageComposeHandler", { debug: emailSubject });
-      // } else {
-      //   logger.log("error", "onNewMessageComposeHandler", {
-      //     error: "Failed to get subject",
-      //     details: subjectResult.error.message,
-      //   });
-      // }
-
+      let messageId;
       if (isMobile) {
-        await appendDebugLogToBody(item, "conversationId", Office.context.mailbox.item.conversationId);
+        const conversationId = Office.context.mailbox.item.conversationId;
+        if (!conversationId) {
+          throw new Error("Conversation ID not available on mobile");
+        }
+        messageId = await searchEmailsByConversationId(conversationId);
       } else {
-        const toResult = await new Promise((resolve) => item.getItemIdAsync((asyncResult) => resolve(asyncResult)));
-        console.log(toResult.value); // id message
+        const itemIdResult = await new Promise((resolve) => item.getItemIdAsync((asyncResult) => resolve(asyncResult)));
+        if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
+          throw new Error(`Failed to get item ID: ${itemIdResult.error.message}`);
+        }
+        messageId = itemIdResult.value;
       }
 
-      // const toResult = await new Promise((resolve) => item.to.getAsync((asyncResult) => resolve(asyncResult)));
-      // let recipientEmail = "Unknown";
-      // console.log(toResult);
-      // if (toResult.status === Office.AsyncResultStatus.Succeeded && toResult.value.length > 0) {
-      //   recipientEmail = toResult.value[0].emailAddress.toLowerCase();
-      //   logger.log("info", "onNewMessageComposeHandler", { debug: recipientEmail });
-      // } else {
-      //   logger.log("error", "onNewMessageComposeHandler", {
-      //     error: "Failed to get 'to'",
-      //     details: toResult.error?.message,
-      //   });
-      // }
+      const email = await fetchEmailById(messageId);
+      const emailBody = email.body?.content || "";
+      const extractedSignature = SignatureManager.extractSignature(emailBody);
 
-      // const searchResponse = await client
-      //   .api("/search/query")
-      //   .post();
-
-      // console.log(searchResponse);
-
-      const response = await client
-        .api("/me/messages")
-        // .filter(`sentDateTime ge 2023-01-11T07:28:08Z and subject eq '${emailSubject}'`)
-        .filter(`internetMessageId eq '${encodeURIComponent(Office.context.mailbox.item.inReplyTo)}'`)
-        .select("subject,body,sentDateTime,toRecipients")
-        // .orderby("sentDateTime desc")
-        // .top(10)
-        .get();
-
-      if (response.value && response.value.length > 0) {
-        // const matchingEmails = response.value.filter((email) =>
-        //   email.toRecipients.some((recipient) => recipient.emailAddress.address.toLowerCase() === recipientEmail)
-        // );
-
-        // if (matchingEmails.length === 0) {
-        //   logger.log("warn", "onNewMessageComposeHandler", {
-        //     status: "No emails matched the recipient in Sent Items",
-        //   });
-        //   await completeWithState(
-        //     event,
-        //     "none",
-        //     "Info",
-        //     isMobile
-        //       ? "No matching email found in Sent Items for this recipient. Please select an M3 signature from the task pane."
-        //       : "No matching email found in Sent Items for this recipient. Please select an M3 signature from the ribbon."
-        //   );
-        //   return;
-        // }
-
-        let matchedMessage = response.value[0];
-
-        if (matchedMessage) {
-          const emailBody = matchedMessage.body?.content || "";
-          const extractedSignature = SignatureManager.extractSignature(emailBody);
-
-          if (extractedSignature) {
-            logger.log("info", "onNewMessageComposeHandler", {
-              status: "Signature extracted from email",
-              signatureLength: extractedSignature.length,
-            });
-
-            const matchedSignatureKey = detectSignatureKey(extractedSignature);
-            if (matchedSignatureKey) {
-              logger.log("info", "onNewMessageComposeHandler", {
-                status: "Detected signature key from content",
-                matchedSignatureKey,
-              });
-              localStorage.removeItem("tempSignature");
-              localStorage.setItem("tempSignature", matchedSignatureKey);
-              await addSignature(matchedSignatureKey, event, completeWithState, true);
-              if (isMobile) {
-                await completeWithState(event, matchedSignatureKey, "Info", Office.context.mailbox.item.inReplyTo);
-              }
-              await completeWithState(event, matchedSignatureKey, null, null);
-            } else {
-              logger.log("warn", "onNewMessageComposeHandler", { status: "Could not detect signature key" });
-              await completeWithState(
-                event,
-                "none",
-                "Info",
-                isMobile
-                  ? "Could not detect signature type. Please select an M3 signature from the task pane."
-                  : "Could not detect signature type. Please select an M3 signature from the ribbon."
-              );
-            }
-          } else {
-            await completeWithState(
-              event,
-              "none",
-              "Info",
-              isMobile
-                ? "No signature found in email. Please select an M3 signature from the task pane."
-                : "No signature found in email. Please select an M3 signature from the ribbon."
-            );
-          }
-        } else {
-          logger.log("warn", "onNewMessageComposeHandler", { status: "No matching email found for recipient" });
-          await completeWithState(
-            event,
-            "none",
-            "Info",
-            isMobile
-              ? "No matching email found with the recipient. Please select an M3 signature from the task pane."
-              : "No matching email found with the recipient. Please select an M3 signature from the ribbon."
-          );
-        }
-      } else {
+      if (!extractedSignature) {
+        logger.log("warn", "onNewMessageComposeHandler", { status: "No signature found in email" });
         await completeWithState(
           event,
           "none",
           "Info",
           isMobile
-            ? "Please select an M3 signature from the task pane."
-            : "Please select an M3 signature from the ribbon."
+            ? "No signature found in email. Please select an M3 signature from the task pane."
+            : "No signature found in email. Please select an M3 signature from the ribbon."
         );
+        return;
       }
-    } catch (error) {
-      logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
-      await completeWithState(event, "none", "Error", `Failed to fetch signature from Graph: ${error.message}`);
-      await appendDebugLogToBody(item, "message", error.message, "stack", error.stack);
-    }
-  } else {
-    if (isMobile) {
-      const mobileDefaultSignatureKey = localStorage.getItem("mobileDefaultSignature");
-      if (mobileDefaultSignatureKey) {
-        try {
+
+      logger.log("info", "onNewMessageComposeHandler", {
+        status: "Signature extracted from email",
+        signatureLength: extractedSignature.length,
+      });
+
+      const matchedSignatureKey = detectSignatureKey(extractedSignature);
+      if (!matchedSignatureKey) {
+        logger.log("warn", "onNewMessageComposeHandler", { status: "Could not detect signature key" });
+        await completeWithState(
+          event,
+          "none",
+          "Info",
+          isMobile
+            ? "Could not detect signature type. Please select an M3 signature from the task pane."
+            : "Could not detect signature type. Please select an M3 signature from the ribbon."
+        );
+        return;
+      }
+
+      logger.log("info", "onNewMessageComposeHandler", {
+        status: "Detected signature key from content",
+        matchedSignatureKey,
+      });
+
+      localStorage.removeItem("tempSignature");
+      localStorage.setItem("tempSignature", matchedSignatureKey);
+      await addSignature(matchedSignatureKey, event, completeWithState, true);
+      await completeWithState(event, matchedSignatureKey, null, null);
+    } else {
+      // Handle new message
+      if (isMobile) {
+        const mobileDefaultSignatureKey = localStorage.getItem("mobileDefaultSignature");
+        if (mobileDefaultSignatureKey) {
           localStorage.removeItem("tempSignature");
           localStorage.setItem("tempSignature", mobileDefaultSignatureKey);
-
           await addSignature(mobileDefaultSignatureKey, event, completeWithState, true);
           await completeWithState(event, mobileDefaultSignatureKey, null, null);
-        } catch (error) {
-          await appendDebugLogToBody(item, "Error Applying Default Signature", "Message", error.message);
-          await completeWithState(event, "none", "Error", `Failed to fetch default signature: ${error.message}`);
+        } else {
+          await completeWithState(event, "none", "Info", "Please select an M3 signature from the task pane.");
         }
       } else {
-        await completeWithState(event, "none", "Info", "Please select an M3 signature from the task pane.");
+        await completeWithState(event, "none", "Info", "Please select an M3 signature from the ribbon.");
       }
-    } else {
-      await completeWithState(event, "none", "Info", "Please select an M3 signature from the ribbon.");
     }
+  } catch (error) {
+    logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
+    await appendDebugLogToBody(item, "Error", "Message", error.message, "Stack", error.stack);
+    await completeWithState(event, "none", "Error", `Failed to process compose event: ${error.message}`);
   }
 }
 
