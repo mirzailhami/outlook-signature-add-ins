@@ -329,17 +329,17 @@ async function onNewMessageComposeHandler(event) {
         authProvider: (done) => done(null, accessToken),
       });
 
-      const subjectResult = await new Promise((resolve) => item.subject.getAsync((result) => resolve(result)));
-      let emailSubject = "Unknown";
-      if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
-        emailSubject = subjectResult.value.trim();
-        logger.log("info", "onNewMessageComposeHandler", { debug: emailSubject });
-      } else {
-        logger.log("error", "onNewMessageComposeHandler", {
-          error: "Failed to get subject",
-          details: subjectResult.error.message,
-        });
-      }
+      // const subjectResult = await new Promise((resolve) => item.subject.getAsync((result) => resolve(result)));
+      // let emailSubject = "Unknown";
+      // if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
+      //   emailSubject = subjectResult.value.trim();
+      //   logger.log("info", "onNewMessageComposeHandler", { debug: emailSubject });
+      // } else {
+      //   logger.log("error", "onNewMessageComposeHandler", {
+      //     error: "Failed to get subject",
+      //     details: subjectResult.error.message,
+      //   });
+      // }
 
       console.log(Office.context.mailbox.item);
       console.log(Office.context.mailbox.item.inReplyTo);
@@ -349,20 +349,20 @@ async function onNewMessageComposeHandler(event) {
 
       await appendDebugLogToBody(item, "inReplyTo", Office.context.mailbox.item.inReplyTo);
 
-      const toResult = await new Promise((resolve) =>
-        Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
-      );
-      let recipientEmail = "Unknown";
-      console.log(toResult);
-      if (toResult.status === Office.AsyncResultStatus.Succeeded && toResult.value.length > 0) {
-        recipientEmail = toResult.value[0].emailAddress.toLowerCase();
-        logger.log("info", "onNewMessageComposeHandler", { debug: recipientEmail });
-      } else {
-        logger.log("error", "onNewMessageComposeHandler", {
-          error: "Failed to get 'to'",
-          details: toResult.error.message,
-        });
-      }
+      // const toResult = await new Promise((resolve) =>
+      //   Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
+      // );
+      // let recipientEmail = "Unknown";
+      // console.log(toResult);
+      // if (toResult.status === Office.AsyncResultStatus.Succeeded && toResult.value.length > 0) {
+      //   recipientEmail = toResult.value[0].emailAddress.toLowerCase();
+      //   logger.log("info", "onNewMessageComposeHandler", { debug: recipientEmail });
+      // } else {
+      //   logger.log("error", "onNewMessageComposeHandler", {
+      //     error: "Failed to get 'to'",
+      //     details: toResult.error.message,
+      //   });
+      // }
 
       const response = await client
         .api("/me/messages")
