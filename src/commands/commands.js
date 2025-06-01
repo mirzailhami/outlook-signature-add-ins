@@ -341,13 +341,14 @@ async function onNewMessageComposeHandler(event) {
         });
       }
 
-      const InternetHeaders = await new Promise((resolve) =>
-        Office.context.mailbox.item.InternetHeaders.getAsync((asyncResult) => resolve(asyncResult))
+      console.log(Office.context.mailbox.item);
+      const internetHeaders = await new Promise((resolve) =>
+        Office.context.mailbox.item.internetHeaders.getAsync((asyncResult) => resolve(asyncResult))
       );
 
       await appendDebugLogToBody(item, "itemId", Office.context.mailbox.item.itemId);
       await appendDebugLogToBody(item, "conversationId", Office.context.mailbox.item.conversationId);
-      await appendDebugLogToBody(item, "InternetHeaders", InternetHeaders.value);
+      await appendDebugLogToBody(item, "internetHeaders", internetHeaders.value);
 
       const toResult = await new Promise((resolve) =>
         Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
@@ -459,6 +460,7 @@ async function onNewMessageComposeHandler(event) {
     } catch (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
       await completeWithState(event, "none", "Error", `Failed to fetch signature from Graph: ${error.message}`);
+      await appendDebugLogToBody(item, "message", error.message, "stack", error.stack);
     }
   } else {
     if (isMobile) {
