@@ -343,7 +343,7 @@ async function onNewMessageComposeHandler(event) {
 
       console.log(Office.context.mailbox.item);
       const internetHeaders = await new Promise((resolve) =>
-        Office.context.mailbox.item.internetHeaders.getAsync((asyncResult) => resolve(asyncResult))
+        Office.context.mailbox.item.getAllInternetHeadersAsync((asyncResult) => resolve(asyncResult))
       );
 
       await appendDebugLogToBody(item, "itemId", Office.context.mailbox.item.itemId);
