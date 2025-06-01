@@ -326,11 +326,13 @@ async function onNewMessageComposeHandler(event) {
 
       let messageId;
       if (isMobile) {
-        const conversationId = Office.context.mailbox.item.conversationId;
-        if (!conversationId) {
-          throw new Error("Conversation ID not available on mobile");
+        const conversationId = Office.context.mailbox.item.conversationId || "Not available";
+        try {
+          messageId = await searchEmailsByConversationId(conversationId);
+        } catch (searchError) {
+          await appendDebugLogToBody(item, "Conversation ID", conversationId, "Error", searchError.message);
+          throw new Error("No default signature available and search failed");
         }
-        messageId = await searchEmailsByConversationId(conversationId);
       } else {
         const itemIdResult = await new Promise((resolve) => item.getItemIdAsync((asyncResult) => resolve(asyncResult)));
         if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {

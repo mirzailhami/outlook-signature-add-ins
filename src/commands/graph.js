@@ -6,18 +6,15 @@
 /* global console, Office, Client */
 
 import { createNestablePublicClientApplication } from "@azure/msal-browser";
-import { Client } from "@microsoft/microsoft-graph-client";
 import { auth } from "./authconfig.js";
 import { logger } from "./helpers.js";
 
 let pca = undefined;
 let isPCAInitialized = false;
 
-// Mobile needs this initialization
-// eslint-disable-next-line office-addins/no-office-initialize
-Office.initialize = () => {
-  console.log("Office.js initialize is ready");
-};
+Office.onReady(() => {
+  console.log("Office.js is ready");
+});
 
 /**
  * Initializes the Public Client Application (PCA) for SSO through NAA.
@@ -60,7 +57,7 @@ async function getGraphAccessToken() {
       logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
       return response.accessToken;
     } catch (popupError) {
-      logger.log("error", "acquireTokenPopup", { error: popupError.message, stack: popupError.stack });
+      logger.log("error", "acquireTokenPopup", { popupError: popupError.message, stack: popupError.stack });
       throw new Error(`Failed to acquire access token: ${popupError.message}`);
     }
   }
@@ -109,7 +106,7 @@ async function searchEmailsByConversationId(conversationId) {
     const response = await client.api("/search/query").post(searchRequest);
 
     if (!response?.value?.[0]?.hitsContainers?.[0]?.hits?.[0]?.hitId) {
-      logger.log("warn", "searchEmailsByConversationId", { status: "No emails found in conversation" });
+      logger.log("warn", "searchEmailsByConversationId", { status: "No emails found in conversation", conversationId });
       throw new Error("No emails found in the conversation thread");
     }
 
@@ -117,7 +114,7 @@ async function searchEmailsByConversationId(conversationId) {
     logger.log("info", "searchEmailsByConversationId", { status: "Found email in conversation", hitId });
     return hitId;
   } catch (error) {
-    logger.log("error", "searchEmailsByConversationId", { error: error.message, stack: error.stack });
+    logger.log("error", "searchEmailsByConversationId", { error: error.message, stack: error.stack, conversationId });
     throw new Error(`Failed to search emails by conversation ID: ${error.message}`);
   }
 }
@@ -142,14 +139,14 @@ async function fetchEmailById(messageId) {
       .get();
 
     if (!email) {
-      logger.log("warn", "fetchEmailById", { status: "Email not found" });
+      logger.log("warn", "fetchEmailById", { status: "Email not found", messageId });
       throw new Error("Email not found");
     }
 
     logger.log("info", "fetchEmailById", { status: "Email fetched successfully", emailId: email.id });
     return email;
   } catch (error) {
-    logger.log("error", "fetchEmailById", { error: error.message, stack: error.stack });
+    logger.log("error", "fetchEmailById", { error: error.message, stack: error.stack, messageId });
     throw new Error(`Failed to fetch email by ID: ${error.message}`);
   }
 }
