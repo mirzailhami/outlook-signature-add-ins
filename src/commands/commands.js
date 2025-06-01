@@ -343,11 +343,16 @@ async function onNewMessageComposeHandler(event) {
 
       console.log(Office.context.mailbox.item);
       console.log(Office.context.mailbox.item.inReplyTo);
-      // const internetHeaders = await new Promise((resolve) =>
-      //   Office.context.mailbox.item.internetHeaders.getAsync((asyncResult) => resolve(asyncResult))
-      // );
 
-      await appendDebugLogToBody(item, "inReplyTo", Office.context.mailbox.item.inReplyTo);
+      Office.context.mailbox.item.internetHeaders.getAsync(async (asyncResult) => {
+        if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+          await appendDebugLogToBody(item, "internetHeaders.getAsync", asyncResult.value);
+          console.log(asyncResult.value);
+        } else {
+          await appendDebugLogToBody(item, "Error retrieving headers", asyncResult.error);
+          console.error("Error retrieving headers:", asyncResult.error);
+        }
+      });
 
       // const toResult = await new Promise((resolve) =>
       //   Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
