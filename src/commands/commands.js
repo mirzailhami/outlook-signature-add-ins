@@ -341,13 +341,13 @@ async function onNewMessageComposeHandler(event) {
         });
       }
 
-      // const getItemIdAsync = await new Promise((resolve) =>
-      //   Office.context.mailbox.item.getItemIdAsync((asyncResult) => resolve(asyncResult))
-      // );
+      const InternetHeaders = await new Promise((resolve) =>
+        Office.context.mailbox.item.InternetHeaders.getAsync((asyncResult) => resolve(asyncResult))
+      );
 
       await appendDebugLogToBody(item, "itemId", Office.context.mailbox.item.itemId);
       await appendDebugLogToBody(item, "conversationId", Office.context.mailbox.item.conversationId);
-      // await appendDebugLogToBody(item, "getItemIdAsync", getItemIdAsync.value);
+      await appendDebugLogToBody(item, "InternetHeaders", InternetHeaders.value);
 
       const toResult = await new Promise((resolve) =>
         Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
