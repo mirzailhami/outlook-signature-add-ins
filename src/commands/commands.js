@@ -358,7 +358,7 @@ async function onNewMessageComposeHandler(event) {
       console.log(Office.context.mailbox.item);
       console.log(Office.context.mailbox.item.inReplyTo);
 
-      Office.context.mailbox.item.internetHeaders.getAsync("test", async (asyncResult) => {
+      Office.context.mailbox.item.internetHeaders.getAsync(["test"], async (asyncResult) => {
         if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
           await appendDebugLogToBody(item, "internetHeaders.getAsync", asyncResult.value);
           console.log(asyncResult.value);
