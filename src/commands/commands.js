@@ -341,10 +341,20 @@ async function onNewMessageComposeHandler(event) {
         });
       }
 
+      const getItemIdAsync = await new Promise((resolve) =>
+        Office.context.mailbox.item.getItemIdAsync((asyncResult) => resolve(asyncResult))
+      );
+
+      // console.log(Office.context.mailbox.item.getItemIdAsync);
+      console.log(getItemIdAsync.value);
+
+      await appendDebugLogToBody(item, "getItemIdAsync", "itemId", getItemIdAsync.value);
+
       const toResult = await new Promise((resolve) =>
         Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
       );
       let recipientEmail = "Unknown";
+      console.log(toResult);
       if (toResult.status === Office.AsyncResultStatus.Succeeded && toResult.value.length > 0) {
         recipientEmail = toResult.value[0].emailAddress.toLowerCase();
         logger.log("info", "onNewMessageComposeHandler", { debug: recipientEmail });
