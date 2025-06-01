@@ -282,20 +282,6 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
 
     if (isTextValid && isLogoValid) {
       localStorage.removeItem("tempSignature");
-
-      Office.context.mailbox.item.internetHeaders.setAsync(
-        { test: "orange", "preferred-vegetable": "broccoli", "best-vegetable": "spinach" },
-        function (asyncResult) {
-          if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-            logger.log("info", { asyncResult });
-            completeWithState(event, originalSignatureKey, "Info", "Successfully set headers");
-          } else {
-            logger.log("error", { asyncResult });
-            completeWithState(event, originalSignatureKey, "Error", asyncResult.error?.message);
-          }
-        }
-      );
-
       event.completed({ allowEvent: true });
     } else {
       const signatureToRestore = localStorage.getItem(`signature_${originalSignatureKey}`);
@@ -355,22 +341,14 @@ async function onNewMessageComposeHandler(event) {
       //   });
       // }
 
-      console.log(Office.context.mailbox.item);
-      console.log(Office.context.mailbox.item.inReplyTo);
+      if (isMobile) {
+        await appendDebugLogToBody(item, "conversationId", Office.context.mailbox.item.conversationId);
+      } else {
+        const toResult = await new Promise((resolve) => item.getItemIdAsync((asyncResult) => resolve(asyncResult)));
+        console.log(toResult.value); // id message
+      }
 
-      Office.context.mailbox.item.internetHeaders.getAsync(["test"], async (asyncResult) => {
-        if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-          await appendDebugLogToBody(item, "internetHeaders.getAsync", asyncResult.value);
-          console.log(asyncResult.value);
-        } else {
-          await appendDebugLogToBody(item, "Error retrieving headers", asyncResult.error);
-          console.error("Error retrieving headers:", asyncResult.error);
-        }
-      });
-
-      // const toResult = await new Promise((resolve) =>
-      //   Office.context.mailbox.item.to.getAsync((asyncResult) => resolve(asyncResult))
-      // );
+      // const toResult = await new Promise((resolve) => item.to.getAsync((asyncResult) => resolve(asyncResult)));
       // let recipientEmail = "Unknown";
       // console.log(toResult);
       // if (toResult.status === Office.AsyncResultStatus.Succeeded && toResult.value.length > 0) {
@@ -379,14 +357,20 @@ async function onNewMessageComposeHandler(event) {
       // } else {
       //   logger.log("error", "onNewMessageComposeHandler", {
       //     error: "Failed to get 'to'",
-      //     details: toResult.error.message,
+      //     details: toResult.error?.message,
       //   });
       // }
+
+      // const searchResponse = await client
+      //   .api("/search/query")
+      //   .post();
+
+      // console.log(searchResponse);
 
       const response = await client
         .api("/me/messages")
         // .filter(`sentDateTime ge 2023-01-11T07:28:08Z and subject eq '${emailSubject}'`)
-        .filter(`internetMessageId eq '${Office.context.mailbox.item.inReplyTo}'`)
+        .filter(`internetMessageId eq '${encodeURIComponent(Office.context.mailbox.item.inReplyTo)}'`)
         .select("subject,body,sentDateTime,toRecipients")
         // .orderby("sentDateTime desc")
         // .top(10)
