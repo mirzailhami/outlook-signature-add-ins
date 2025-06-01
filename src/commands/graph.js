@@ -6,6 +6,7 @@
 /* global console, Office, Client */
 
 import { createNestablePublicClientApplication } from "@azure/msal-browser";
+import { Client } from "@microsoft/microsoft-graph-client";
 import { auth } from "./authconfig.js";
 import { logger } from "./helpers.js";
 
