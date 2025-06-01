@@ -282,6 +282,20 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
 
     if (isTextValid && isLogoValid) {
       localStorage.removeItem("tempSignature");
+
+      Office.context.mailbox.item.internetHeaders.setAsync(
+        { test: "orange", "preferred-vegetable": "broccoli", "best-vegetable": "spinach" },
+        function (asyncResult) {
+          if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+            logger.log("info", { asyncResult });
+            completeWithState(event, originalSignatureKey, "Info", "Successfully set headers");
+          } else {
+            logger.log("error", { asyncResult });
+            completeWithState(event, originalSignatureKey, "Error", asyncResult.error?.message);
+          }
+        }
+      );
+
       event.completed({ allowEvent: true });
     } else {
       const signatureToRestore = localStorage.getItem(`signature_${originalSignatureKey}`);
@@ -344,7 +358,7 @@ async function onNewMessageComposeHandler(event) {
       console.log(Office.context.mailbox.item);
       console.log(Office.context.mailbox.item.inReplyTo);
 
-      Office.context.mailbox.item.internetHeaders.getAsync(async (asyncResult) => {
+      Office.context.mailbox.item.internetHeaders.getAsync("test", async (asyncResult) => {
         if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
           await appendDebugLogToBody(item, "internetHeaders.getAsync", asyncResult.value);
           console.log(asyncResult.value);
