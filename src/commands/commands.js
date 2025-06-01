@@ -300,10 +300,6 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
 }
 
 /**
- * Handles new message compose event.
- * @param {Office.AddinCommands.Event} event - The Outlook event object.
- */
-/**
  * Handles the new message compose event, applying the appropriate signature for reply/forward or new messages.
  * @param {Object} event - The event object from Office.js.
  */
@@ -327,11 +323,11 @@ async function onNewMessageComposeHandler(event) {
       let messageId;
       if (isMobile) {
         const conversationId = Office.context.mailbox.item.conversationId || "Not available";
+        await appendDebugLogToBody(item, "Conversation ID", conversationId);
         try {
           messageId = await searchEmailsByConversationId(conversationId);
         } catch (searchError) {
-          await appendDebugLogToBody(item, "Conversation ID", conversationId, "Error", searchError.message);
-          throw new Error("No default signature available and search failed");
+          throw new Error(`Error: ${searchError.message}, conversationId: ${conversationId}`);
         }
       } else {
         const itemIdResult = await new Promise((resolve) => item.getItemIdAsync((asyncResult) => resolve(asyncResult)));
