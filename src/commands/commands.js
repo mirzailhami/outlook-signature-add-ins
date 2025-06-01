@@ -366,33 +366,34 @@ async function onNewMessageComposeHandler(event) {
 
       const response = await client
         .api("/me/messages")
-        .filter(`sentDateTime ge 2023-01-11T07:28:08Z and subject eq '${emailSubject}'`)
+        // .filter(`sentDateTime ge 2023-01-11T07:28:08Z and subject eq '${emailSubject}'`)
+        .filter(`internetMessageId eq '${Office.context.mailbox.item.inReplyTo}'`)
         .select("subject,body,sentDateTime,toRecipients")
-        .orderby("sentDateTime desc")
-        .top(10)
+        // .orderby("sentDateTime desc")
+        // .top(10)
         .get();
 
       if (response.value && response.value.length > 0) {
-        const matchingEmails = response.value.filter((email) =>
-          email.toRecipients.some((recipient) => recipient.emailAddress.address.toLowerCase() === recipientEmail)
-        );
+        // const matchingEmails = response.value.filter((email) =>
+        //   email.toRecipients.some((recipient) => recipient.emailAddress.address.toLowerCase() === recipientEmail)
+        // );
 
-        if (matchingEmails.length === 0) {
-          logger.log("warn", "onNewMessageComposeHandler", {
-            status: "No emails matched the recipient in Sent Items",
-          });
-          await completeWithState(
-            event,
-            "none",
-            "Info",
-            isMobile
-              ? "No matching email found in Sent Items for this recipient. Please select an M3 signature from the task pane."
-              : "No matching email found in Sent Items for this recipient. Please select an M3 signature from the ribbon."
-          );
-          return;
-        }
+        // if (matchingEmails.length === 0) {
+        //   logger.log("warn", "onNewMessageComposeHandler", {
+        //     status: "No emails matched the recipient in Sent Items",
+        //   });
+        //   await completeWithState(
+        //     event,
+        //     "none",
+        //     "Info",
+        //     isMobile
+        //       ? "No matching email found in Sent Items for this recipient. Please select an M3 signature from the task pane."
+        //       : "No matching email found in Sent Items for this recipient. Please select an M3 signature from the ribbon."
+        //   );
+        //   return;
+        // }
 
-        let matchedMessage = matchingEmails[0];
+        let matchedMessage = response.value[0];
 
         if (matchedMessage) {
           const emailBody = matchedMessage.body?.content || "";
