@@ -82,7 +82,7 @@ async function createGraphClient() {
  * @returns {Promise<string>} The message ID (hitId) of the most recent email in the thread.
  * @throws {Error} If the search query fails or no emails are found.
  */
-async function searchEmailsByConversationId(conversationId, debugLogFunction) {
+async function searchEmailsByConversationId(conversationId, { item, debugLogFunction }) {
   if (!conversationId) {
     throw new Error("Conversation ID is required for search query");
   }
@@ -106,8 +106,8 @@ async function searchEmailsByConversationId(conversationId, debugLogFunction) {
     });
     const response = await client.api("/search/query").post(searchRequest);
 
-    if (debugLogFunction) {
-      await debugLogFunction(null, "Search Response", JSON.stringify(response, null, 2));
+    if (debugLogFunction && item) {
+      await debugLogFunction(item, "Search Response", JSON.stringify(response, null, 2));
     }
 
     if (!response?.value?.[0]?.hitsContainers?.[0]?.hits?.[0]?.hitId) {
@@ -120,12 +120,13 @@ async function searchEmailsByConversationId(conversationId, debugLogFunction) {
     return hitId;
   } catch (error) {
     logger.log("error", "searchEmailsByConversationId", { error: error.message, stack: error.stack, conversationId });
-    if (debugLogFunction) {
-      await debugLogFunction(
-        null,
-        "Search Error",
-        `Error: ${error.message}, Response: ${JSON.stringify(error.response?.body || {}, null, 2)}`
-      );
+    if (debugLogFunction && item) {
+      const errorDetails = {
+        message: error.message,
+        stack: error.stack,
+        response: error.response ? JSON.stringify(error.response, null, 2) : "No response object",
+      };
+      await debugLogFunction(item, "Search Error", JSON.stringify(errorDetails, null, 2));
     }
     throw new Error(`Failed to search emails by conversation ID: ${error.message}`);
   }

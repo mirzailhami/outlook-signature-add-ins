@@ -324,9 +324,10 @@ async function onNewMessageComposeHandler(event) {
       if (isMobile) {
         const conversationId = Office.context.mailbox.item.conversationId || "Not available";
         try {
-          messageId = await searchEmailsByConversationId(conversationId, (item, ...args) =>
-            appendDebugLogToBody(item, ...args)
-          );
+          messageId = await searchEmailsByConversationId(conversationId, {
+            item,
+            debugLogFunction: appendDebugLogToBody,
+          });
           await appendDebugLogToBody(item, "Message ID", messageId);
         } catch (searchError) {
           throw new Error(`Error: ${searchError.message}, conversationId: ${conversationId}`);
