@@ -323,7 +323,6 @@ async function onNewMessageComposeHandler(event) {
       let messageId;
       if (isMobile) {
         const conversationId = Office.context.mailbox.item.conversationId || "Not available";
-        await appendDebugLogToBody(item, "Conversation ID", conversationId);
         try {
           messageId = await searchEmailsByConversationId(conversationId);
         } catch (searchError) {
@@ -400,7 +399,7 @@ async function onNewMessageComposeHandler(event) {
     }
   } catch (error) {
     logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
-    await appendDebugLogToBody(item, "Error", "Message", error.message, "Stack", error.stack);
+    await appendDebugLogToBody(item, "Message", error.message, "Stack", error.stack);
     await completeWithState(event, "none", "Error", `Failed to process compose event: ${error.message}`);
   }
 }
