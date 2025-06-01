@@ -82,7 +82,7 @@ async function createGraphClient() {
  * @returns {Promise<string>} The message ID (hitId) of the most recent email in the thread.
  * @throws {Error} If the search query fails or no emails are found.
  */
-async function searchEmailsByConversationId(conversationId) {
+async function searchEmailsByConversationId(conversationId, debugLogFunction) {
   if (!conversationId) {
     throw new Error("Conversation ID is required for search query");
   }
@@ -106,6 +106,10 @@ async function searchEmailsByConversationId(conversationId) {
     });
     const response = await client.api("/search/query").post(searchRequest);
 
+    if (debugLogFunction) {
+      await debugLogFunction(null, "Search Response", JSON.stringify(response, null, 2));
+    }
+
     if (!response?.value?.[0]?.hitsContainers?.[0]?.hits?.[0]?.hitId) {
       logger.log("warn", "searchEmailsByConversationId", { status: "No emails found in conversation", conversationId });
       throw new Error("No emails found in the conversation thread");
@@ -116,6 +120,13 @@ async function searchEmailsByConversationId(conversationId) {
     return hitId;
   } catch (error) {
     logger.log("error", "searchEmailsByConversationId", { error: error.message, stack: error.stack, conversationId });
+    if (debugLogFunction) {
+      await debugLogFunction(
+        null,
+        "Search Error",
+        `Error: ${error.message}, Response: ${JSON.stringify(error.response?.body || {}, null, 2)}`
+      );
+    }
     throw new Error(`Failed to search emails by conversation ID: ${error.message}`);
   }
 }
