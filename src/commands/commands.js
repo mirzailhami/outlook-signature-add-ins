@@ -342,6 +342,7 @@ async function onNewMessageComposeHandler(event) {
       }
 
       console.log(Office.context.mailbox.item);
+      console.log(Office.context.mailbox.item.inReplyTo);
       // const internetHeaders = await new Promise((resolve) =>
       //   Office.context.mailbox.item.internetHeaders.getAsync((asyncResult) => resolve(asyncResult))
       // );
