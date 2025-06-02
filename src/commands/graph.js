@@ -93,7 +93,7 @@ async function searchEmailsByConversationId(conversationId, { item, debugLogFunc
       {
         entityTypes: ["message"],
         query: {
-          queryString: "test:AAQkAGMzYjI5N2M2LWFjODgtNDg1My1iN2U2LWEyNDU1ZmZlYTE0MgAQABj7mbfLuY9FoRmopY8XQT8",
+          queryString: conversationId,
         },
       },
     ],
@@ -101,17 +101,17 @@ async function searchEmailsByConversationId(conversationId, { item, debugLogFunc
 
   try {
     const client = await createGraphClient();
-    logger.log("info", "searchEmailsByConversationId", {
-      status: "Searching emails by conversation ID",
-      conversationId,
-    });
+    // logger.log("info", "searchEmailsByConversationId", {
+    //   status: "Searching emails by conversation ID",
+    //   conversationId,
+    // });
     const response = await client
       .api("/search/query")
       .header("content-type", "application/json")
       .header("ConsistencyLevel", "eventual")
       .post(searchRequest);
 
-    console.log(response);
+    // console.log(response);
 
     if (debugLogFunction && item) {
       await debugLogFunction(item, "Search Response", JSON.stringify(response, null, 2));
