@@ -319,26 +319,27 @@ async function onNewMessageComposeHandler(event) {
     if (isReplyOrForward) {
       logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
 
-      let messageId = Office.context.mailbox.item.conversationId;
-      // if (isMobile) {
-      //   const conversationId = Office.context.mailbox.item.conversationId || "Not available";
-      //   await appendDebugLogToBody(item, "conversationId", conversationId);
-      //   try {
-      //     messageId = await searchEmailsByConversationId(conversationId, {
-      //       item,
-      //       debugLogFunction: appendDebugLogToBody,
-      //     });
-      //     await appendDebugLogToBody(item, "Message ID", messageId);
-      //   } catch (searchError) {
-      //     throw new Error(`Error: ${searchError.message}, conversationId: ${conversationId}`);
-      //   }
-      // } else {
-      //   const itemIdResult = await new Promise((resolve) => item.getItemIdAsync((asyncResult) => resolve(asyncResult)));
-      //   if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
-      //     throw new Error(`Failed to get item ID: ${itemIdResult.error.message}`);
-      //   }
-      //   messageId = itemIdResult.value;
-      // }
+      let messageId;
+      if (isMobile) {
+        messageId = Office.context.mailbox.item.conversationId;
+        //   const conversationId = Office.context.mailbox.item.conversationId || "Not available";
+        //   await appendDebugLogToBody(item, "conversationId", conversationId);
+        //   try {
+        //     messageId = await searchEmailsByConversationId(conversationId, {
+        //       item,
+        //       debugLogFunction: appendDebugLogToBody,
+        //     });
+        //     await appendDebugLogToBody(item, "Message ID", messageId);
+        //   } catch (searchError) {
+        //     throw new Error(`Error: ${searchError.message}, conversationId: ${conversationId}`);
+        //   }
+      } else {
+        const itemIdResult = await new Promise((resolve) => item.getItemIdAsync((asyncResult) => resolve(asyncResult)));
+        if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
+          throw new Error(`Failed to get item ID: ${itemIdResult.error.message}`);
+        }
+        messageId = itemIdResult.value;
+      }
 
       const email = await fetchEmailById(messageId);
       const emailBody = email.body?.content || "";
