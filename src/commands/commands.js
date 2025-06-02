@@ -1,7 +1,6 @@
 /* global Office */
 
 import { searchEmailsByConversationId, fetchEmailById } from "./graph.js";
-import "isomorphic-fetch";
 import { logger, SignatureManager, fetchSignature, detectSignatureKey, appendDebugLogToBody } from "./helpers.js";
 
 Office.onReady(() => {

@@ -6,6 +6,7 @@
 /* global console, Office, Client */
 
 import { createNestablePublicClientApplication } from "@azure/msal-browser";
+import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
 import { auth } from "./authconfig.js";
 import { logger } from "./helpers.js";
@@ -92,7 +93,7 @@ async function searchEmailsByConversationId(conversationId, { item, debugLogFunc
       {
         entityTypes: ["message"],
         query: {
-          queryString: conversationId,
+          queryString: "test:AAQkAGMzYjI5N2M2LWFjODgtNDg1My1iN2U2LWEyNDU1ZmZlYTE0MgAQABj7mbfLuY9FoRmopY8XQT8",
         },
       },
     ],
@@ -104,22 +105,25 @@ async function searchEmailsByConversationId(conversationId, { item, debugLogFunc
       status: "Searching emails by conversation ID",
       conversationId,
     });
-    const response = await client.api("/search/query").post(searchRequest);
+    const response = await client
+      .api("/search/query")
+      .header("content-type", "application/json")
+      .header("ConsistencyLevel", "eventual")
+      .post(searchRequest);
+
+    console.log(response);
 
     if (debugLogFunction && item) {
       await debugLogFunction(item, "Search Response", JSON.stringify(response, null, 2));
     }
 
     if (!response?.value?.[0]?.hitsContainers?.[0]?.hits?.[0]?.hitId) {
-      logger.log("warn", "searchEmailsByConversationId", { status: "No emails found in conversation", conversationId });
       throw new Error("No emails found in the conversation thread");
     }
 
     const hitId = response.value[0].hitsContainers[0].hits[0].hitId;
-    logger.log("info", "searchEmailsByConversationId", { status: "Found email in conversation", hitId });
     return hitId;
   } catch (error) {
-    logger.log("error", "searchEmailsByConversationId", { error: error.message, stack: error.stack, conversationId });
     if (debugLogFunction && item) {
       const errorDetails = {
         message: error.message,
