@@ -51,7 +51,7 @@ async function addSignature(signatureKey, event, completeWithStateFn, isAutoAppl
               appendDebugLogToBody(item, "addSignature Error (Cached)", "Message", asyncResult.error.message);
             }
             logger.log("error", "addSignature", { error: asyncResult.error.message });
-            displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
+            // displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
             if (!isAutoApplied) {
               event.completed();
               resolve();

@@ -19,7 +19,7 @@
   </Hosts>
   <Requirements>
     <Sets>
-      <Set Name="Mailbox" MinVersion="1.15"/>
+      <Set Name="Mailbox" MinVersion="1.8"/>
     </Sets>
   </Requirements>
   <FormSettings>
@@ -27,12 +27,6 @@
       <DesktopSettings>
         <SourceLocation DefaultValue="${ASSET_BASE_URL}/taskpane.html" />
       </DesktopSettings>
-      <TabletSettings>
-        <SourceLocation DefaultValue="${ASSET_BASE_URL}/taskpane.html" />
-      </TabletSettings>
-      <PhoneSettings>
-        <SourceLocation DefaultValue="${ASSET_BASE_URL}/taskpane.html" />
-      </PhoneSettings>
     </Form>
   </FormSettings>
   <Permissions>ReadWriteMailbox</Permissions>
@@ -42,7 +36,7 @@
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <Requirements>
-        <bt:Sets DefaultMinVersion="1.15">
+        <bt:Sets DefaultMinVersion="1.8">
           <bt:Set Name="Mailbox"/>
         </bt:Sets>
       </Requirements>
@@ -55,8 +49,6 @@
             <Runtime resid="WebViewRuntime.Url">
               <!-- JavaScript file containing event handlers. This is used by classic Outlook on Windows. -->
               <Override type="javascript" resid="JSRuntime.Url"/>
-              <Override type="javascript" resid="GraphJS.Url"/>
-              <Override type="javascript" resid="HelperJS.Url"/>
             </Runtime>
           </Runtimes>
           <DesktopFormFactor>
