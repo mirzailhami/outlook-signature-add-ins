@@ -8,11 +8,15 @@
 import { createNestablePublicClientApplication } from "@azure/msal-browser";
 import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
-import { auth } from "./authconfig.js";
 import { logger } from "./helpers.js";
 
 let pca = undefined;
 let isPCAInitialized = false;
+
+const auth = {
+  clientId: "44cb4054-0802-4e2f-8ccb-aba939633fbb",
+  authority: "https://login.microsoftonline.com/common",
+};
 
 Office.onReady(() => {
   console.log("Office.js is ready");

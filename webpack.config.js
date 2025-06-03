@@ -30,7 +30,7 @@ module.exports = async (env, options) => {
       polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
       taskpane: ["./src/taskpane/taskpane.html"],
       commands: ["./src/commands/commands.js"],
-      graph: "./src/commands/graph.js",
+      graph: ["./src/commands/graph.js"],
     },
 
     output: {
@@ -122,7 +122,6 @@ module.exports = async (env, options) => {
           { from: "src/index.html", to: "index.html" },
           { from: "assets", to: "assets" },
           { from: "src/well-known", to: ".well-known" },
-          { from: "src/commands/authconfig.js", to: "authconfig.js" },
           { from: "src/commands/helpers.js", to: "helpers.js" },
         ],
       }),

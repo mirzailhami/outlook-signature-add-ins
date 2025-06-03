@@ -161,8 +161,12 @@ const SignatureManager = {
     }
     const hasReplyOrForwardPrefix = ["re:", "fw:", "fwd:"].some((prefix) => subject.toLowerCase().includes(prefix));
 
+    if (hasReplyOrForwardPrefix) {
+      return true;
+    }
+
     // Check 3: conversationId (only if subject indicates reply/forward)
-    if (item.itemType === Office.MailboxEnums.ItemType.Message && item.conversationId && hasReplyOrForwardPrefix) {
+    if (item.itemType === Office.MailboxEnums.ItemType.Message && item.conversationId) {
       return true;
     }
 
@@ -356,4 +360,83 @@ async function appendDebugLogToBody(item, ...args) {
   });
 }
 
-export { logger, SignatureManager, fetchSignature, detectSignatureKey, appendDebugLogToBody };
+/**
+ * Completes the event with a signature state and optional notification.
+ * @param {Office.AddinCommands.Event} event - The Outlook event object.
+ * @param {string} signatureKey - The signature key applied.
+ * @param {string} [notificationType] - Notification type ("Info" or "Error").
+ * @param {string} [notificationMessage] - Notification message.
+ */
+async function completeWithState(event, signatureKey, notificationType, notificationMessage) {
+  if (notificationMessage) {
+    displayNotification(notificationType, notificationMessage, notificationType === "Error");
+  }
+  event.completed();
+}
+
+/**
+ * Displays a notification in the Outlook UI.
+ * @param {string} type - Notification type ("Error" or "Info").
+ * @param {string} message - Notification message.
+ * @param {boolean} persistent - Whether the notification persists.
+ */
+function displayNotification(type, message, persistent = false) {
+  try {
+    const item = Office.context.mailbox.item;
+    if (!item) {
+      logger.log("error", "displayNotification", { error: "No mailbox item" });
+      return;
+    }
+
+    const notificationType =
+      type === "Error"
+        ? Office.MailboxEnums.ItemNotificationMessageType.ErrorMessage
+        : Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage;
+
+    const notification = { type: notificationType, message };
+    if (type === "Info") {
+      notification.icon = "none";
+      notification.persistent = persistent;
+    }
+
+    item.notificationMessages.addAsync(`notif_${new Date().getTime()}`, notification, (result) => {
+      if (result.status === Office.AsyncResultStatus.Failed) {
+        logger.log("error", "displayNotification", { error: result.error.message });
+      }
+    });
+  } catch (error) {
+    logger.log("error", "displayNotification", { error: error.message });
+  }
+}
+
+/**
+ * Displays an error with a Smart Alert and notification.
+ * @param {string} message - Error message.
+ * @param {Office.AddinCommands.Event} event - The Outlook event object.
+ */
+async function displayError(message, event, persistent = false) {
+  logger.log("info", "displayError", { message });
+
+  const markdownMessage = message.includes("modified")
+    ? `${message}\n\n**Tip**: Ensure the M3 signature is not edited before sending.`
+    : `${message}\n\n**Tip**: Select an M3 signature from the ribbon under "M3 Signatures".`;
+
+  displayNotification("Error", message, persistent);
+  event.completed({
+    allowEvent: false,
+    errorMessage: message,
+    errorMessageMarkdown: markdownMessage,
+    cancelLabel: "OK",
+  });
+}
+
+export {
+  logger,
+  SignatureManager,
+  displayNotification,
+  displayError,
+  completeWithState,
+  fetchSignature,
+  detectSignatureKey,
+  appendDebugLogToBody,
+};

@@ -25,8 +25,14 @@
   <FormSettings>
     <Form xsi:type="ItemEdit">
       <DesktopSettings>
-        <SourceLocation DefaultValue="${ASSET_BASE_URL}/error.html"/>
+        <SourceLocation DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
       </DesktopSettings>
+      <TabletSettings>
+        <SourceLocation DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
+      </TabletSettings>
+      <PhoneSettings>
+        <SourceLocation DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
+      </PhoneSettings>
     </Form>
   </FormSettings>
   <Permissions>ReadWriteMailbox</Permissions>
@@ -36,21 +42,24 @@
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <Requirements>
-        <bt:Sets DefaultMinVersion="1.8">
+        <bt:Sets DefaultMinVersion="1.15">
           <bt:Set Name="Mailbox"/>
         </bt:Sets>
       </Requirements>
       <Hosts>
         <Host xsi:type="MailHost">
+          <!-- Event-based activation happens in a lightweight runtime.-->
           <Runtimes>
             <!-- HTML file including reference to or inline JavaScript event handlers.
                This is used by Outlook on the web and on the new Mac UI, and new Outlook on Windows. -->
-            <Runtime resid="WebViewRuntime.Url">
+            <Runtime resid="Commands.Url">
               <!-- JavaScript file containing event handlers. This is used by classic Outlook on Windows. -->
-              <Override type="javascript" resid="JSRuntime.Url"/>
+              <Override type="javascript" resid="GraphJS.Url"/>
+              <Override type="javascript" resid="HelperJS.Url"/>
             </Runtime>
           </Runtimes>
           <DesktopFormFactor>
+            <!-- Configure other command surface extension points for add-in command support, if needed. -->
             <FunctionFile resid="Commands.Url"/>
             <ExtensionPoint xsi:type="MessageComposeCommandSurface">
               <OfficeTab id="TabDefault">
@@ -148,11 +157,13 @@
                 </Group>
               </OfficeTab>
             </ExtensionPoint>
+            <!-- Enable launching the add-in on the included event. -->
             <ExtensionPoint xsi:type="LaunchEvent">
               <LaunchEvents>
                 <LaunchEvent Type="OnMessageSend" FunctionName="validateSignature" SendMode="SoftBlock"/>
                 <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler" SendMode="SoftBlock"/>
               </LaunchEvents>
+              <!-- Identify the runtime to be used (also referenced by the Runtime element). -->
               <SourceLocation resid="WebViewRuntime.Url"/>
             </ExtensionPoint>
           </DesktopFormFactor>
@@ -200,9 +211,10 @@
         </bt:Images>
         <bt:Urls>
           <bt:Url id="Commands.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
-          <bt:Url id="WebViewRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
+          <bt:Url id="WebViewRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.html" />
           <bt:Url id="Taskpane.Url" DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
-          <bt:Url id="JSRuntime.Url" DefaultValue="${ASSET_BASE_URL}/launchevent.js" />
+          <bt:Url id="GraphJS.Url" DefaultValue="${ASSET_BASE_URL}/graph.js" />
+          <bt:Url id="HelperJS.Url" DefaultValue="${ASSET_BASE_URL}/helpers.js" />
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="M3 Signatures"/>

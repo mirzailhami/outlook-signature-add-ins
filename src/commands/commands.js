@@ -1,7 +1,16 @@
 /* global Office */
 
-import { searchEmailsByConversationId, fetchEmailById } from "./graph.js";
-import { logger, SignatureManager, fetchSignature, detectSignatureKey, appendDebugLogToBody } from "./helpers.js";
+import { fetchEmailById } from "./graph.js";
+import {
+  logger,
+  completeWithState,
+  SignatureManager,
+  fetchSignature,
+  detectSignatureKey,
+  appendDebugLogToBody,
+  displayNotification,
+  displayError,
+} from "./helpers.js";
 
 Office.onReady(() => {
   logger.log("info", "Office.onReady", { host: Office.context?.mailbox?.diagnostics?.hostName });
@@ -14,20 +23,6 @@ Office.onReady(() => {
   Office.actions.associate("validateSignature", validateSignature);
   Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
 });
-
-/**
- * Completes the event with a signature state and optional notification.
- * @param {Office.AddinCommands.Event} event - The Outlook event object.
- * @param {string} signatureKey - The signature key applied.
- * @param {string} [notificationType] - Notification type ("Info" or "Error").
- * @param {string} [notificationMessage] - Notification message.
- */
-async function completeWithState(event, signatureKey, notificationType, notificationMessage) {
-  if (notificationMessage) {
-    displayNotification(notificationType, notificationMessage, notificationType === "Error");
-  }
-  event.completed();
-}
 
 /**
  * Adds a signature to the email and saves it to localStorage.
@@ -148,61 +143,6 @@ async function addSignature(signatureKey, event, completeWithStateFn, isAutoAppl
 }
 
 /**
- * Displays a notification in the Outlook UI.
- * @param {string} type - Notification type ("Error" or "Info").
- * @param {string} message - Notification message.
- * @param {boolean} persistent - Whether the notification persists.
- */
-function displayNotification(type, message, persistent = false) {
-  try {
-    const item = Office.context.mailbox.item;
-    if (!item) {
-      logger.log("error", "displayNotification", { error: "No mailbox item" });
-      return;
-    }
-
-    const notificationType =
-      type === "Error"
-        ? Office.MailboxEnums.ItemNotificationMessageType.ErrorMessage
-        : Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage;
-    const notification = { type: notificationType, message };
-    if (type === "Info") {
-      notification.icon = "none";
-      notification.persistent = persistent;
-    }
-
-    item.notificationMessages.addAsync(`notif_${new Date().getTime()}`, notification, (result) => {
-      if (result.status === Office.AsyncResultStatus.Failed) {
-        logger.log("error", "displayNotification", { error: result.error.message });
-      }
-    });
-  } catch (error) {
-    logger.log("error", "displayNotification", { error: error.message });
-  }
-}
-
-/**
- * Displays an error with a Smart Alert and notification.
- * @param {string} message - Error message.
- * @param {Office.AddinCommands.Event} event - The Outlook event object.
- */
-async function displayError(message, event) {
-  logger.log("info", "displayError", { message });
-
-  const markdownMessage = message.includes("modified")
-    ? `${message}\n\n**Tip**: Ensure the M3 signature is not edited before sending.`
-    : `${message}\n\n**Tip**: Select an M3 signature from the ribbon under "M3 Signatures".`;
-
-  displayNotification("Error", message, true);
-  event.completed({
-    allowEvent: false,
-    errorMessage: message,
-    errorMessageMarkdown: markdownMessage,
-    cancelLabel: "OK",
-  });
-}
-
-/**
  * Validates the email signature on send.
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
@@ -226,7 +166,11 @@ async function validateSignature(event) {
       : SignatureManager.extractSignature(body);
 
     if (!currentSignature) {
-      displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
+      displayError(
+        "Email is missing the M3 required signature. Please select an appropriate email signature.",
+        event,
+        false
+      );
     } else {
       const isReplyOrForward = await SignatureManager.isReplyOrForward(item);
       await validateSignatureChanges(item, currentSignature, event, isReplyOrForward);
@@ -315,6 +259,8 @@ async function onNewMessageComposeHandler(event) {
     hostName: Office.context.mailbox.diagnostics.hostName,
   });
 
+  displayNotification("Info", `Platform: ${Office.context.mailbox.diagnostics.hostName}`, true);
+
   try {
     if (isReplyOrForward) {
       logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
@@ -322,23 +268,13 @@ async function onNewMessageComposeHandler(event) {
       let messageId;
       if (isMobile) {
         messageId = Office.context.mailbox.item.conversationId;
-        //   const conversationId = Office.context.mailbox.item.conversationId || "Not available";
-        //   await appendDebugLogToBody(item, "conversationId", conversationId);
-        //   try {
-        //     messageId = await searchEmailsByConversationId(conversationId, {
-        //       item,
-        //       debugLogFunction: appendDebugLogToBody,
-        //     });
-        //     await appendDebugLogToBody(item, "Message ID", messageId);
-        //   } catch (searchError) {
-        //     throw new Error(`Error: ${searchError.message}, conversationId: ${conversationId}`);
-        //   }
       } else {
         const itemIdResult = await new Promise((resolve) => item.getItemIdAsync((asyncResult) => resolve(asyncResult)));
         if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
           throw new Error(`Failed to get item ID: ${itemIdResult.error.message}`);
         }
         messageId = itemIdResult.value;
+        logger.log("info", "getItemIdAsync for OWA", { messageId });
       }
 
       const email = await fetchEmailById(messageId);
@@ -448,18 +384,3 @@ function addSignatureM2(event) {
 function addSignatureM3(event) {
   addSignature("m3Signature", event, completeWithState);
 }
-
-export {
-  addSignature,
-  addSignatureMona,
-  addSignatureMorgan,
-  addSignatureMorven,
-  addSignatureM2,
-  addSignatureM3,
-  displayError,
-  displayNotification,
-  validateSignature,
-  validateSignatureChanges,
-  onNewMessageComposeHandler,
-  completeWithState,
-};
