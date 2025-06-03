@@ -421,7 +421,7 @@ async function displayError(message, event, persistent = false) {
     ? `${message}\n\n**Tip**: Ensure the M3 signature is not edited before sending.`
     : `${message}\n\n**Tip**: Select an M3 signature from the ribbon under "M3 Signatures".`;
 
-  displayNotification("Error", message, persistent);
+  // displayNotification("Error", message, persistent);
   event.completed({
     allowEvent: false,
     errorMessage: message,
