@@ -196,6 +196,11 @@ async function addSignature(signatureKey, event, isAutoApplied = false) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 async function validateSignature(event) {
+  displayNotification(
+    `Info`,
+    `Platform: ${Office.context.mailbox.diagnostics.hostName}, Version: ${Office.context.mailbox.diagnostics.hostVersion}`
+  );
+
   try {
     const item = Office.context.mailbox.item;
     if (!item) {
@@ -292,6 +297,11 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
  * @param {Object} event - The event object from Office.js.
  */
 async function onNewMessageComposeHandler(event) {
+  displayNotification(
+    `Info`,
+    `Platform: ${Office.context.mailbox.diagnostics.hostName}, Version: ${Office.context.mailbox.diagnostics.hostVersion}`
+  );
+
   const item = Office.context.mailbox.item;
   const isReplyOrForward = await SignatureManager.isReplyOrForward(item);
 
