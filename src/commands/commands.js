@@ -88,7 +88,7 @@ function initializeAddIn() {
     Office.actions.associate("addSignatureM2", addSignatureM2);
     Office.actions.associate("addSignatureM3", addSignatureM3);
     Office.actions.associate("validateSignature", validateSignature);
-    Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
+    // Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
   });
 }
 
@@ -441,3 +441,5 @@ function addSignatureM2(event) {
 function addSignatureM3(event) {
   addSignature("m3Signature", event);
 }
+
+Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
