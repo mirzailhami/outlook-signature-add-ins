@@ -30,58 +30,58 @@ let isMobile = false;
 let isClassicOutlook = false;
 
 // Load scripts sequentially with error handling
-Promise.all([
-  loadScript(`${ASSET_BASE_URL}/helpers.js`)
+Office.onReady(() => {
+  Promise.all([
+    loadScript(`${ASSET_BASE_URL}/helpers.js`)
+      .then(() => {
+        helpersLoaded = true;
+      })
+      .catch(() => {
+        helpersLoaded = false;
+      }),
+    loadScript(`${ASSET_BASE_URL}/graph.js`)
+      .then(() => {
+        graphLoaded = true;
+      })
+      .catch(() => {
+        graphLoaded = false;
+      }),
+  ])
     .then(() => {
-      helpersLoaded = true;
+      console.log("All dependencies loaded successfully");
+      initializeAddIn();
     })
-    .catch(() => {
-      helpersLoaded = false;
-    }),
-  loadScript(`${ASSET_BASE_URL}/graph.js`)
-    .then(() => {
-      graphLoaded = true;
-    })
-    .catch(() => {
-      graphLoaded = false;
-    }),
-])
-  .then(() => {
-    console.log("All dependencies loaded successfully");
-    initializeAddIn();
-  })
-  .catch((error) => {
-    console.error("Dependency loading failed:", error);
-    initializeAddIn();
-  });
+    .catch((error) => {
+      console.error("Dependency loading failed:", error);
+      initializeAddIn();
+    });
+});
 
 function initializeAddIn() {
-  Office.onReady(() => {
-    if (!helpersLoaded) {
-      console.warn("Helpers.js failed to load; logging and signature management features disabled.");
-    }
-    if (!graphLoaded) {
-      console.warn("Graph.js failed to load; Graph API features disabled.");
-    }
+  if (!helpersLoaded) {
+    console.warn("Helpers.js failed to load; logging and signature management features disabled.");
+  }
+  if (!graphLoaded) {
+    console.warn("Graph.js failed to load; Graph API features disabled.");
+  }
 
-    isMobile =
-      Office.context.mailbox.diagnostics.hostName === "OutlookAndroid" ||
-      Office.context.mailbox.diagnostics.hostName === "OutlookIOS";
+  isMobile =
+    Office.context.mailbox.diagnostics.hostName === "OutlookAndroid" ||
+    Office.context.mailbox.diagnostics.hostName === "OutlookIOS";
 
-    isClassicOutlook = Office.context.mailbox.diagnostics.hostName === "Outlook";
+  isClassicOutlook = Office.context.mailbox.diagnostics.hostName === "Outlook";
 
-    logger.log("info", "Office.onReady", {
-      host: Office.context?.mailbox?.diagnostics?.hostName,
-      version: Office.context?.mailbox?.diagnostics?.hostVersion,
-      isMobile,
-      isClassicOutlook,
-    });
-    Office.actions.associate("addSignatureMona", addSignatureMona);
-    Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
-    Office.actions.associate("addSignatureMorven", addSignatureMorven);
-    Office.actions.associate("addSignatureM2", addSignatureM2);
-    Office.actions.associate("addSignatureM3", addSignatureM3);
+  logger.log("info", "Office.onReady", {
+    host: Office.context?.mailbox?.diagnostics?.hostName,
+    version: Office.context?.mailbox?.diagnostics?.hostVersion,
+    isMobile,
+    isClassicOutlook,
   });
+  Office.actions.associate("addSignatureMona", addSignatureMona);
+  Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
+  Office.actions.associate("addSignatureMorven", addSignatureMorven);
+  Office.actions.associate("addSignatureM2", addSignatureM2);
+  Office.actions.associate("addSignatureM3", addSignatureM3);
 }
 
 /**
