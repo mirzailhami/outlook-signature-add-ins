@@ -305,7 +305,12 @@ async function onNewMessageComposeHandler(event) {
   const item = Office.context.mailbox.item;
 
   const notificationType = Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage;
-  const notification = { type: notificationType, message: `onNewMessageComposeHandler`, icon: "none" };
+  const notification = {
+    type: notificationType,
+    message: `onNewMessageComposeHandler`,
+    icon: "none",
+    persistent: false,
+  };
   item.notificationMessages.addAsync(`notif_${new Date().getTime()}`, notification, (result) => {
     if (result.status === Office.AsyncResultStatus.Failed) {
       logger.log("error", "displayNotification", { error: result.error.message });
