@@ -7,17 +7,16 @@ const ASSET_BASE_URL = process.env.ASSET_BASE_URL;
 
 function loadScript(url) {
   return new Promise((resolve, reject) => {
+    console.log("Attempting to load script:", url); // Debug log
     var script = document.createElement("script");
     script.type = "text/javascript";
     script.src = url;
-    script.onload = () => resolve();
+    script.onload = () => {
+      console.log("Script loaded successfully:", url); // Debug log
+      resolve();
+    };
     script.onerror = () => {
-      Office.context.mailbox.item.notificationMessages.addAsync("scriptError", {
-        type: Office.MailboxEnums.ItemNotificationMessageType.ErrorMessage,
-        message: "Failed to load: " + url,
-        icon: "Icon.16x16",
-        persistent: true,
-      });
+      console.error("Script failed to load:", url); // Debug log
       reject(new Error("Failed to load: " + url));
     };
     document.head.appendChild(script);
@@ -82,7 +81,6 @@ function initializeAddIn() {
     Office.actions.associate("addSignatureMorven", addSignatureMorven);
     Office.actions.associate("addSignatureM2", addSignatureM2);
     Office.actions.associate("addSignatureM3", addSignatureM3);
-    Office.actions.associate("validateSignature", validateSignature);
   });
 }
 
@@ -302,7 +300,6 @@ async function onNewMessageComposeHandler(event) {
     `Info`,
     `Platform: ${Office.context.mailbox.diagnostics.hostName}, Version: ${Office.context.mailbox.diagnostics.hostVersion}`
   );
-
   const isReplyOrForward = await SignatureManager.isReplyOrForward(item);
 
   logger.log("info", "onNewMessageComposeHandler", {
@@ -433,4 +430,5 @@ function addSignatureM3(event) {
   addSignature("m3Signature", event);
 }
 
+Office.actions.associate("validateSignature", validateSignature);
 Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
