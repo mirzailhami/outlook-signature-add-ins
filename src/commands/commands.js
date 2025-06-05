@@ -58,11 +58,6 @@ Promise.all([
 
 function initializeAddIn() {
   Office.onReady(() => {
-    displayNotification(
-      `Info`,
-      `Platform: ${Office.context.mailbox.diagnostics.hostName}, Version: ${Office.context.mailbox.diagnostics.hostVersion}`
-    );
-
     if (!helpersLoaded) {
       console.warn("Helpers.js failed to load; logging and signature management features disabled.");
     }
@@ -88,7 +83,6 @@ function initializeAddIn() {
     Office.actions.associate("addSignatureM2", addSignatureM2);
     Office.actions.associate("addSignatureM3", addSignatureM3);
     Office.actions.associate("validateSignature", validateSignature);
-    // Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
   });
 }
 
@@ -304,18 +298,10 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
 async function onNewMessageComposeHandler(event) {
   const item = Office.context.mailbox.item;
 
-  const notificationType = Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage;
-  const notification = {
-    type: notificationType,
-    message: `onNewMessageComposeHandler`,
-    icon: "none",
-    persistent: false,
-  };
-  item.notificationMessages.addAsync(`notif_${new Date().getTime()}`, notification, (result) => {
-    if (result.status === Office.AsyncResultStatus.Failed) {
-      logger.log("error", "displayNotification", { error: result.error.message });
-    }
-  });
+  displayNotification(
+    `Info`,
+    `Platform: ${Office.context.mailbox.diagnostics.hostName}, Version: ${Office.context.mailbox.diagnostics.hostVersion}`
+  );
 
   const isReplyOrForward = await SignatureManager.isReplyOrForward(item);
 
