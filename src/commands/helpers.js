@@ -367,9 +367,9 @@ async function appendDebugLogToBody(item, ...args) {
  * @param {string} [notificationType] - Notification type ("Info" or "Error").
  * @param {string} [notificationMessage] - Notification message.
  */
-async function completeWithState(event, signatureKey, notificationType, notificationMessage) {
+async function completeWithState(event, notificationType, notificationMessage, persistent = false) {
   if (notificationMessage) {
-    displayNotification(notificationType, notificationMessage, notificationType === "Error");
+    displayNotification(notificationType, notificationMessage, persistent);
   }
   event.completed();
 }
@@ -440,3 +440,13 @@ export {
   detectSignatureKey,
   appendDebugLogToBody,
 };
+
+// Make functions available globally for Classic Outlook
+window.logger = logger;
+window.SignatureManager = SignatureManager;
+window.displayNotification = displayNotification;
+window.displayError = displayError;
+window.completeWithState = completeWithState;
+window.fetchSignature = fetchSignature;
+window.detectSignatureKey = detectSignatureKey;
+window.appendDebugLogToBody = appendDebugLogToBody;

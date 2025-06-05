@@ -1,41 +1,100 @@
-/* global Office */
+/* global Office, console, logger, SignatureManager, displayNotification, displayError, completeWithState, fetchSignature, detectSignatureKey, appendDebugLogToBody, fetchEmailById */
 
-import { fetchEmailById } from "./graph.js";
-import {
-  logger,
-  completeWithState,
-  SignatureManager,
-  fetchSignature,
-  detectSignatureKey,
-  appendDebugLogToBody,
-  displayNotification,
-  displayError,
-} from "./helpers.js";
+import { completeWithState, displayNotification } from "./helpers";
 
-Office.onReady(() => {
-  logger.log("info", "Office.onReady", { host: Office.context?.mailbox?.diagnostics?.hostName });
+// Use process.env.ASSET_BASE_URL to construct dynamic URLs
+const ASSET_BASE_URL = process.env.ASSET_BASE_URL;
 
-  Office.actions.associate("addSignatureMona", addSignatureMona);
-  Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
-  Office.actions.associate("addSignatureMorven", addSignatureMorven);
-  Office.actions.associate("addSignatureM2", addSignatureM2);
-  Office.actions.associate("addSignatureM3", addSignatureM3);
-  Office.actions.associate("validateSignature", validateSignature);
-  Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
-});
+function loadScript(url) {
+  return new Promise((resolve, reject) => {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = url;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      Office.context.mailbox.item.notificationMessages.addAsync("scriptError", {
+        type: Office.MailboxEnums.ItemNotificationMessageType.ErrorMessage,
+        message: "Failed to load: " + url,
+        icon: "Icon.16x16",
+        persistent: true,
+      });
+      reject(new Error("Failed to load: " + url));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+// Load scripts dynamically using the base URL
+let helpersLoaded = false;
+let graphLoaded = false;
+let isMobile = false;
+let isClassicOutlook = false;
+
+// Load scripts sequentially with error handling
+Promise.all([
+  loadScript(`${ASSET_BASE_URL}/helpers.js`)
+    .then(() => {
+      helpersLoaded = true;
+    })
+    .catch(() => {
+      helpersLoaded = false;
+    }),
+  loadScript(`${ASSET_BASE_URL}/graph.js`)
+    .then(() => {
+      graphLoaded = true;
+    })
+    .catch(() => {
+      graphLoaded = false;
+    }),
+])
+  .then(() => {
+    console.log("All dependencies loaded successfully");
+    initializeAddIn();
+  })
+  .catch((error) => {
+    console.error("Dependency loading failed:", error);
+    initializeAddIn();
+  });
+
+function initializeAddIn() {
+  Office.onReady(() => {
+    if (!helpersLoaded) {
+      console.warn("Helpers.js failed to load; logging and signature management features disabled.");
+    }
+    if (!graphLoaded) {
+      console.warn("Graph.js failed to load; Graph API features disabled.");
+    }
+
+    isMobile =
+      Office.context.mailbox.diagnostics.hostName === "OutlookAndroid" ||
+      Office.context.mailbox.diagnostics.hostName === "OutlookIOS";
+
+    isClassicOutlook = Office.context.mailbox.diagnostics.hostName === "Outlook";
+
+    logger.log("info", "Office.onReady", {
+      host: Office.context?.mailbox?.diagnostics?.hostName,
+      version: Office.context?.mailbox?.diagnostics?.hostVersion,
+      isMobile,
+      isClassicOutlook,
+    });
+    Office.actions.associate("addSignatureMona", addSignatureMona);
+    Office.actions.associate("addSignatureMorgan", addSignatureMorgan);
+    Office.actions.associate("addSignatureMorven", addSignatureMorven);
+    Office.actions.associate("addSignatureM2", addSignatureM2);
+    Office.actions.associate("addSignatureM3", addSignatureM3);
+    Office.actions.associate("validateSignature", validateSignature);
+    Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
+  });
+}
 
 /**
  * Adds a signature to the email and saves it to localStorage.
  * @param {string} signatureKey - The signature key (e.g., "m3Signature").
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
- * @param {Function} completeWithStateFn - The function to complete the event with state.
  * @param {boolean} isAutoApplied - Whether the signature is auto-applied.
  */
-async function addSignature(signatureKey, event, completeWithStateFn, isAutoApplied = false) {
+async function addSignature(signatureKey, event, isAutoApplied = false) {
   const item = Office.context.mailbox.item;
-  const isMobile =
-    Office.context.mailbox.diagnostics.hostName === "OutlookAndroid" ||
-    Office.context.mailbox.diagnostics.hostName === "OutlookIOS";
 
   try {
     localStorage.removeItem("tempSignature");
@@ -50,31 +109,26 @@ async function addSignature(signatureKey, event, completeWithStateFn, isAutoAppl
             if (isMobile) {
               appendDebugLogToBody(item, "addSignature Error (Cached)", "Message", asyncResult.error.message);
             }
-            logger.log("error", "addSignature", { error: asyncResult.error.message });
-            // displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
             if (!isAutoApplied) {
               event.completed();
               resolve();
             } else {
               // Move the completeWithStateFn call outside the callback
-              reject(new Error("setSignatureAsync failed for cached signature"));
+              reject(new Error(asyncResult.error.message));
             }
-          } else {
-            item.body.getAsync("html", (result) => {
-              if (result.status === Office.AsyncResultStatus.Succeeded) {
-                logger.log("debug", "addSignature", {
-                  bodyContainsMarker: result.value.includes("<!-- signature -->"),
-                  bodyLength: result.value.length,
-                });
-              }
-              event.completed();
-              resolve();
-            });
           }
+          item.body.getAsync("html", (result) => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+              logger.log("debug", "addSignature", {
+                bodyContainsMarker: result.value.includes("<!-- signature -->"),
+                bodyLength: result.value.length,
+              });
+            }
+            event.completed();
+            resolve();
+          });
         });
       });
-      // If rejected due to error and isAutoApplied, handle it here
-      throw new Error("setSignatureAsync failed for cached signature");
     } else {
       await new Promise((resolve, reject) => {
         fetchSignature(signatureKey, (template, error) => {
@@ -133,12 +187,7 @@ async function addSignature(signatureKey, event, completeWithStateFn, isAutoAppl
       await appendDebugLogToBody(item, "addSignature Error (Catch)", "Message", error.message);
     }
     logger.log("error", "addSignature", { error: error.message });
-    displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
-    if (isAutoApplied) {
-      await completeWithStateFn(event, "none", "Info", "Please select an M3 signature from the ribbon.");
-    } else {
-      event.completed();
-    }
+    await completeWithState("Error", error.message, true);
   }
 }
 
@@ -160,17 +209,13 @@ async function validateSignature(event) {
         resolve(result.status === Office.AsyncResultStatus.Succeeded ? result.value : null)
       )
     );
-    const isClassicOutlook = Office.context.mailbox.diagnostics.hostName === "Outlook";
+
     const currentSignature = isClassicOutlook
       ? SignatureManager.extractSignatureForOutlookClassic(body)
       : SignatureManager.extractSignature(body);
 
     if (!currentSignature) {
-      displayError(
-        "Email is missing the M3 required signature. Please select an appropriate email signature.",
-        event,
-        false
-      );
+      displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
       const isReplyOrForward = await SignatureManager.isReplyOrForward(item);
       await validateSignatureChanges(item, currentSignature, event, isReplyOrForward);
@@ -249,17 +294,11 @@ async function validateSignatureChanges(item, currentSignature, event, isReplyOr
 async function onNewMessageComposeHandler(event) {
   const item = Office.context.mailbox.item;
   const isReplyOrForward = await SignatureManager.isReplyOrForward(item);
-  const isMobile =
-    Office.context.mailbox.diagnostics.hostName === "OutlookAndroid" ||
-    Office.context.mailbox.diagnostics.hostName === "OutlookIOS";
 
   logger.log("info", "onNewMessageComposeHandler", {
     isReplyOrForward,
     isMobile,
-    hostName: Office.context.mailbox.diagnostics.hostName,
   });
-
-  displayNotification("Info", `Platform: ${Office.context.mailbox.diagnostics.hostName}`, true);
 
   try {
     if (isReplyOrForward) {
@@ -271,10 +310,10 @@ async function onNewMessageComposeHandler(event) {
       } else {
         const itemIdResult = await new Promise((resolve) => item.getItemIdAsync((asyncResult) => resolve(asyncResult)));
         if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
-          throw new Error(`Failed to get item ID: ${itemIdResult.error.message}`);
+          throw new Error(itemIdResult.error.message);
         }
         messageId = itemIdResult.value;
-        logger.log("info", "getItemIdAsync for OWA", { messageId });
+        logger.log("info", "getItemIdAsync for OWA/Classic", { messageId });
       }
 
       const email = await fetchEmailById(messageId);
@@ -285,7 +324,6 @@ async function onNewMessageComposeHandler(event) {
         logger.log("warn", "onNewMessageComposeHandler", { status: "No signature found in email" });
         await completeWithState(
           event,
-          "none",
           "Info",
           isMobile
             ? "No signature found in email. Please select an M3 signature from the task pane."
@@ -304,7 +342,6 @@ async function onNewMessageComposeHandler(event) {
         logger.log("warn", "onNewMessageComposeHandler", { status: "Could not detect signature key" });
         await completeWithState(
           event,
-          "none",
           "Info",
           isMobile
             ? "Could not detect signature type. Please select an M3 signature from the task pane."
@@ -320,28 +357,29 @@ async function onNewMessageComposeHandler(event) {
 
       localStorage.removeItem("tempSignature");
       localStorage.setItem("tempSignature", matchedSignatureKey);
-      await addSignature(matchedSignatureKey, event, completeWithState, true);
-      await completeWithState(event, matchedSignatureKey, null, null);
+      await addSignature(matchedSignatureKey, event, true);
+      await completeWithState(event, null, null);
     } else {
-      // Handle new message
       if (isMobile) {
         const mobileDefaultSignatureKey = localStorage.getItem("mobileDefaultSignature");
         if (mobileDefaultSignatureKey) {
           localStorage.removeItem("tempSignature");
           localStorage.setItem("tempSignature", mobileDefaultSignatureKey);
-          await addSignature(mobileDefaultSignatureKey, event, completeWithState, true);
-          await completeWithState(event, mobileDefaultSignatureKey, null, null);
+          await addSignature(mobileDefaultSignatureKey, event, true);
+          await completeWithState(event, null, null);
         } else {
-          await completeWithState(event, "none", "Info", "Please select an M3 signature from the task pane.");
+          await completeWithState(event, "Info", "Please select an M3 signature from the task pane.");
         }
       } else {
-        await completeWithState(event, "none", "Info", "Please select an M3 signature from the ribbon.");
+        await completeWithState(event, "Info", "Please select an M3 signature from the ribbon.");
       }
     }
   } catch (error) {
     logger.log("error", "onNewMessageComposeHandler", { error: error.message, stack: error.stack });
-    await appendDebugLogToBody(item, "Message", error.message, "Stack", error.stack);
-    await completeWithState(event, "none", "Error", `Failed to process compose event: ${error.message}`);
+    if (isMobile) {
+      await appendDebugLogToBody(item, "Message", error.message, "Stack", error.stack);
+    }
+    await completeWithState(event, "Error", `Failed to process compose event: ${error.message}`);
   }
 }
 
@@ -350,7 +388,7 @@ async function onNewMessageComposeHandler(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureMona(event) {
-  addSignature("monaSignature", event, completeWithState);
+  addSignature("monaSignature", event);
 }
 
 /**
@@ -358,7 +396,7 @@ function addSignatureMona(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureMorgan(event) {
-  addSignature("morganSignature", event, completeWithState);
+  addSignature("morganSignature", event);
 }
 
 /**
@@ -366,7 +404,7 @@ function addSignatureMorgan(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureMorven(event) {
-  addSignature("morvenSignature", event, completeWithState);
+  addSignature("morvenSignature", event);
 }
 
 /**
@@ -374,7 +412,7 @@ function addSignatureMorven(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureM2(event) {
-  addSignature("m2Signature", event, completeWithState);
+  addSignature("m2Signature", event);
 }
 
 /**
@@ -382,5 +420,5 @@ function addSignatureM2(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function addSignatureM3(event) {
-  addSignature("m3Signature", event, completeWithState);
+  addSignature("m3Signature", event);
 }

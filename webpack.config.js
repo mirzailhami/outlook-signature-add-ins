@@ -31,10 +31,14 @@ module.exports = async (env, options) => {
       taskpane: ["./src/taskpane/taskpane.html"],
       commands: ["./src/commands/commands.js"],
       graph: ["./src/commands/graph.js"],
+      helpers: ["./src/commands/helpers.js"],
     },
 
     output: {
       clean: true,
+      libraryTarget: "umd", // Ensure output is compatible with browsers
+      library: "[name]", // Expose each entry point as a global (e.g., window.commands, window.helpers)
+      globalObject: "this", // Ensure global object is "window" in browsers
     },
 
     resolve: {
@@ -46,8 +50,8 @@ module.exports = async (env, options) => {
       rules: [
         {
           test: /\.js$/,
-          exclude: /node_modules/,
-          include: [path.resolve(__dirname, "src")],
+          // exclude: /node_modules/,
+          include: [path.resolve(__dirname, "src"), /node_modules\/luxon/],
           use: {
             loader: "babel-loader",
             options: {
@@ -58,8 +62,9 @@ module.exports = async (env, options) => {
                     useBuiltIns: "usage",
                     corejs: 3,
                     targets: {
-                      browsers: ["last 2 versions", "not dead", "not ie 11"],
+                      browsers: ["last 2 versions", "not dead", "ie 11"],
                     },
+                    modules: "commonjs",
                   },
                 ],
               ],
@@ -97,7 +102,7 @@ module.exports = async (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/commands/commands.html",
         filename: "commands.html",
-        chunks: ["polyfill", "commands", "graph"],
+        chunks: ["polyfill", "commands"],
         publicPath: "auto",
         minify: isProduction
           ? {
@@ -121,8 +126,24 @@ module.exports = async (env, options) => {
           { from: ".nojekyll", to: ".nojekyll" },
           { from: "src/index.html", to: "index.html" },
           { from: "assets", to: "assets" },
-          { from: "src/well-known", to: ".well-known" },
-          { from: "src/commands/helpers.js", to: "helpers.js" },
+          {
+            from: "src/well-known",
+            to: ".well-known",
+            transform(content, path) {
+              if (path.endsWith("microsoft-officeaddins-allowed.json")) {
+                const assetBaseUrl =
+                  process.env.ASSET_BASE_URL ||
+                  (isProduction ? "https://mirzailhami.github.io/outlook-signature-add-ins" : "https://localhost:3000");
+                const allowed = [
+                  `${assetBaseUrl}/graph.js`,
+                  `${assetBaseUrl}/helpers.js`,
+                  `${assetBaseUrl}/commands.js`,
+                ];
+                return JSON.stringify({ allowed }, null, 2);
+              }
+              return content;
+            },
+          },
         ],
       }),
     ],

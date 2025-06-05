@@ -207,8 +207,6 @@
           <bt:Url id="WebViewRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.html" />
           <bt:Url id="Taskpane.Url" DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
           <bt:Url id="JSRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.js" />
-          <bt:Url id="GraphJS.Url" DefaultValue="${ASSET_BASE_URL}/graph.js" />
-          <bt:Url id="HelperJS.Url" DefaultValue="${ASSET_BASE_URL}/helpers.js" />
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="M3 Signatures"/>

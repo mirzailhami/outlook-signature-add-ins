@@ -3,12 +3,11 @@
  * See LICENSE in the project root for license information.
  */
 
-/* global console, Office, Client */
+/* global console, Office, Client, logger */
 
 import { createNestablePublicClientApplication } from "@azure/msal-browser";
 import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
-import { logger } from "./helpers.js";
 
 let pca = undefined;
 let isPCAInitialized = false;
@@ -82,65 +81,6 @@ async function createGraphClient() {
 }
 
 /**
- * Searches for emails in the same conversation thread using the conversation ID.
- * @param {string} conversationId - The conversation ID of the email thread.
- * @returns {Promise<string>} The message ID (hitId) of the most recent email in the thread.
- * @throws {Error} If the search query fails or no emails are found.
- */
-async function searchEmailsByConversationId(conversationId, { item, debugLogFunction }) {
-  if (!conversationId) {
-    throw new Error("Conversation ID is required for search query");
-  }
-
-  const searchRequest = {
-    requests: [
-      {
-        entityTypes: ["message"],
-        query: {
-          queryString: conversationId,
-        },
-      },
-    ],
-  };
-
-  try {
-    const client = await createGraphClient();
-    // logger.log("info", "searchEmailsByConversationId", {
-    //   status: "Searching emails by conversation ID",
-    //   conversationId,
-    // });
-    const response = await client
-      .api("/search/query")
-      .header("content-type", "application/json")
-      .header("ConsistencyLevel", "eventual")
-      .post(searchRequest);
-
-    // console.log(response);
-
-    if (debugLogFunction && item) {
-      await debugLogFunction(item, "Search Response", JSON.stringify(response, null, 2));
-    }
-
-    if (!response?.value?.[0]?.hitsContainers?.[0]?.hits?.[0]?.hitId) {
-      throw new Error("No emails found in the conversation thread");
-    }
-
-    const hitId = response.value[0].hitsContainers[0].hits[0].hitId;
-    return hitId;
-  } catch (error) {
-    if (debugLogFunction && item) {
-      const errorDetails = {
-        message: error.message,
-        stack: error.stack,
-        response: error.response ? JSON.stringify(error.response, null, 2) : "No response object",
-      };
-      await debugLogFunction(item, "Search Error", JSON.stringify(errorDetails, null, 2));
-    }
-    throw new Error(`Failed to search emails by conversation ID: ${error.message}`);
-  }
-}
-
-/**
  * Fetches an email by its message ID.
  * @param {string} messageId - The ID of the email to fetch.
  * @returns {Promise<Object>} The email object with subject, body, sentDateTime, and toRecipients.
@@ -172,4 +112,8 @@ async function fetchEmailById(messageId) {
   }
 }
 
-export { getGraphAccessToken, searchEmailsByConversationId, fetchEmailById };
+// Export for Webpack bundling
+export { fetchEmailById };
+
+// Make functions available globally for Classic Outlook
+window.fetchEmailById = fetchEmailById;
