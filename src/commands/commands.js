@@ -1,6 +1,6 @@
 /* global Office, console, logger, SignatureManager, displayNotification, displayError, completeWithState, fetchSignature, detectSignatureKey, appendDebugLogToBody, fetchEmailById */
 
-import { completeWithState, displayNotification } from "./helpers";
+// import { completeWithState, displayNotification } from "./helpers";
 
 // Use process.env.ASSET_BASE_URL to construct dynamic URLs
 const ASSET_BASE_URL = process.env.ASSET_BASE_URL;
