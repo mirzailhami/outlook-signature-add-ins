@@ -30,32 +30,30 @@ let isMobile = false;
 let isClassicOutlook = false;
 
 // Load scripts sequentially with error handling
-Office.onReady(() => {
-  Promise.all([
-    loadScript(`${ASSET_BASE_URL}/helpers.js`)
-      .then(() => {
-        helpersLoaded = true;
-      })
-      .catch(() => {
-        helpersLoaded = false;
-      }),
-    loadScript(`${ASSET_BASE_URL}/graph.js`)
-      .then(() => {
-        graphLoaded = true;
-      })
-      .catch(() => {
-        graphLoaded = false;
-      }),
-  ])
+Promise.all([
+  loadScript(`${ASSET_BASE_URL}/helpers.js`)
     .then(() => {
-      console.log("All dependencies loaded successfully");
-      initializeAddIn();
+      helpersLoaded = true;
     })
-    .catch((error) => {
-      console.error("Dependency loading failed:", error);
-      initializeAddIn();
-    });
-});
+    .catch(() => {
+      helpersLoaded = false;
+    }),
+  loadScript(`${ASSET_BASE_URL}/graph.js`)
+    .then(() => {
+      graphLoaded = true;
+    })
+    .catch(() => {
+      graphLoaded = false;
+    }),
+])
+  .then(() => {
+    console.log("All dependencies loaded successfully");
+    initializeAddIn();
+  })
+  .catch((error) => {
+    console.error("Dependency loading failed:", error);
+    initializeAddIn();
+  });
 
 function initializeAddIn() {
   if (!helpersLoaded) {
