@@ -1,14 +1,10 @@
 /* global Office, console, logger, SignatureManager, displayNotification, displayError, completeWithState, fetchSignature, detectSignatureKey, appendDebugLogToBody, fetchEmailById */
 
-// import { completeWithState, displayNotification } from "./helpers";
-
-console.log("Is Promise available?", typeof Promise !== "undefined" ? "Yes" : "No");
-
 // Use process.env.ASSET_BASE_URL to construct dynamic URLs
 const rawBaseUrl = process.env.ASSET_BASE_URL || "https://localhost:3000";
 // Remove trailing slash to avoid double slashes in URLs
 const ASSET_BASE_URL = rawBaseUrl.endsWith("/") ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
-console.log("ASSET_BASE_URL:", ASSET_BASE_URL);
+// console.log("ASSET_BASE_URL:", ASSET_BASE_URL);
 
 function loadScript(url) {
   // Fallback if Promise is not defined
@@ -76,10 +72,10 @@ function initializeAddIn() {
     }
 
     isMobile =
-      Office.context.mailbox.diagnostics.hostName === "OutlookAndroid" ||
-      Office.context.mailbox.diagnostics.hostName === "OutlookIOS";
+      Office.context?.mailbox?.diagnostics?.hostName === "OutlookAndroid" ||
+      Office.context?.mailbox?.diagnostics?.hostName === "OutlookIOS";
 
-    isClassicOutlook = Office.context.mailbox.diagnostics.hostName === "Outlook";
+    isClassicOutlook = Office.context?.mailbox?.diagnostics?.hostName === "Outlook";
 
     logger.log("info", "Office.onReady", {
       host: Office.context?.mailbox?.diagnostics?.hostName,
