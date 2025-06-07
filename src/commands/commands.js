@@ -390,9 +390,7 @@ function displayNotification(type, message, persistent = false) {
  * @param {string} message - Error message.
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
-function displayError(message, event, persistent = false) {
-  logger.log("info", "displayError", { message });
-
+function displayError(message, event) {
   const markdownMessage = message.includes("modified")
     ? `${message}\n\n**Tip**: Ensure the M3 signature is not edited before sending.`
     : `${message}\n\n**Tip**: Select an M3 signature from the ribbon under "M3 Signatures".`;
@@ -710,15 +708,15 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
   } else {
     SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
       if (error || !restored) {
+        logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
         displayError("Failed to restore the original M3 signature. Please reselect.", event);
-        return;
-      }
-      setTimeout(() => {
+      } else {
+        logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
         displayError(
           "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
           event
         );
-      }, 500);
+      }
     });
   }
 }
@@ -748,7 +746,6 @@ function onNewMessageComposeHandler(event) {
     `Platform: ${Office.context.mailbox.diagnostics.hostName}, Version: ${Office.context.mailbox.diagnostics.hostVersion}`
   );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
-    console.log(isReplyOrForward);
     if (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
       completeWithState(event, "Error", "Failed to determine reply/forward status.");
