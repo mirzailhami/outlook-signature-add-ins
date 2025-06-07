@@ -30,7 +30,6 @@ module.exports = async (env, options) => {
     entry: {
       polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
       commands: ["./src/commands/commands.js", "./src/commands/commands.html"],
-      launchevent: "./src/commands/commands.js",
       taskpane: ["./src/taskpane/taskpane.html"],
     },
 
@@ -49,7 +48,6 @@ module.exports = async (env, options) => {
           include: [
             path.resolve(__dirname, "node_modules/@azure"),
             path.resolve(__dirname, "node_modules/@microsoft"),
-            path.resolve(__dirname, "node_modules/luxon"),
             path.resolve(__dirname, "src"),
           ],
           use: {

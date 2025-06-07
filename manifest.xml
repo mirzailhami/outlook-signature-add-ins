@@ -53,7 +53,7 @@
           </Runtimes>
           <DesktopFormFactor>
             <!-- Configure other command surface extension points for add-in command support, if needed. -->
-            <FunctionFile resid="Commands.Url"/>
+            <FunctionFile resid="WebViewRuntime.Url"/>
             <ExtensionPoint xsi:type="MessageComposeCommandSurface">
               <OfficeTab id="TabDefault">
                 <Group id="msgComposeGroup">
@@ -161,7 +161,7 @@
             </ExtensionPoint>
           </DesktopFormFactor>
           <MobileFormFactor>
-            <FunctionFile resid="Commands.Url"/>
+            <FunctionFile resid="WebViewRuntime.Url"/>
             <ExtensionPoint xsi:type="MobileMessageReadCommandSurface">
               <Group id="mobileMsgRead">
                 <Label resid="GroupLabel"/>
@@ -203,7 +203,6 @@
           <bt:Image id="Icon.signature" DefaultValue="${ASSET_BASE_URL}/assets/signature-16.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="Commands.Url" DefaultValue="${ASSET_BASE_URL}/commands.html"/>
           <bt:Url id="WebViewRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.html" />
           <bt:Url id="Taskpane.Url" DefaultValue="${ASSET_BASE_URL}/taskpane.html"/>
           <bt:Url id="JSRuntime.Url" DefaultValue="${ASSET_BASE_URL}/commands.js" />
