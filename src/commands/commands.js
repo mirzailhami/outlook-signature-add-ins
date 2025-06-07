@@ -650,10 +650,21 @@ function validateSignature(event) {
       ? SignatureManager.extractSignatureForOutlookClassic(body)
       : SignatureManager.extractSignature(body);
 
+    displayNotification(
+      "Info",
+      `validateSignature: Signature detected - currentSignatureLength: ${currentSignature ? currentSignature.length : 0}`
+    );
+
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
       SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
+        displayNotification(
+          "Info",
+          `validateSignature: isReplyOrForward result - isReplyOrForward: ${isReplyOrForward}, error: ${
+            error ? error.message : "none"
+          }`
+        );
         if (error) {
           logger.log("error", "validateSignature", { error: error.message });
           displayError("Failed to determine reply/forward status.", event);
@@ -665,13 +676,6 @@ function validateSignature(event) {
   });
 }
 
-/**
- * Validates if the signature has been modified or changed.
- * @param {Office.MessageCompose} item - The email item.
- * @param {string} currentSignature - The current signature in the email body.
- * @param {Office.AddinCommands.Event} event - The Outlook event object.
- * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
- */
 /**
  * Validates if the signature has been modified or changed.
  * @param {Office.MessageCompose} item - The email item.
