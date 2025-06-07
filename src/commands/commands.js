@@ -3,6 +3,7 @@
 /* eslint-disable no-undef */
 
 import { createNestablePublicClientApplication } from "@azure/msal-browser";
+import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
 
 /**
@@ -441,20 +442,16 @@ Office.onReady(() => {
  * Initializes the Public Client Application (PCA) for SSO through NAA.
  * @param {function(Error|null)} callback - Callback with error if initialization fails.
  */
-function initializePCA(callback) {
-  if (isPCAInitialized) {
-    callback(null);
-    return;
-  }
+async function initializePCA() {
+  if (isPCAInitialized) return;
 
   try {
-    pca = createNestablePublicClientApplication({ auth });
+    pca = await createNestablePublicClientApplication({ auth });
     isPCAInitialized = true;
     logger.log("info", "initializePCA", { status: "PCA initialized successfully" });
-    callback(null);
   } catch (error) {
     logger.log("error", "initializePCA", { error: error.message, stack: error.stack });
-    callback(new Error(`Failed to initialize PCA: ${error.message}`));
+    throw new Error(`Failed to initialize PCA: ${error.message}`);
   }
 }
 
@@ -462,57 +459,39 @@ function initializePCA(callback) {
  * Fetches an access token for Microsoft Graph API.
  * @param {function(string|null, Error|null)} callback - Callback with token or error.
  */
-function getGraphAccessToken(callback) {
-  initializePCA((initError) => {
-    if (initError) {
-      callback(null, initError);
-      return;
-    }
+async function getGraphAccessToken() {
+  await initializePCA();
+  const tokenRequest = {
+    scopes: ["User.Read", "Mail.ReadWrite", "Mail.Read", "openid", "profile"],
+  };
 
-    const tokenRequest = {
-      scopes: ["User.Read", "Mail.ReadWrite", "Mail.Read", "openid", "profile"],
-    };
-
+  try {
     logger.log("info", "acquireTokenSilent", { status: "Attempting to acquire token silently" });
-    pca.acquireTokenSilent(tokenRequest, (silentError, silentResponse) => {
-      if (!silentError && silentResponse) {
-        logger.log("info", "acquireTokenSilent", { status: "Token acquired silently" });
-        callback(silentResponse.accessToken, null);
-      } else {
-        logger.log("warn", "acquireTokenSilent", { error: silentError?.message });
-        logger.log("info", "acquireTokenPopup", { status: "Falling back to interactive token acquisition" });
-        pca.acquireTokenPopup(tokenRequest, (popupError, popupResponse) => {
-          if (popupError) {
-            logger.log("error", "acquireTokenPopup", { popupError: popupError.message });
-            callback(null, new Error(`Failed to acquire access token: ${popupError.message}`));
-          } else {
-            logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
-            callback(popupResponse.accessToken, null);
-          }
-        });
-      }
-    });
-  });
+    const response = await pca.acquireTokenSilent(tokenRequest);
+    logger.log("info", "acquireTokenSilent", { status: "Token acquired silently" });
+    return response.accessToken;
+  } catch (silentError) {
+    logger.log("warn", "acquireTokenSilent", { error: silentError.message, stack: silentError.stack });
+    try {
+      logger.log("info", "acquireTokenPopup", { status: "Falling back to interactive token acquisition" });
+      const response = await pca.acquireTokenPopup(tokenRequest);
+      logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
+      return response.accessToken;
+    } catch (popupError) {
+      logger.log("error", "acquireTokenPopup", { popupError: popupError.message, stack: popupError.stack });
+      throw new Error(`Failed to acquire access token: ${popupError.message}`);
+    }
+  }
 }
 
 /**
  * Creates a Graph API client with the access token.
  * @param {function(Client|null, Error|null)} callback - Callback with client or error.
  */
-function createGraphClient(callback) {
-  getGraphAccessToken((accessToken, error) => {
-    if (error || !accessToken) {
-      callback(null, error || new Error("No access token available"));
-      return;
-    }
-    try {
-      const client = Client.init({
-        authProvider: (done) => done(null, accessToken),
-      });
-      callback(client, null);
-    } catch (clientError) {
-      callback(null, new Error(`Failed to initialize Graph client: ${clientError.message}`));
-    }
+async function createGraphClient() {
+  const accessToken = await getGraphAccessToken();
+  return Client.init({
+    authProvider: (done) => done(null, accessToken),
   });
 }
 
@@ -521,35 +500,30 @@ function createGraphClient(callback) {
  * @param {string} messageId - The ID of the email to fetch.
  * @param {function(Object|null, Error|null)} callback - Callback with email or error.
  */
-function fetchEmailById(messageId, callback) {
+async function fetchEmailById(messageId) {
   if (!messageId) {
-    callback(null, new Error("Message ID is required to fetch email"));
-    return;
+    throw new Error("Message ID is required to fetch email");
   }
 
-  createGraphClient((client, error) => {
-    if (error || !client) {
-      callback(null, error || new Error("Graph client not initialized"));
-      return;
-    }
-
+  try {
+    const client = await createGraphClient();
     logger.log("info", "fetchEmailById", { status: "Fetching email by ID", messageId });
-    client
+    const email = await client
       .api(`/me/messages/${messageId}`)
       .select("id,subject,body,sentDateTime,toRecipients")
-      .get((graphError, email) => {
-        if (graphError) {
-          logger.log("error", "fetchEmailById", { error: graphError.message, messageId });
-          callback(null, new Error(`Failed to fetch email by ID: ${graphError.message}`));
-        } else if (!email) {
-          logger.log("warn", "fetchEmailById", { status: "Email not found", messageId });
-          callback(null, new Error("Email not found"));
-        } else {
-          logger.log("info", "fetchEmailById", { status: "Email fetched successfully", emailId: email.id });
-          callback(email, null);
-        }
-      });
-  });
+      .get();
+
+    if (!email) {
+      logger.log("warn", "fetchEmailById", { status: "Email not found", messageId });
+      throw new Error("Email not found");
+    }
+
+    logger.log("info", "fetchEmailById", { status: "Email fetched successfully", emailId: email.id });
+    return email;
+  } catch (error) {
+    logger.log("error", "fetchEmailById", { error: error.message, stack: error.stack, messageId });
+    throw new Error(`Failed to fetch email by ID: ${error.message}`);
+  }
 }
 
 /**
