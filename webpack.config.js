@@ -25,33 +25,33 @@ module.exports = async (env, options) => {
   return {
     mode: isProduction ? "production" : "development",
     devtool: isProduction ? "source-map" : "eval-source-map",
+    stats: { errorDetails: true }, // Enable detailed error messages
 
     entry: {
-      commands: [
-        "core-js/stable",
-        "regenerator-runtime/runtime",
-        path.resolve(__dirname, "src/commands/commands.js"),
-        path.resolve(__dirname, "src/commands/graph.js"),
-        path.resolve(__dirname, "src/commands/helpers.js"),
-      ],
+      polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
+      commands: ["./src/commands/commands.js", "./src/commands/commands.html"],
+      launchevent: "./src/commands/commands.js",
+      taskpane: ["./src/taskpane/taskpane.html"],
     },
 
     output: {
-      path: path.resolve(__dirname, "dist"),
-      filename: "commands.js",
       clean: true,
     },
 
     resolve: {
       extensions: [".js", ".html"],
-      fallback: { https: require.resolve("https-browserify"), http: require.resolve("stream-http") },
     },
 
     module: {
       rules: [
         {
           test: /\.js$/,
-          include: [path.resolve(__dirname, "src"), /node_modules\/(core-js|regenerator-runtime|luxon)/],
+          include: [
+            path.resolve(__dirname, "node_modules/@azure"),
+            path.resolve(__dirname, "node_modules/@microsoft"),
+            path.resolve(__dirname, "node_modules/luxon"),
+            path.resolve(__dirname, "src"),
+          ],
           use: {
             loader: "babel-loader",
             options: {
@@ -60,9 +60,8 @@ module.exports = async (env, options) => {
                   "@babel/preset-env",
                   {
                     targets: {
-                      browsers: ["last 2 versions", "not dead", "ie 11"],
+                      browsers: ["since 2015"],
                     },
-                    modules: "commonjs",
                   },
                 ],
               ],
@@ -72,6 +71,7 @@ module.exports = async (env, options) => {
         {
           test: /\.html$/,
           use: ["html-loader"],
+          exclude: /node_modules/,
         },
       ],
     },
@@ -87,7 +87,7 @@ module.exports = async (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/taskpane/taskpane.html",
         filename: "taskpane.html",
-        chunks: ["commands"],
+        chunks: ["polyfill", "commands"],
         publicPath: isProduction ? "/outlook-signature-add-ins/" : "/",
         minify: isProduction
           ? {
@@ -100,7 +100,7 @@ module.exports = async (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/commands/commands.html",
         filename: "commands.html",
-        chunks: ["commands"],
+        chunks: ["polyfill", "commands"],
         publicPath: isProduction ? "/outlook-signature-add-ins/" : "/",
         minify: isProduction
           ? {
@@ -150,8 +150,6 @@ module.exports = async (env, options) => {
       hot: true,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-        "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
       },
       allowedHosts: ["localhost", ".azurewebsites.net"],
       server: {

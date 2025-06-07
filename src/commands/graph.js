@@ -6,7 +6,6 @@
 /* global console, Office, Client, logger */
 
 import { createNestablePublicClientApplication } from "@azure/msal-browser";
-import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
 
 let pca = undefined;
