@@ -672,9 +672,25 @@ function validateSignature(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
+/**
+ * Validates if the signature has been modified or changed.
+ * @param {Office.MessageCompose} item - The email item.
+ * @param {string} currentSignature - The current signature in the email body.
+ * @param {Office.AddinCommands.Event} event - The Outlook event object.
+ * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
+ */
 function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
+  displayNotification("Info", `validateSignatureChanges: Started - isReplyOrForward: ${isReplyOrForward}`);
+
   const originalSignatureKey = localStorage.getItem("tempSignature");
   const rawMatchedSignature = localStorage.getItem(`signature_${originalSignatureKey}`);
+
+  displayNotification(
+    "Info",
+    `validateSignatureChanges: Keys - originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
+      rawMatchedSignature ? rawMatchedSignature.length : "null"
+    }`
+  );
 
   const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
   const cleanCachedSignature = SignatureManager.normalizeSignature(rawMatchedSignature);
@@ -689,9 +705,14 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
   const isTextValid = cleanCurrentSignature === cleanCachedSignature;
   const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
 
+  displayNotification(
+    "Info",
+    `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
+  );
+
   logger.log("debug", "validateSignatureChanges", {
     rawCurrentSignatureLength: currentSignature.length,
-    rawMatchedSignatureLength: rawMatchedSignature.length,
+    rawMatchedSignatureLength: rawMatchedSignature ? rawMatchedSignature.length : 0,
     cleanCurrentSignature,
     cleanCachedSignature,
     originalSignatureKey,
@@ -704,9 +725,16 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
 
   if (isTextValid && isLogoValid) {
     localStorage.removeItem("tempSignature");
+    displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
     event.completed({ allowEvent: true });
   } else {
+    displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
     SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
+      displayNotification(
+        "Info",
+        `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
+      );
+
       if (error || !restored) {
         logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
         displayError("Failed to restore the original M3 signature. Please reselect.", event);
@@ -751,11 +779,6 @@ function onNewMessageComposeHandler(event) {
       completeWithState(event, "Error", "Failed to determine reply/forward status.");
       return;
     }
-
-    logger.log("info", "onNewMessageComposeHandler", {
-      isReplyOrForward,
-      isMobile,
-    });
 
     if (isReplyOrForward) {
       logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
