@@ -442,88 +442,118 @@ Office.onReady(() => {
  * Initializes the Public Client Application (PCA) for SSO through NAA.
  * @param {function(Error|null)} callback - Callback with error if initialization fails.
  */
-async function initializePCA() {
+function initializePCA(callback) {
   if (isPCAInitialized) return;
 
-  try {
-    pca = await createNestablePublicClientApplication({ auth });
-    isPCAInitialized = true;
-    logger.log("info", "initializePCA", { status: "PCA initialized successfully" });
-  } catch (error) {
-    logger.log("error", "initializePCA", { error: error.message, stack: error.stack });
-    throw new Error(`Failed to initialize PCA: ${error.message}`);
-  }
+  createNestablePublicClientApplication({ auth }).then(
+    (pcaInstance) => {
+      pca = pcaInstance;
+      isPCAInitialized = true;
+      logger.log("info", "initializePCA", { status: "PCA initialized successfully" });
+      callback(null);
+    },
+    (error) => {
+      logger.log("error", "initializePCA", { error: error.message, stack: error.stack });
+      callback(new Error(`Failed to initialize PCA: ${error.message}`));
+    }
+  );
 }
 
 /**
  * Fetches an access token for Microsoft Graph API.
  * @param {function(string|null, Error|null)} callback - Callback with token or error.
  */
-async function getGraphAccessToken() {
-  await initializePCA();
-  const tokenRequest = {
-    scopes: ["User.Read", "Mail.ReadWrite", "Mail.Read", "openid", "profile"],
-  };
-
-  try {
-    logger.log("info", "acquireTokenSilent", { status: "Attempting to acquire token silently" });
-    const response = await pca.acquireTokenSilent(tokenRequest);
-    logger.log("info", "acquireTokenSilent", { status: "Token acquired silently" });
-    return response.accessToken;
-  } catch (silentError) {
-    logger.log("warn", "acquireTokenSilent", { error: silentError.message, stack: silentError.stack });
-    try {
-      logger.log("info", "acquireTokenPopup", { status: "Falling back to interactive token acquisition" });
-      const response = await pca.acquireTokenPopup(tokenRequest);
-      logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
-      return response.accessToken;
-    } catch (popupError) {
-      logger.log("error", "acquireTokenPopup", { popupError: popupError.message, stack: popupError.stack });
-      throw new Error(`Failed to acquire access token: ${popupError.message}`);
+function getGraphAccessToken(callback) {
+  initializePCA((initError) => {
+    if (initError) {
+      callback(null, initError);
+      return;
     }
-  }
+
+    const tokenRequest = {
+      scopes: ["User.Read", "Mail.ReadWrite", "Mail.Read", "openid", "profile"],
+    };
+
+    logger.log("info", "acquireTokenSilent", { status: "Attempting to acquire token silently" });
+    pca.acquireTokenSilent(tokenRequest).then(
+      (silentResponse) => {
+        logger.log("info", "acquireTokenSilent", { status: "Token acquired silently" });
+        callback(silentResponse.accessToken, null);
+      },
+      (silentError) => {
+        logger.log("warn", "acquireTokenSilent", { error: silentError.message });
+        logger.log("info", "acquireTokenPopup", { status: "Falling back to interactive token acquisition" });
+        pca.acquireTokenPopup(tokenRequest).then(
+          (popupResponse) => {
+            logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
+            callback(popupResponse.accessToken, null);
+          },
+          (popupError) => {
+            logger.log("error", "acquireTokenPopup", { popupError: popupError.message });
+            callback(null, new Error(`Failed to acquire access token: ${popupError.message}`));
+          }
+        );
+      }
+    );
+  });
 }
 
 /**
  * Creates a Graph API client with the access token.
  * @param {function(Client|null, Error|null)} callback - Callback with client or error.
  */
-async function createGraphClient() {
-  const accessToken = await getGraphAccessToken();
-  return Client.init({
-    authProvider: (done) => done(null, accessToken),
+function createGraphClient(callback) {
+  getGraphAccessToken((accessToken, error) => {
+    if (error || !accessToken) {
+      callback(null, error || new Error("No access token available"));
+      return;
+    }
+    try {
+      const client = Client.init({
+        authProvider: (done) => done(null, accessToken),
+      });
+      callback(client, null);
+    } catch (clientError) {
+      callback(null, new Error(`Failed to initialize Graph client: ${clientError.message}`));
+    }
   });
 }
 
 /**
- * Fetches an email by its message ID.
- * @param {string} messageId - The ID of the email to fetch.
- * @param {function(Object|null, Error|null)} callback - Callback with email or error.
+ * Fetches message by its message ID.
+ * @param {string} messageId - The ID of the message to fetch.
+ * @param {function(Object|null, Error|null)} callback - Callback with message or error.
  */
-async function fetchEmailById(messageId) {
+function fetchMessageById(messageId, callback) {
   if (!messageId) {
-    throw new Error("Message ID is required to fetch email");
+    callback(null, new Error("Message ID is required to fetch message"));
+    return;
   }
 
-  try {
-    const client = await createGraphClient();
-    logger.log("info", "fetchEmailById", { status: "Fetching email by ID", messageId });
-    const email = await client
-      .api(`/me/messages/${messageId}`)
-      .select("id,subject,body,sentDateTime,toRecipients")
-      .get();
-
-    if (!email) {
-      logger.log("warn", "fetchEmailById", { status: "Email not found", messageId });
-      throw new Error("Email not found");
+  createGraphClient((client, error) => {
+    if (error || !client) {
+      logger.log("error", "fetchMessageById", { error: error?.message, messageId });
+      callback(null, error || new Error("Graph client not initialized"));
+      return;
     }
 
-    logger.log("info", "fetchEmailById", { status: "Email fetched successfully", emailId: email.id });
-    return email;
-  } catch (error) {
-    logger.log("error", "fetchEmailById", { error: error.message, stack: error.stack, messageId });
-    throw new Error(`Failed to fetch email by ID: ${error.message}`);
-  }
+    client
+      .api(`/me/messages/${messageId}`)
+      .select("id,subject,body,sentDateTime,toRecipients")
+      .get()
+      .then((message) => {
+        if (!message) {
+          logger.log("warn", "fetchMessageById", { status: "Message not found", messageId });
+          callback(null, new Error("Email not found"));
+        } else {
+          callback(message, null);
+        }
+      })
+      .catch((graphError) => {
+        logger.log("error", "fetchMessageById", { error: graphError.message, messageId });
+        callback(null, new Error(`Failed to fetch email by ID: ${graphError.message}`));
+      });
+  });
 }
 
 /**
@@ -755,6 +785,7 @@ function onNewMessageComposeHandler(event) {
       let messageId;
       if (isMobile) {
         messageId = item.conversationId;
+        processEmailId(messageId, event);
       } else {
         item.getItemIdAsync((itemIdResult) => {
           if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
@@ -764,58 +795,7 @@ function onNewMessageComposeHandler(event) {
           }
           messageId = itemIdResult.value;
           logger.log("info", "getItemIdAsync for OWA/Classic", { messageId });
-
-          fetchEmailById(messageId, (email, fetchError) => {
-            if (fetchError) {
-              logger.log("error", "onNewMessageComposeHandler", { error: fetchError.message });
-              completeWithState(event, "Error", fetchError.message);
-              return;
-            }
-
-            const emailBody = email.body?.content || "";
-            const extractedSignature = SignatureManager.extractSignature(emailBody);
-
-            if (!extractedSignature) {
-              logger.log("warn", "onNewMessageComposeHandler", { status: "No signature found in email" });
-              completeWithState(
-                event,
-                "Info",
-                isMobile
-                  ? "No signature found in email. Please select an M3 signature from the task pane."
-                  : "No signature found in email. Please select an M3 signature from the ribbon."
-              );
-              return;
-            }
-
-            logger.log("info", "onNewMessageComposeHandler", {
-              status: "Signature extracted from email",
-              signatureLength: extractedSignature.length,
-            });
-
-            const matchedSignatureKey = detectSignatureKey(extractedSignature);
-            if (!matchedSignatureKey) {
-              logger.log("warn", "onNewMessageComposeHandler", { status: "Could not detect signature key" });
-              completeWithState(
-                event,
-                "Info",
-                isMobile
-                  ? "Could not detect signature type. Please select an M3 signature from the task pane."
-                  : "Could not detect signature type. Please select an M3 signature from the ribbon."
-              );
-              return;
-            }
-
-            logger.log("info", "onNewMessageComposeHandler", {
-              status: "Detected signature key from content",
-              matchedSignatureKey,
-            });
-
-            localStorage.removeItem("tempSignature");
-            localStorage.setItem("tempSignature", matchedSignatureKey);
-            addSignature(matchedSignatureKey, event, true, () => {
-              completeWithState(event, null, null);
-            });
-          });
+          processEmailId(messageId, event);
         });
       }
     } else {
@@ -834,6 +814,66 @@ function onNewMessageComposeHandler(event) {
         completeWithState(event, "Info", "Please select an M3 signature from the ribbon.");
       }
     }
+  });
+}
+
+/**
+ * Processes the email ID by fetching the email and handling the signature.
+ * @param {string} messageId - The ID of the email to process.
+ * @param {Office.AddinCommands.Event} event - The event object.
+ */
+function processEmailId(messageId, event) {
+  fetchMessageById(messageId, (message, fetchError) => {
+    console.log(messageId, message, fetchError);
+    if (fetchError) {
+      logger.log("error", "onNewMessageComposeHandler", { error: fetchError.message });
+      completeWithState(event, "Error", fetchError.message);
+      return;
+    }
+
+    const emailBody = message.body?.content || "";
+    const extractedSignature = SignatureManager.extractSignature(emailBody);
+
+    if (!extractedSignature) {
+      logger.log("warn", "onNewMessageComposeHandler", { status: "No signature found in email" });
+      completeWithState(
+        event,
+        "Info",
+        isMobile
+          ? "No signature found in email. Please select an M3 signature from the task pane."
+          : "No signature found in email. Please select an M3 signature from the ribbon."
+      );
+      return;
+    }
+
+    logger.log("info", "onNewMessageComposeHandler", {
+      status: "Signature extracted from email",
+      signatureLength: extractedSignature.length,
+    });
+
+    const matchedSignatureKey = detectSignatureKey(extractedSignature);
+    if (!matchedSignatureKey) {
+      logger.log("warn", "onNewMessageComposeHandler", { status: "Could not detect signature key" });
+      completeWithState(
+        event,
+        "Info",
+        isMobile
+          ? "Could not detect signature type. Please select an M3 signature from the task pane."
+          : "Could not detect signature type. Please select an M3 signature from the ribbon."
+      );
+      return;
+    }
+
+    logger.log("info", "onNewMessageComposeHandler", {
+      status: "Detected signature key from content",
+      matchedSignatureKey,
+    });
+
+    localStorage.removeItem("tempSignature");
+    localStorage.setItem("tempSignature", matchedSignatureKey);
+    addSignature(matchedSignatureKey, event, true, () => {
+      completeWithState(event, null, null);
+    });
   });
 }
 
