@@ -153,31 +153,11 @@ const SignatureManager = {
    * @param {function(boolean, Error|null)} callback - Callback with result and error.
    */
   isReplyOrForward(item, callback) {
-    // Check 1: inReplyTo
-    if (item.inReplyTo) {
-      callback(true, null);
-      return;
-    }
-
-    // Check 2: Subject prefix
-    item.subject.getAsync((subjectResult) => {
-      let subject = "";
-      if (subjectResult.status === Office.AsyncResultStatus.Succeeded) {
-        subject = subjectResult.value || "";
-      }
-      const hasReplyOrForwardPrefix = ["re:", "fw:", "fwd:"].some((prefix) => subject.toLowerCase().includes(prefix));
-
-      if (hasReplyOrForwardPrefix) {
-        callback(true, null);
+    item.getComposeTypeAsync(function (asyncResult) {
+      if (asyncResult.status === "succeeded") {
+        callback(asyncResult.value.composeType === "newMail" ? false : true, null);
         return;
       }
-
-      // Check 3: conversationId
-      if (item.itemType === Office.MailboxEnums.ItemType.Message && item.conversationId) {
-        callback(true, null);
-        return;
-      }
-
       callback(false, null);
     });
   },
@@ -768,6 +748,7 @@ function onNewMessageComposeHandler(event) {
     `Platform: ${Office.context.mailbox.diagnostics.hostName}, Version: ${Office.context.mailbox.diagnostics.hostVersion}`
   );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
+    console.log(isReplyOrForward);
     if (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
       completeWithState(event, "Error", "Failed to determine reply/forward status.");
