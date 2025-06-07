@@ -741,14 +741,19 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
 
       if (error || !restored) {
         logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
+        displayNotification("Error", "validateSignatureChanges: Restore failed, displaying error");
         displayError("Failed to restore the original M3 signature. Please reselect.", event);
       } else {
         logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
+        displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
         displayError(
           "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
           event
         );
       }
+      // Fallback to ensure event completes and prevents timeout
+      displayNotification("Info", "validateSignatureChanges: Ensuring event completion");
+      event.completed({ allowEvent: false });
     });
   }
 }
