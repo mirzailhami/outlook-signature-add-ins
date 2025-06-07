@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [dev-mobile-graph]
+    branches: [dev-mobile-graph-classic]
 
 jobs:
   deploy:
@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: dev-mobile-graph
+          ref: dev-mobile-graph-classic
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,7 +36,7 @@ jobs:
           keep_files: true
           force_orphan: true
           enable_jekyll: false
-          full_commit_message: "Deploy from dev-mobile-graph (SHA: ${{ github.sha }})"
+          full_commit_message: "Deploy from dev-mobile-graph-classic (SHA: ${{ github.sha }})"
           user_name: "GitHub Actions"
           user_email: "41898282+github-actions[bot]@users.noreply.github.com"
           cname: mirzailhami.github.io/outlook-signature-add-ins

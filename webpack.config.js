@@ -27,31 +27,31 @@ module.exports = async (env, options) => {
     devtool: isProduction ? "source-map" : "eval-source-map",
 
     entry: {
-      polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
-      taskpane: ["./src/taskpane/taskpane.html"],
-      commands: ["./src/commands/commands.js"],
-      graph: ["./src/commands/graph.js"],
-      helpers: ["./src/commands/helpers.js"],
+      commands: [
+        "core-js/stable",
+        "regenerator-runtime/runtime",
+        path.resolve(__dirname, "src/commands/commands.js"),
+        path.resolve(__dirname, "src/commands/graph.js"),
+        path.resolve(__dirname, "src/commands/helpers.js"),
+      ],
     },
 
     output: {
+      path: path.resolve(__dirname, "dist"),
+      filename: "commands.js",
       clean: true,
-      libraryTarget: "umd", // Ensure output is compatible with browsers
-      library: "[name]", // Expose each entry point as a global (e.g., window.commands, window.helpers)
-      globalObject: "this", // Ensure global object is "window" in browsers
     },
 
     resolve: {
       extensions: [".js", ".html"],
-      fallback: { https: require.resolve("https-browserify"), http: require.resolve("stream-http") }, // For fetch compatibility
+      fallback: { https: require.resolve("https-browserify"), http: require.resolve("stream-http") },
     },
 
     module: {
       rules: [
         {
           test: /\.js$/,
-          // exclude: /node_modules/,
-          include: [path.resolve(__dirname, "src"), /node_modules\/luxon/],
+          include: [path.resolve(__dirname, "src"), /node_modules\/(core-js|regenerator-runtime|luxon)/],
           use: {
             loader: "babel-loader",
             options: {
@@ -59,8 +59,6 @@ module.exports = async (env, options) => {
                 [
                   "@babel/preset-env",
                   {
-                    useBuiltIns: "usage",
-                    corejs: 3,
                     targets: {
                       browsers: ["last 2 versions", "not dead", "ie 11"],
                     },
@@ -89,8 +87,8 @@ module.exports = async (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/taskpane/taskpane.html",
         filename: "taskpane.html",
-        chunks: ["polyfill", "commands"],
-        publicPath: "auto",
+        chunks: ["commands"],
+        publicPath: isProduction ? "/outlook-signature-add-ins/" : "/",
         minify: isProduction
           ? {
               removeComments: true,
@@ -102,8 +100,8 @@ module.exports = async (env, options) => {
       new HtmlWebpackPlugin({
         template: "./src/commands/commands.html",
         filename: "commands.html",
-        chunks: ["polyfill", "commands"],
-        publicPath: "auto",
+        chunks: ["commands"],
+        publicPath: isProduction ? "/outlook-signature-add-ins/" : "/",
         minify: isProduction
           ? {
               removeComments: true,
@@ -134,11 +132,7 @@ module.exports = async (env, options) => {
                 const assetBaseUrl =
                   process.env.ASSET_BASE_URL ||
                   (isProduction ? "https://mirzailhami.github.io/outlook-signature-add-ins" : "https://localhost:3000");
-                const allowed = [
-                  `${assetBaseUrl}/graph.js`,
-                  `${assetBaseUrl}/helpers.js`,
-                  `${assetBaseUrl}/commands.js`,
-                ];
+                const allowed = [`${assetBaseUrl}/commands.js`];
                 return JSON.stringify({ allowed }, null, 2);
               }
               return content;
@@ -167,6 +161,10 @@ module.exports = async (env, options) => {
       devMiddleware: {
         writeToDisk: true,
       },
+    },
+
+    optimization: {
+      splitChunks: false,
     },
 
     performance: {
