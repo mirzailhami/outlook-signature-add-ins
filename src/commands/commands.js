@@ -762,10 +762,10 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
       // Step 2: Fetch the signature and compare
       fetchSignature(originalSignatureKey, (fetchedSignature, error) => {
         if (error || !fetchedSignature) {
-          displayNotification(
-            "Error",
-            `validateSignatureChanges: Failed to fetch ${originalSignatureKey}, error: ${error?.message || "null"}, fetchedSignature: ${fetchedSignature || "null"}`
-          );
+          // displayNotification(
+          //   "Error",
+          //   `validateSignatureChanges: Failed to fetch ${originalSignatureKey}, error: ${error?.message || "null"}, fetchedSignature: ${fetchedSignature || "null"}`
+          // );
           displayError("Failed to validate signature. Please reselect.", event);
           event.completed({ allowEvent: false });
           return;
@@ -788,26 +788,26 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         const isLogoValid =
           !expectedLogoUrl || (currentLogoUrl && expectedLogoUrl && currentLogoUrl === expectedLogoUrl);
 
-        displayNotification(
-          "Info",
-          `currentLogoUrl: ${currentLogoUrl.length || "null"},
-          expectedLogoUrl: ${expectedLogoUrl.length || "null"}`
-        );
+        // displayNotification(
+        //   "Info",
+        //   `currentLogoUrl: ${currentLogoUrl.length || "null"},
+        //   expectedLogoUrl: ${expectedLogoUrl.length || "null"}`
+        // );
 
-        displayNotification(
-          "Info",
-          `currentSignature: ${currentSignature.length || "null"},
-          rawMatchedSignature: ${rawMatchedSignature.length || "null"}`
-        );
+        // displayNotification(
+        //   "Info",
+        //   `currentSignature: ${currentSignature.length || "null"},
+        //   rawMatchedSignature: ${rawMatchedSignature.length || "null"}`
+        // );
 
-        displayNotification(
-          "Info",
-          `cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
-          cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
-        );
+        // displayNotification(
+        //   "Info",
+        //   `cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
+        //   cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
+        // );
 
         if (isTextValid && isLogoValid) {
-          displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
+          // displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
           event.completed({ allowEvent: true });
         } else {
           // restore the signature
@@ -822,10 +822,10 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
                     `validateSignatureChanges: Failed to get body, error: ${bodyResult.error.message}`
                   );
                   displayError("Failed to validate restored signature.", event);
-                  event.completed({ allowEvent: false });
                   return;
                 }
                 let currentBody = bodyResult.value;
+                displayNotification("Info", `currentBody: ${currentBody.substring(0, 20) || "null"}`);
                 item.body.setAsync(currentBody + " ", { coercionType: Office.CoercionType.Html }, (setResult) => {
                   if (setResult.status !== Office.AsyncResultStatus.Succeeded) {
                     displayNotification(
@@ -833,16 +833,15 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
                       `validateSignatureChanges: Failed to update body, error: ${setResult.error.message}`
                     );
                     displayError("Failed to apply restored signature.", event);
-                    event.completed({ allowEvent: false });
                     return;
                   }
-                  item.saveAsync(() => {
-                    displayError(
-                      "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                      event
-                    );
-                  });
+                  // item.saveAsync(() => {
+                  displayError(
+                    "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                    event
+                  );
                 });
+                // });
               });
             }
             return;
