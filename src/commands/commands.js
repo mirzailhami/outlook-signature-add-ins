@@ -659,6 +659,10 @@ function validateSignature(event) {
           displayError("Failed to determine reply/forward status.", event);
           return;
         }
+        displayNotification(
+          "Info",
+          `currentSignature: ${currentSignature.length}, isReplyOrForward: ${isReplyOrForward}`
+        );
         validateSignatureChanges(item, currentSignature, event, isReplyOrForward);
       });
     }
@@ -678,7 +682,7 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
 
   displayNotification(
     "Info",
-    `validateSignatureChanges: Keys - originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
+    `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
       rawMatchedSignature ? rawMatchedSignature.length : "null"
     }`
   );
