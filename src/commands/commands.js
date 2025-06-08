@@ -135,26 +135,18 @@ const SignatureManager = {
   normalizeSignature(sig) {
     if (!sig) return "";
 
-    let normalized = sig;
+    // Decode HTML entities first
+    const textarea = document.createElement("textarea");
+    textarea.innerHTML = sig;
+    let normalized = textarea.value;
 
-    // Manual HTML entity decoding
-    const htmlEntities = {
-      "&amp;": "&",
-      "&lt;": "<",
-      "&gt;": ">",
-      "&quot;": '"',
-      "&nbsp;": " ",
-      "&#160;": " ",
-      "&#39;": "'",
-      "&apos;": "'",
-    };
+    // Replace HTML entities
+    const htmlEntities = { " ": " ", "&": "&", "<": "<", ">": ">", '"': '"' };
     for (const [entity, char] of Object.entries(htmlEntities)) {
       normalized = normalized.replace(new RegExp(entity, "gi"), char);
     }
-
     // Remove HTML tags
     normalized = normalized.replace(/<[^>]+>/g, " ");
-
     // Clean up text
     normalized = normalized
       .replace(/[\r\n]+/g, " ") // Replace newlines with a single space
@@ -164,7 +156,6 @@ const SignatureManager = {
       .replace(/\s+(email:)/gi, "$1") // Remove spaces before "email:"
       .trim() // Remove leading/trailing spaces
       .toLowerCase();
-
     return normalized;
   },
 
@@ -205,41 +196,25 @@ const SignatureManager = {
    * @param {string} signatureKey - The signature key for fallback.
    * @param {function(boolean, Error|null)} callback - Callback with success and error.
    */
-  /**
-   * Restores a signature to the email body using callbacks.
-   * @param {Office.MessageCompose} item - The email item.
-   * @param {string} signature - The signature to restore.
-   * @param {string} signatureKey - The signature key for fallback.
-   * @param {function(boolean, string|null, Error|null)} callback - Callback with success, restored signature, and error.
-   */
   restoreSignature(item, signature, signatureKey, callback) {
     logger.log("info", "restoreSignatureAsync", { signatureKey, cachedSignatureLength: signature?.length });
-    displayNotification("Info", `restoreSignature: Starting with signature length: ${signature?.length || "null"}`);
-    let restoredSignature = signature;
-    const roamingSettings = Office.context.roamingSettings;
     if (!signature) {
-      restoredSignature = roamingSettings.get(`signature_${signatureKey}`);
+      signature = storageGetItem(`signature_${signatureKey}`);
       logger.log("info", "restoreSignatureAsync", {
         status: "Falling back to signatureKey",
-        fallbackLength: restoredSignature?.length,
+        fallbackLength: signature?.length,
       });
-      displayNotification(
-        "Info",
-        `restoreSignature: Fallback signature length: ${restoredSignature?.length || "null"}`
-      );
-      if (!restoredSignature) {
+      if (!signature) {
         logger.log("error", "restoreSignatureAsync", { error: "No signature available" });
-        displayNotification("Error", "restoreSignature: No signature available for restoration");
         callback(false, new Error("No signature available"));
         return;
       }
     }
 
-    const signatureWithMarker = "<!-- signature -->" + restoredSignature.trim();
+    const signatureWithMarker = "<!-- signature -->" + signature.trim();
     item.body.getAsync("html", { asyncContext: { signatureWithMarker, callback } }, (result) => {
       if (result.status !== Office.AsyncResultStatus.Succeeded) {
         logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
-        displayNotification("Error", "restoreSignature: Failed to get current body");
         callback(false, new Error("Failed to get current body"));
         return;
       }
@@ -248,7 +223,6 @@ const SignatureManager = {
       const startIndex = currentBody.indexOf("<!-- signature -->");
       if (startIndex === -1) {
         logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
-        displayNotification("Warn", "restoreSignature: Signature marker not found, appending instead");
         item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
           callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null);
         });
@@ -597,19 +571,9 @@ function fetchMessageById(messageId, callback) {
 function addSignature(signatureKey, event, isAutoApplied, callback) {
   const item = Office.context.mailbox.item;
 
-  // Use RoamingSettings for persistent storage
-  const roamingSettings = Office.context.roamingSettings;
-  const currentTempKey = roamingSettings.get("tempSignature");
-  if (currentTempKey !== signatureKey) {
-    roamingSettings.set("tempSignature", signatureKey);
-    roamingSettings.saveAsync();
-  }
-
-  const cachedSignature = roamingSettings.get(`signature_${signatureKey}`); // Check RoamingSettings
-  displayNotification(
-    "Info",
-    `addSignature: signatureKey: ${signatureKey}, currentTempKey: ${currentTempKey || "null"}, cachedSignatureLength: ${cachedSignature ? cachedSignature.length : "null"}`
-  );
+  storageRemoveItem("tempSignature");
+  storageSetItem("tempSignature", signatureKey);
+  const cachedSignature = storageGetItem(`signature_${signatureKey}`);
 
   if (cachedSignature && !isAutoApplied) {
     const signatureWithMarker = "<!-- signature -->" + cachedSignature.trim();
@@ -673,19 +637,16 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
           }
           return;
         }
-        roamingSettings.set(`signature_${signatureKey}`, template); // Store in RoamingSettings
-        roamingSettings.saveAsync(() => {
-          displayNotification("Info", `addSignature: Signature stored for ${signatureKey}, length: ${template.length}`);
-          item.body.getAsync("html", (result) => {
-            if (result.status === Office.AsyncResultStatus.Succeeded) {
-              logger.log("debug", "addSignature", {
-                bodyContainsMarker: result.value.includes("<!-- signature -->"),
-                bodyLength: result.value.length,
-              });
-            }
-            event.completed();
-            callback();
-          });
+        item.body.getAsync("html", (result) => {
+          if (result.status === Office.AsyncResultStatus.Succeeded) {
+            logger.log("debug", "addSignature", {
+              bodyContainsMarker: result.value.includes("<!-- signature -->"),
+              bodyLength: result.value.length,
+            });
+          }
+          storageSetItem(`signature_${signatureKey}`, template);
+          event.completed();
+          callback();
         });
       });
     });
@@ -725,6 +686,10 @@ function validateSignature(event) {
           displayError("Failed to determine reply/forward status.", event);
           return;
         }
+        displayNotification(
+          "Info",
+          `currentSignature: ${currentSignature.length}, isReplyOrForward: ${isReplyOrForward}`
+        );
         validateSignatureChanges(item, currentSignature, event, isReplyOrForward);
       });
     }
@@ -739,14 +704,14 @@ function validateSignature(event) {
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
 function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
+  displayNotification("Info", `validateSignatureChanges is starting`);
+
   try {
-    const roamingSettings = Office.context.roamingSettings;
-    const originalSignatureKey = roamingSettings.get("tempSignature");
-    displayNotification("Info", `validateSignatureChanges: Retrieved tempSignature: ${originalSignatureKey || "null"}`);
-    const rawMatchedSignature = originalSignatureKey ? roamingSettings.get(`signature_${originalSignatureKey}`) : null;
+    const originalSignatureKey = storageGetItem("tempSignature");
+    const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
     displayNotification(
       "Info",
-      `validateSignatureChanges: originalSignatureKey: ${originalSignatureKey || "null"}, rawMatchedSignatureLength: ${
+      `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
         rawMatchedSignature ? rawMatchedSignature.length : "null"
       }`
     );
@@ -808,8 +773,7 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
     });
 
     if (isTextValid && isLogoValid) {
-      roamingSettings.remove("tempSignature");
-      roamingSettings.saveAsync();
+      storageRemoveItem("tempSignature");
       displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
       event.completed({ allowEvent: true });
     } else {
