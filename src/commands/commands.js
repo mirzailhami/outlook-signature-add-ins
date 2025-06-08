@@ -771,6 +771,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
           return;
         }
 
+        // Step 2.5: Extract and validate the fetched signature
         const rawMatchedSignature = fetchedSignature;
 
         // Step 3 & 4: Compare and decide
@@ -789,76 +790,40 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
 
         displayNotification(
           "Info",
-          `currentLogoUrl: ${currentLogoUrl?.length || "null"}, expectedLogoUrl: ${expectedLogoUrl?.length || "null"}`
+          `currentLogoUrl: ${currentLogoUrl.length || "null"},
+          expectedLogoUrl: ${expectedLogoUrl.length || "null"}`
         );
+
         displayNotification(
           "Info",
-          `currentSignature: ${currentSignature?.length || "null"}, rawMatchedSignature: ${rawMatchedSignature?.length || "null"}`
+          `currentSignature: ${currentSignature.length || "null"},
+          rawMatchedSignature: ${rawMatchedSignature.length || "null"}`
         );
+
         displayNotification(
           "Info",
-          `cleanCurrentSignature: ${cleanCurrentSignature?.length || "null"}, cleanFetchedSignature: ${cleanFetchedSignature?.length || "null"}`
+          `cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
+          cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
         );
 
         if (isTextValid && isLogoValid) {
           displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
           event.completed({ allowEvent: true });
         } else {
-          displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
+          // restore the signature
           SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
             if (error || !restored) {
-              displayNotification(
-                "Error",
-                `validateSignatureChanges: Restore failed, error: ${error?.message || "none"}`
-              );
               displayError("Failed to restore the original M3 signature. Please reselect.", event);
-              event.completed({ allowEvent: false });
-              return;
-            }
-
-            // Re-fetch the body after restoration
-            item.body.getAsync(Office.CoercionType.Html, (bodyResult) => {
-              if (bodyResult.status !== Office.AsyncResultStatus.Succeeded) {
-                displayNotification(
-                  "Error",
-                  `validateSignatureChanges: Failed to get restored body, error: ${bodyResult.error.message}`
-                );
-                displayError("Failed to validate restored signature.", event);
-                event.completed({ allowEvent: false });
-                return;
-              }
-
-              const restoredSignature = SignatureManager.extractSignatureForOutlookClassic(bodyResult.value);
-              const cleanRestoredSignature = SignatureManager.normalizeSignature(restoredSignature);
-              const restoredLogoMatch = restoredSignature.match(logoRegex);
-              let restoredLogoUrl = restoredLogoMatch ? restoredLogoMatch[1].split("?")[0] : null;
-
-              const isRestoredTextValid = cleanRestoredSignature === cleanFetchedSignature;
-              const isRestoredLogoValid =
-                !expectedLogoUrl || (restoredLogoUrl && expectedLogoUrl && restoredLogoUrl === expectedLogoUrl);
-
-              displayNotification(
-                "Info",
-                `Post-restore: restoredSignature: ${restoredSignature?.length || "null"}, cleanRestoredSignature: ${cleanRestoredSignature?.length || "null"}, restoredLogoUrl: ${restoredLogoUrl?.length || "null"}`
-              );
-              displayNotification(
-                "Info",
-                `Post-restore validation - isRestoredTextValid: ${isRestoredTextValid}, isRestoredLogoValid: ${isRestoredLogoValid}`
-              );
-
-              if (isRestoredTextValid && isRestoredLogoValid) {
-                displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
+            } else {
+              item.saveAsync(() => {
                 displayError(
                   "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
                   event
                 );
-                event.completed({ allowEvent: false }); // Block initial send, require retry
-              } else {
-                displayNotification("Error", "validateSignatureChanges: Restored signature does not match original");
-                displayError("Failed to restore the original M3 signature correctly. Please reselect.", event);
-                event.completed({ allowEvent: false });
-              }
-            });
+              });
+            }
+            event.completed({ allowEvent: false });
+            return;
           });
         }
       });
