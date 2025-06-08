@@ -744,7 +744,7 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
       const originalSignatureKey = detectSignatureKey(currentSignature);
       displayNotification(
         "Info",
-        `validateSignatureChanges: Detected originalSignatureKey from current signature: ${originalSignatureKey || "null"}, host: ${hostName}`
+        `validateSignatureChanges: Detected originalSignatureKey from current signature: ${originalSignatureKey || "null"}, currentSignature: ${currentSignature.length}`
       );
 
       if (!originalSignatureKey) {
