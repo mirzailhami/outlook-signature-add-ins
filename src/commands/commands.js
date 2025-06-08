@@ -745,15 +745,19 @@ function validateSignature(event) {
  * @param {string} currentSignature - The current signature in the email body.
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
-function validateSignatureChanges(item, currentSignature, event) {
+function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
+  displayNotification(
+    "Info",
+    `validateSignatureChanges is starting, host: ${Office.context.mailbox.diagnostics.hostName}`
+  );
+
   try {
     const hostName = Office.context.mailbox.diagnostics.hostName;
     const isClassicOutlook = hostName === "Outlook";
 
-    let originalSignatureKey, rawMatchedSignature;
     if (isClassicOutlook) {
       // Step 1: Detect signature key from current signature
-      originalSignatureKey = detectSignatureKey(currentSignature);
+      const originalSignatureKey = detectSignatureKey(currentSignature);
       displayNotification(
         "Info",
         `validateSignatureChanges: Detected originalSignatureKey from current signature: ${originalSignatureKey || "null"}, host: ${hostName}`
@@ -777,7 +781,7 @@ function validateSignatureChanges(item, currentSignature, event) {
           return;
         }
 
-        rawMatchedSignature = fetchedSignature;
+        const rawMatchedSignature = fetchedSignature;
         displayNotification(
           "Info",
           `validateSignatureChanges: Fetched signature for ${originalSignatureKey}, length: ${rawMatchedSignature.length}`
@@ -829,17 +833,17 @@ function validateSignatureChanges(item, currentSignature, event) {
         }
       });
       return; // Exit early for async handling in Classic Outlook
-    } else {
-      // Non-Classic Outlook (OWA, New Outlook, mobile) uses existing storage-based logic
-      originalSignatureKey = storageGetItem("tempSignature");
-      rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
-      displayNotification(
-        "Info",
-        `validateSignatureChanges: originalSignatureKey: ${originalSignatureKey || "null"}, rawMatchedSignatureLength: ${
-          rawMatchedSignature ? rawMatchedSignature.length : "null"
-        }, source: ${storageGetItem("tempSignature") ? "localStorage" : "in-memory"}`
-      );
     }
+
+    // Non-Classic Outlook (OWA, New Outlook, mobile) uses existing storage-based logic
+    const originalSignatureKey = storageGetItem("tempSignature");
+    const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: originalSignatureKey: ${originalSignatureKey || "null"}, rawMatchedSignatureLength: ${
+        rawMatchedSignature ? rawMatchedSignature.length : "null"
+      }, source: ${storageGetItem("tempSignature") ? "localStorage" : "in-memory"}`
+    );
 
     displayNotification(
       "Info",
@@ -891,6 +895,7 @@ function validateSignatureChanges(item, currentSignature, event) {
       cleanCurrentSignature,
       cleanCachedSignature,
       originalSignatureKey,
+      isReplyOrForward,
       currentLogoUrl,
       expectedLogoUrl,
       isTextValid,
@@ -925,6 +930,7 @@ function validateSignatureChanges(item, currentSignature, event) {
       });
     }
   } catch (error) {
+    displayNotification("Error", `validateSignatureChanges: Exception - ${error.message}`);
     logger.log("error", "validateSignatureChanges", { error: error.message, stack: error.stack });
     displayError("An unexpected error occurred during signature validation.", event);
   }
