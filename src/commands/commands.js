@@ -11,8 +11,8 @@ function storageSetItem(key, value) {
   //   localStorage.setItem(key, value);
   //   displayNotification("Info", `localStorage.setItem(${key}, ${value})`);
   // } else {
+  displayNotification("Info", `SET storage[${key}] = ${value.length}`);
   storage[key] = value; // Store in a simple object
-  displayNotification("Info", `storage[${key}] = ${value}`);
   // }
 }
 
@@ -31,7 +31,7 @@ function storageRemoveItem(key) {
   //   displayNotification("Info", `localStorage remove ${key}`);
   //   localStorage.removeItem(key);
   // } else {
-  displayNotification("Info", `storage remove ${key}`);
+  displayNotification("Info", `DEL storage ${key}`);
   delete storage[key]; // Remove from the fallback object
   // }
 }
@@ -584,7 +584,7 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
   try {
     const item = Office.context.mailbox.item;
 
-    storageRemoveItem("tempSignature");
+    // storageRemoveItem("tempSignature");
     storageSetItem("tempSignature", signatureKey);
     // tempSignature["key"] = signatureKey;
     const cachedSignature = storageGetItem(`signature_${signatureKey}`);
