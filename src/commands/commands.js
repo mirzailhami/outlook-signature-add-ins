@@ -767,19 +767,6 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
 
         // Step 2.5: Extract and validate the fetched signature
         const rawMatchedSignature = fetchedSignature;
-        if (!rawMatchedSignature) {
-          displayNotification(
-            "Error",
-            `validateSignatureChanges: extractSignatureForOutlookClassic returned null for ${originalSignatureKey}`
-          );
-          displayError("Failed to process fetched signature. Please reselect.", event);
-          event.completed({ allowEvent: false });
-          return;
-        }
-        displayNotification(
-          "Info",
-          `validateSignatureChanges: Fetched signature for ${originalSignatureKey}, length: ${rawMatchedSignature.length}`
-        );
 
         // Step 3 & 4: Compare and decide
         const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
@@ -809,25 +796,12 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
           event.completed({ allowEvent: true });
         } else {
           displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
-          SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
-            displayNotification(
-              "Info",
-              `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
+          addSignature(originalSignatureKey, event, false, () => {
+            displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
+            displayError(
+              "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+              event
             );
-
-            if (error || !restored) {
-              logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
-              displayNotification("Error", "validateSignatureChanges: Restore failed, displaying error");
-              displayError("Failed to restore the original M3 signature. Please reselect.", event);
-            } else {
-              logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
-              displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
-              displayError(
-                "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                event
-              );
-            }
-            event.completed({ allowEvent: false });
           });
         }
       });
