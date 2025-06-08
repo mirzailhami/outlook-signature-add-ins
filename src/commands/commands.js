@@ -10,55 +10,55 @@ import { Client } from "@microsoft/microsoft-graph-client";
 let storage = typeof localStorage !== "undefined" ? localStorage : {};
 
 function storageSetItem(key, value) {
-  const hostName = Office.context.mailbox.diagnostics.hostName;
-  displayNotification(
-    "Info",
-    `storageSetItem: Setting ${key} = ${value}, host: ${hostName}, using ${
-      typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
-    }`
-  );
+  // const hostName = Office.context.mailbox.diagnostics.hostName;
+  // displayNotification(
+  //   "Info",
+  //   `storageSetItem: Setting ${key} = ${value}, host: ${hostName}, using ${
+  //     typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
+  //   }`
+  // );
   if (typeof localStorage !== "undefined") {
     localStorage.setItem(key, value);
-    displayNotification("Info", `storageSetItem: Using localStorage for ${key} = ${value}`);
+    // displayNotification("Info", `storageSetItem: Using localStorage for ${key} = ${value}`);
   } else {
     storage[key] = value;
-    displayNotification("Info", `storageSetItem: Using in-memory for ${key} = ${value}`);
+    // displayNotification("Info", `storageSetItem: Using in-memory for ${key} = ${value}`);
   }
 }
 
 function storageGetItem(key) {
-  const hostName = Office.context.mailbox.diagnostics.hostName;
-  displayNotification(
-    "Info",
-    `storageGetItem: Getting ${key}, host: ${hostName}, using ${
-      typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
-    }`
-  );
+  // const hostName = Office.context.mailbox.diagnostics.hostName;
+  // displayNotification(
+  //   "Info",
+  //   `storageGetItem: Getting ${key}, host: ${hostName}, using ${
+  //     typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
+  //   }`
+  // );
   if (typeof localStorage !== "undefined") {
     const value = localStorage.getItem(key);
-    displayNotification("Info", `storageGetItem: Using localStorage for ${key} = ${value || "null"}`);
+    // displayNotification("Info", `storageGetItem: Using localStorage for ${key} = ${value || "null"}`);
     return value;
   } else {
     const value = storage[key] || null;
-    displayNotification("Info", `storageGetItem: Using in-memory for ${key} = ${value || "null"}`);
+    // displayNotification("Info", `storageGetItem: Using in-memory for ${key} = ${value || "null"}`);
     return value;
   }
 }
 
 function storageRemoveItem(key) {
-  const hostName = Office.context.mailbox.diagnostics.hostName;
-  displayNotification(
-    "Info",
-    `storageRemoveItem: Removing ${key}, host: ${hostName}, using ${
-      typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
-    }`
-  );
+  // const hostName = Office.context.mailbox.diagnostics.hostName;
+  // displayNotification(
+  //   "Info",
+  //   `storageRemoveItem: Removing ${key}, host: ${hostName}, using ${
+  //     typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
+  //   }`
+  // );
   if (typeof localStorage !== "undefined") {
     localStorage.removeItem(key);
-    displayNotification("Info", `storageRemoveItem: Using localStorage for ${key}`);
+    // displayNotification("Info", `storageRemoveItem: Using localStorage for ${key}`);
   } else {
     delete storage[key];
-    displayNotification("Info", `storageRemoveItem: Using in-memory for ${key}`);
+    // displayNotification("Info", `storageRemoveItem: Using in-memory for ${key}`);
   }
 }
 
@@ -711,7 +711,7 @@ function validateSignature(event) {
     return;
   }
 
-  item.body.getAsync("html", (bodyResult) => {
+  item.body.getAsync(Office.CoercionType.Html, (bodyResult) => {
     if (bodyResult.status !== Office.AsyncResultStatus.Succeeded) {
       logger.log("error", "validateSignature", { error: "Failed to get body" });
       displayError("Failed to get email body.", event);
@@ -811,24 +811,18 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
           event.completed({ allowEvent: true });
         } else {
           // restore the signature
-          displayError(
-            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-            event
-          );
-          const signatureWithMarker = "<!-- signature -->" + rawMatchedSignature.trim();
-          item.body.setSignatureAsync(
-            signatureWithMarker,
-            { coercionType: Office.CoercionType.Html },
-            (asyncResult) => {
-              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                displayError(`Failed to apply ${signatureKey}.`, event);
-                return;
-              }
-              displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
-              event.completed();
-              return;
+          SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
+            if (error || !restored) {
+              displayError("Failed to restore the original M3 signature. Please reselect.", event);
+            } else {
+              displayError(
+                "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                event
+              );
             }
-          );
+            event.completed({ allowEvent: false });
+            return;
+          });
         }
       });
       return; // Exit early for async handling in Classic Outlook
@@ -858,7 +852,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
       cleanCurrentSignature,
       cleanCachedSignature,
       originalSignatureKey,
-      isReplyOrForward,
       currentLogoUrl,
       expectedLogoUrl,
       isTextValid,
