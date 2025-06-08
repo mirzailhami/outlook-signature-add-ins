@@ -795,14 +795,25 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
           displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
           event.completed({ allowEvent: true });
         } else {
-          displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
-          addSignature(originalSignatureKey, event, false, () => {
-            displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
-            displayError(
-              "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-              event
-            );
-          });
+          // restore the signature
+          displayError(
+            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+            event
+          );
+          const signatureWithMarker = "<!-- signature -->" + rawMatchedSignature.trim();
+          item.body.setSignatureAsync(
+            signatureWithMarker,
+            { coercionType: Office.CoercionType.Html },
+            (asyncResult) => {
+              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                displayError(`Failed to apply ${signatureKey}.`, event);
+                return;
+              }
+              displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
+              event.completed();
+              return;
+            }
+          );
         }
       });
       return; // Exit early for async handling in Classic Outlook
