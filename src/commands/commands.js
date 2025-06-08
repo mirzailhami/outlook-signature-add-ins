@@ -719,9 +719,10 @@ function validateSignature(event) {
     }
 
     const body = bodyResult.value;
-    const currentSignature = isClassicOutlook
-      ? SignatureManager.extractSignatureForOutlookClassic(body)
-      : SignatureManager.extractSignature(body);
+    // const currentSignature = isClassicOutlook
+    //   ? SignatureManager.extractSignatureForOutlookClassic(body)
+    //   : SignatureManager.extractSignature(body);
+    const currentSignature = SignatureManager.extractSignature(body);
 
     displayNotification(
       "Info",
@@ -791,19 +792,20 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         displayNotification(
           "Info",
           `currentLogoUrl: ${currentLogoUrl.length || "null"},
-          expectedLogoUrl: ${expectedLogoUrl.length || "null"},
-          currentSignature: ${currentSignature.length || "null"},
-          rawMatchedSignature: ${rawMatchedSignature.length || "null"},
-          cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
-          cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
+          expectedLogoUrl: ${expectedLogoUrl.length || "null"}`
         );
 
-        // displayNotification(
-        //   "Info",
-        //   `validateSignatureChanges:
-        //   isTextValid: ${isTextValid},
-        //   isLogoValid: ${isLogoValid}`
-        // );
+        displayNotification(
+          "Info",
+          `currentSignature: ${currentSignature.length || "null"},
+          rawMatchedSignature: ${rawMatchedSignature.length || "null"}`
+        );
+
+        displayNotification(
+          "Info",
+          `cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
+          cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
+        );
 
         if (isTextValid && isLogoValid) {
           displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
