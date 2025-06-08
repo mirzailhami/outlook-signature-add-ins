@@ -677,16 +677,17 @@ function validateSignature(event) {
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
 function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
-  displayNotification(
-    "Info",
-    `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
-      rawMatchedSignature ? rawMatchedSignature.length : "null"
-    }`
-  );
+  displayNotification("Info", `validateSignatureChanges is starting`);
 
   try {
     const originalSignatureKey = localStorage.getItem("tempSignature");
     const rawMatchedSignature = localStorage.getItem(`signature_${originalSignatureKey}`);
+    displayNotification(
+      "Info",
+      `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
+        rawMatchedSignature ? rawMatchedSignature.length : "null"
+      }`
+    );
     displayNotification(
       "Info",
       `validateSignatureChanges: Before normalize - currentSignatureLength: ${currentSignature ? currentSignature.length : "null"}`
