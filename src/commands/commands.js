@@ -723,18 +723,7 @@ function validateSignature(event) {
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
-      SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
-        if (error) {
-          logger.log("error", "validateSignature", { error: error.message });
-          displayError("Failed to determine reply/forward status.", event);
-          return;
-        }
-        // displayNotification(
-        //   "Info",
-        //   `currentSignature: ${currentSignature.length}, isReplyOrForward: ${isReplyOrForward}`
-        // );
-        validateSignatureChanges(item, currentSignature, event);
-      });
+      validateSignatureChanges(item, currentSignature, event);
     }
   });
 }
@@ -808,7 +797,11 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
 
         displayNotification(
           "Info",
-          `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl || "null"}, expectedLogoUrl: ${expectedLogoUrl || "null"}`
+          `validateSignatureChanges: 
+          isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid},
+          currentLogoUrl: ${currentLogoUrl.length || "null"}, expectedLogoUrl: ${expectedLogoUrl.length || "null"},
+          cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
+          cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
         );
 
         if (isTextValid && isLogoValid) {
