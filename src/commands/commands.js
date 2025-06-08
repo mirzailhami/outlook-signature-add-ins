@@ -798,12 +798,12 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
           cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
         );
 
-        displayNotification(
-          "Info",
-          `validateSignatureChanges: 
-          isTextValid: ${isTextValid},
-          isLogoValid: ${isLogoValid}`
-        );
+        // displayNotification(
+        //   "Info",
+        //   `validateSignatureChanges:
+        //   isTextValid: ${isTextValid},
+        //   isLogoValid: ${isLogoValid}`
+        // );
 
         if (isTextValid && isLogoValid) {
           displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
