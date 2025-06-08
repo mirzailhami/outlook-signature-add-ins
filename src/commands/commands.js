@@ -14,6 +14,7 @@ function storageSetItem(key, value) {
     localStorage.setItem(key, value);
   } else {
     storage[key] = value; // Store in a simple object
+    displayNotification("Info", `Storage set ${key}: ${value}`);
   }
 }
 
@@ -21,6 +22,7 @@ function storageGetItem(key) {
   if (typeof localStorage !== "undefined") {
     return localStorage.getItem(key);
   } else {
+    displayNotification("Info", `Storage get ${key}: ${storage[key]}`);
     return storage[key] || null; // Return null if key doesn't exist
   }
 }
@@ -29,6 +31,7 @@ function storageRemoveItem(key) {
   if (typeof localStorage !== "undefined") {
     localStorage.removeItem(key);
   } else {
+    displayNotification("Info", `Storage remove ${key}`);
     delete storage[key]; // Remove from the fallback object
   }
 }
@@ -583,6 +586,7 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
 
     storageRemoveItem("tempSignature");
     storageSetItem("tempSignature", signatureKey);
+    // tempSignature["key"] = signatureKey;
     const cachedSignature = storageGetItem(`signature_${signatureKey}`);
 
     if (cachedSignature && !isAutoApplied) {
@@ -701,10 +705,10 @@ function validateSignature(event) {
           displayError("Failed to determine reply/forward status.", event);
           return;
         }
-        displayNotification(
-          "Info",
-          `currentSignature: ${currentSignature.length}, isReplyOrForward: ${isReplyOrForward}`
-        );
+        // displayNotification(
+        //   "Info",
+        //   `currentSignature: ${currentSignature.length}, isReplyOrForward: ${isReplyOrForward}`
+        // );
         validateSignatureChanges(item, currentSignature, event);
       });
     }
