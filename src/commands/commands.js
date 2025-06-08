@@ -840,6 +840,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
                 "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
                 event
               );
+              event.completed({ allowEvent: true });
               // });
               // });
               // });
