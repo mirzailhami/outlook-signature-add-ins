@@ -650,21 +650,10 @@ function validateSignature(event) {
       ? SignatureManager.extractSignatureForOutlookClassic(body)
       : SignatureManager.extractSignature(body);
 
-    displayNotification(
-      "Info",
-      `validateSignature: Signature detected - currentSignatureLength: ${currentSignature ? currentSignature.length : 0}`
-    );
-
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
       SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
-        displayNotification(
-          "Info",
-          `validateSignature: isReplyOrForward result - isReplyOrForward: ${isReplyOrForward}, error: ${
-            error ? error.message : "none"
-          }`
-        );
         if (error) {
           logger.log("error", "validateSignature", { error: error.message });
           displayError("Failed to determine reply/forward status.", event);
@@ -684,77 +673,99 @@ function validateSignature(event) {
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
 function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
-  displayNotification("Info", `validateSignatureChanges: Started - isReplyOrForward: ${isReplyOrForward}`);
-
   const originalSignatureKey = localStorage.getItem("tempSignature");
   const rawMatchedSignature = localStorage.getItem(`signature_${originalSignatureKey}`);
 
-  displayNotification(
-    "Info",
-    `validateSignatureChanges: Keys - originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
-      rawMatchedSignature ? rawMatchedSignature.length : "null"
-    }`
-  );
+  try {
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: Before normalize - currentSignatureLength: ${currentSignature ? currentSignature.length : "null"}`
+    );
+    const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: After normalize current - cleanCurrentSignatureLength: ${cleanCurrentSignature ? cleanCurrentSignature.length : "null"}`
+    );
 
-  const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
-  const cleanCachedSignature = SignatureManager.normalizeSignature(rawMatchedSignature);
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: Before normalize cached - rawMatchedSignature: ${rawMatchedSignature ? "present" : "null"}`
+    );
+    const cleanCachedSignature = SignatureManager.normalizeSignature(rawMatchedSignature);
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: After normalize cached - cleanCachedSignatureLength: ${cleanCachedSignature ? cleanCachedSignature.length : "null"}`
+    );
 
-  const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/[^"']+))["'][^>]*>/i;
-  const currentLogoMatch = currentSignature.match(logoRegex);
-  let currentLogoUrl = currentLogoMatch ? currentLogoMatch[1].split("?")[0] : null;
+    const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/[^"']+))["'][^>]*>/i;
+    displayNotification("Info", "validateSignatureChanges: Before logo match");
+    const currentLogoMatch = currentSignature.match(logoRegex);
+    let currentLogoUrl = currentLogoMatch ? currentLogoMatch[1].split("?")[0] : null;
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: After logo match current - currentLogoUrl: ${currentLogoUrl}`
+    );
 
-  const expectedLogoMatch = rawMatchedSignature.match(logoRegex);
-  let expectedLogoUrl = expectedLogoMatch ? expectedLogoMatch[1].split("?")[0] : null;
+    const expectedLogoMatch = rawMatchedSignature ? rawMatchedSignature.match(logoRegex) : null;
+    let expectedLogoUrl = expectedLogoMatch ? expectedLogoMatch[1].split("?")[0] : null;
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: After logo match cached - expectedLogoUrl: ${expectedLogoUrl}`
+    );
 
-  const isTextValid = cleanCurrentSignature === cleanCachedSignature;
-  const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
+    const isTextValid = cleanCurrentSignature === cleanCachedSignature;
+    const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
 
-  displayNotification(
-    "Info",
-    `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
-  );
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
+    );
 
-  logger.log("debug", "validateSignatureChanges", {
-    rawCurrentSignatureLength: currentSignature.length,
-    rawMatchedSignatureLength: rawMatchedSignature ? rawMatchedSignature.length : 0,
-    cleanCurrentSignature,
-    cleanCachedSignature,
-    originalSignatureKey,
-    isReplyOrForward,
-    currentLogoUrl,
-    expectedLogoUrl,
-    isTextValid,
-    isLogoValid,
-  });
-
-  if (isTextValid && isLogoValid) {
-    localStorage.removeItem("tempSignature");
-    displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
-    event.completed({ allowEvent: true });
-  } else {
-    displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
-    SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
-      displayNotification(
-        "Info",
-        `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
-      );
-
-      if (error || !restored) {
-        logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
-        displayNotification("Error", "validateSignatureChanges: Restore failed, displaying error");
-        displayError("Failed to restore the original M3 signature. Please reselect.", event);
-      } else {
-        logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
-        displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
-        displayError(
-          "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-          event
-        );
-      }
-      // Fallback to ensure event completes and prevents timeout
-      displayNotification("Info", "validateSignatureChanges: Ensuring event completion");
-      event.completed({ allowEvent: false });
+    logger.log("debug", "validateSignatureChanges", {
+      rawCurrentSignatureLength: currentSignature.length,
+      rawMatchedSignatureLength: rawMatchedSignature ? rawMatchedSignature.length : 0,
+      cleanCurrentSignature,
+      cleanCachedSignature,
+      originalSignatureKey,
+      isReplyOrForward,
+      currentLogoUrl,
+      expectedLogoUrl,
+      isTextValid,
+      isLogoValid,
     });
+
+    if (isTextValid && isLogoValid) {
+      localStorage.removeItem("tempSignature");
+      displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
+      event.completed({ allowEvent: true });
+    } else {
+      displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
+      SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
+        displayNotification(
+          "Info",
+          `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
+        );
+
+        if (error || !restored) {
+          logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
+          displayNotification("Error", "validateSignatureChanges: Restore failed, displaying error");
+          displayError("Failed to restore the original M3 signature. Please reselect.", event);
+        } else {
+          logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
+          displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
+          displayError(
+            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+            event
+          );
+        }
+        displayNotification("Info", "validateSignatureChanges: Ensuring event completion");
+        event.completed({ allowEvent: false });
+      });
+    }
+  } catch (error) {
+    displayNotification("Error", `validateSignatureChanges: Exception - ${error.message}`);
+    logger.log("error", "validateSignatureChanges", { error: error.message, stack: error.stack });
+    displayError("An unexpected error occurred during signature validation.", event);
   }
 }
 
