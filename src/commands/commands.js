@@ -205,25 +205,41 @@ const SignatureManager = {
    * @param {string} signatureKey - The signature key for fallback.
    * @param {function(boolean, Error|null)} callback - Callback with success and error.
    */
+  /**
+   * Restores a signature to the email body using callbacks.
+   * @param {Office.MessageCompose} item - The email item.
+   * @param {string} signature - The signature to restore.
+   * @param {string} signatureKey - The signature key for fallback.
+   * @param {function(boolean, string|null, Error|null)} callback - Callback with success, restored signature, and error.
+   */
   restoreSignature(item, signature, signatureKey, callback) {
     logger.log("info", "restoreSignatureAsync", { signatureKey, cachedSignatureLength: signature?.length });
+    displayNotification("Info", `restoreSignature: Starting with signature length: ${signature?.length || "null"}`);
+    let restoredSignature = signature;
+    const roamingSettings = Office.context.roamingSettings;
     if (!signature) {
-      signature = storageGetItem(`signature_${signatureKey}`);
+      restoredSignature = roamingSettings.get(`signature_${signatureKey}`);
       logger.log("info", "restoreSignatureAsync", {
         status: "Falling back to signatureKey",
-        fallbackLength: signature?.length,
+        fallbackLength: restoredSignature?.length,
       });
-      if (!signature) {
+      displayNotification(
+        "Info",
+        `restoreSignature: Fallback signature length: ${restoredSignature?.length || "null"}`
+      );
+      if (!restoredSignature) {
         logger.log("error", "restoreSignatureAsync", { error: "No signature available" });
+        displayNotification("Error", "restoreSignature: No signature available for restoration");
         callback(false, new Error("No signature available"));
         return;
       }
     }
 
-    const signatureWithMarker = "<!-- signature -->" + signature.trim();
+    const signatureWithMarker = "<!-- signature -->" + restoredSignature.trim();
     item.body.getAsync("html", { asyncContext: { signatureWithMarker, callback } }, (result) => {
       if (result.status !== Office.AsyncResultStatus.Succeeded) {
         logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
+        displayNotification("Error", "restoreSignature: Failed to get current body");
         callback(false, new Error("Failed to get current body"));
         return;
       }
@@ -232,6 +248,7 @@ const SignatureManager = {
       const startIndex = currentBody.indexOf("<!-- signature -->");
       if (startIndex === -1) {
         logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
+        displayNotification("Warn", "restoreSignature: Signature marker not found, appending instead");
         item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
           callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null);
         });
@@ -579,15 +596,16 @@ function fetchMessageById(messageId, callback) {
  */
 function addSignature(signatureKey, event, isAutoApplied, callback) {
   const item = Office.context.mailbox.item;
+
+  // Use RoamingSettings for persistent storage
   const roamingSettings = Office.context.roamingSettings;
   const currentTempKey = roamingSettings.get("tempSignature");
-
   if (currentTempKey !== signatureKey) {
     roamingSettings.set("tempSignature", signatureKey);
     roamingSettings.saveAsync();
   }
-  const cachedSignature = roamingSettings.get(`signature_${signatureKey}`); // Use RoamingSettings
 
+  const cachedSignature = roamingSettings.get(`signature_${signatureKey}`); // Check RoamingSettings
   displayNotification(
     "Info",
     `addSignature: signatureKey: ${signatureKey}, currentTempKey: ${currentTempKey || "null"}, cachedSignatureLength: ${cachedSignature ? cachedSignature.length : "null"}`
@@ -656,17 +674,18 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
           return;
         }
         roamingSettings.set(`signature_${signatureKey}`, template); // Store in RoamingSettings
-        roamingSettings.saveAsync();
-        displayNotification("Info", `addSignature: Signature stored for ${signatureKey}, length: ${template.length}`);
-        item.body.getAsync("html", (result) => {
-          if (result.status === Office.AsyncResultStatus.Succeeded) {
-            logger.log("debug", "addSignature", {
-              bodyContainsMarker: result.value.includes("<!-- signature -->"),
-              bodyLength: result.value.length,
-            });
-          }
-          event.completed();
-          callback();
+        roamingSettings.saveAsync(() => {
+          displayNotification("Info", `addSignature: Signature stored for ${signatureKey}, length: ${template.length}`);
+          item.body.getAsync("html", (result) => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+              logger.log("debug", "addSignature", {
+                bodyContainsMarker: result.value.includes("<!-- signature -->"),
+                bodyLength: result.value.length,
+              });
+            }
+            event.completed();
+            callback();
+          });
         });
       });
     });
