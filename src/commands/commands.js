@@ -575,6 +575,11 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
   storageSetItem("tempSignature", signatureKey);
   const cachedSignature = storageGetItem(`signature_${signatureKey}`);
 
+  displayNotification(
+    "Info",
+    `signatureKey: ${signatureKey}, cachedSignatureLength: ${cachedSignature ? cachedSignature.length : "null"}`
+  );
+
   if (cachedSignature && !isAutoApplied) {
     const signatureWithMarker = "<!-- signature -->" + cachedSignature.trim();
     item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
@@ -686,10 +691,6 @@ function validateSignature(event) {
           displayError("Failed to determine reply/forward status.", event);
           return;
         }
-        displayNotification(
-          "Info",
-          `currentSignature: ${currentSignature.length}, isReplyOrForward: ${isReplyOrForward}`
-        );
         validateSignatureChanges(item, currentSignature, event, isReplyOrForward);
       });
     }
@@ -704,8 +705,6 @@ function validateSignature(event) {
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
 function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
-  displayNotification("Info", `validateSignatureChanges is starting`);
-
   try {
     const originalSignatureKey = storageGetItem("tempSignature");
     const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
