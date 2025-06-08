@@ -654,6 +654,7 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
             });
           }
           storageSetItem(`signature_${signatureKey}`, template);
+          tempSignature[signatureKey] = template;
           event.completed();
           callback();
         });
@@ -716,68 +717,70 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
   try {
     const originalSignatureKey = storageGetItem("tempSignature");
     const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
+    console.log(originalSignatureKey);
+    console.log(tempSignature[originalSignatureKey]);
     displayNotification(
       "Info",
       `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
         rawMatchedSignature ? rawMatchedSignature.length : "null"
       }`
     );
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: Before normalize - currentSignatureLength: ${currentSignature ? currentSignature.length : "null"}`
-    );
+    // displayNotification(
+    //   "Info",
+    //   `validateSignatureChanges: Before normalize - currentSignatureLength: ${currentSignature ? currentSignature.length : "null"}`
+    // );
     const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: After normalize current - cleanCurrentSignatureLength: ${cleanCurrentSignature ? cleanCurrentSignature.length : "null"}`
-    );
+    // displayNotification(
+    //   "Info",
+    //   `validateSignatureChanges: After normalize current - cleanCurrentSignatureLength: ${cleanCurrentSignature ? cleanCurrentSignature.length : "null"}`
+    // );
 
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: Before normalize cached - rawMatchedSignature: ${rawMatchedSignature ? "present" : "null"}`
-    );
+    // displayNotification(
+    //   "Info",
+    //   `validateSignatureChanges: Before normalize cached - rawMatchedSignature: ${rawMatchedSignature ? "present" : "null"}`
+    // );
     const cleanCachedSignature = SignatureManager.normalizeSignature(rawMatchedSignature);
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: After normalize cached - cleanCachedSignatureLength: ${cleanCachedSignature ? cleanCachedSignature.length : "null"}`
-    );
+    // displayNotification(
+    //   "Info",
+    //   `validateSignatureChanges: After normalize cached - cleanCachedSignatureLength: ${cleanCachedSignature ? cleanCachedSignature.length : "null"}`
+    // );
 
     const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/[^"']+))["'][^>]*>/i;
-    displayNotification("Info", "validateSignatureChanges: Before logo match");
+    // displayNotification("Info", "validateSignatureChanges: Before logo match");
     const currentLogoMatch = currentSignature.match(logoRegex);
     let currentLogoUrl = currentLogoMatch ? currentLogoMatch[1].split("?")[0] : null;
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: After logo match current - currentLogoUrl: ${currentLogoUrl}`
-    );
+    // displayNotification(
+    //   "Info",
+    //   `validateSignatureChanges: After logo match current - currentLogoUrl: ${currentLogoUrl}`
+    // );
 
     const expectedLogoMatch = rawMatchedSignature ? rawMatchedSignature.match(logoRegex) : null;
     let expectedLogoUrl = expectedLogoMatch ? expectedLogoMatch[1].split("?")[0] : null;
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: After logo match cached - expectedLogoUrl: ${expectedLogoUrl}`
-    );
+    // displayNotification(
+    //   "Info",
+    //   `validateSignatureChanges: After logo match cached - expectedLogoUrl: ${expectedLogoUrl}`
+    // );
 
     const isTextValid = cleanCurrentSignature === cleanCachedSignature;
     const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
 
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
-    );
+    // displayNotification(
+    //   "Info",
+    //   `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
+    // );
 
-    logger.log("debug", "validateSignatureChanges", {
-      rawCurrentSignatureLength: currentSignature.length,
-      rawMatchedSignatureLength: rawMatchedSignature ? rawMatchedSignature.length : 0,
-      cleanCurrentSignature,
-      cleanCachedSignature,
-      originalSignatureKey,
-      isReplyOrForward,
-      currentLogoUrl,
-      expectedLogoUrl,
-      isTextValid,
-      isLogoValid,
-    });
+    // logger.log("debug", "validateSignatureChanges", {
+    //   rawCurrentSignatureLength: currentSignature.length,
+    //   rawMatchedSignatureLength: rawMatchedSignature ? rawMatchedSignature.length : 0,
+    //   cleanCurrentSignature,
+    //   cleanCachedSignature,
+    //   originalSignatureKey,
+    //   isReplyOrForward,
+    //   currentLogoUrl,
+    //   expectedLogoUrl,
+    //   isTextValid,
+    //   isLogoValid,
+    // });
 
     if (isTextValid && isLogoValid) {
       storageRemoveItem("tempSignature");
@@ -786,10 +789,10 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
     } else {
       displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
       SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
-        displayNotification(
-          "Info",
-          `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
-        );
+        // displayNotification(
+        //   "Info",
+        //   `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
+        // );
 
         if (error || !restored) {
           logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
@@ -803,7 +806,7 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
             event
           );
         }
-        displayNotification("Info", "validateSignatureChanges: Ensuring event completion");
+        // displayNotification("Info", "validateSignatureChanges: Ensuring event completion");
         event.completed({ allowEvent: false });
       });
     }
@@ -992,3 +995,4 @@ Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandle
 
 let isMobile = false;
 let isClassicOutlook = false;
+let tempSignature = {};
