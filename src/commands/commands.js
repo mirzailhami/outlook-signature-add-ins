@@ -11,30 +11,13 @@ let storage = typeof localStorage !== "undefined" ? localStorage : {};
 
 function storageSetItem(key, value) {
   const hostName = Office.context.mailbox.diagnostics.hostName;
-  const isClassicOutlook = hostName === "Outlook";
   displayNotification(
     "Info",
     `storageSetItem: Setting ${key} = ${value}, host: ${hostName}, using ${
-      isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
-        ? "OfficeRuntime.Storage"
-        : typeof localStorage !== "undefined"
-          ? "localStorage"
-          : "in-memory storage"
+      typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
     }`
   );
-  if (isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
-    OfficeRuntime.Storage.setItem(key, value).catch((error) => {
-      logger.log("error", "storageSetItem", { error: error.message, key, value });
-      displayNotification("Error", `storageSetItem: OfficeRuntime.Storage failed for ${key}, falling back`);
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem(key, value);
-        displayNotification("Info", `storageSetItem: Fallback to localStorage for ${key} = ${value}`);
-      } else {
-        storage[key] = value;
-        displayNotification("Info", `storageSetItem: Fallback to in-memory for ${key} = ${value}`);
-      }
-    });
-  } else if (typeof localStorage !== "undefined") {
+  if (typeof localStorage !== "undefined") {
     localStorage.setItem(key, value);
     displayNotification("Info", `storageSetItem: Using localStorage for ${key} = ${value}`);
   } else {
@@ -45,32 +28,13 @@ function storageSetItem(key, value) {
 
 function storageGetItem(key) {
   const hostName = Office.context.mailbox.diagnostics.hostName;
-  const isClassicOutlook = hostName === "Outlook";
   displayNotification(
     "Info",
     `storageGetItem: Getting ${key}, host: ${hostName}, using ${
-      isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
-        ? "OfficeRuntime.Storage"
-        : typeof localStorage !== "undefined"
-          ? "localStorage"
-          : "in-memory storage"
+      typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
     }`
   );
-  if (isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
-    return OfficeRuntime.Storage.getItem(key).catch((error) => {
-      logger.log("error", "storageGetItem", { error: error.message, key });
-      displayNotification("Error", `storageGetItem: OfficeRuntime.Storage failed for ${key}, falling back`);
-      if (typeof localStorage !== "undefined") {
-        const value = localStorage.getItem(key);
-        displayNotification("Info", `storageGetItem: Fallback to localStorage for ${key} = ${value || "null"}`);
-        return value;
-      } else {
-        const value = storage[key] || null;
-        displayNotification("Info", `storageGetItem: Fallback to in-memory for ${key} = ${value || "null"}`);
-        return value;
-      }
-    });
-  } else if (typeof localStorage !== "undefined") {
+  if (typeof localStorage !== "undefined") {
     const value = localStorage.getItem(key);
     displayNotification("Info", `storageGetItem: Using localStorage for ${key} = ${value || "null"}`);
     return value;
@@ -83,30 +47,13 @@ function storageGetItem(key) {
 
 function storageRemoveItem(key) {
   const hostName = Office.context.mailbox.diagnostics.hostName;
-  const isClassicOutlook = hostName === "Outlook";
   displayNotification(
     "Info",
     `storageRemoveItem: Removing ${key}, host: ${hostName}, using ${
-      isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
-        ? "OfficeRuntime.Storage"
-        : typeof localStorage !== "undefined"
-          ? "localStorage"
-          : "in-memory storage"
+      typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
     }`
   );
-  if (isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
-    OfficeRuntime.Storage.removeItem(key).catch((error) => {
-      logger.log("error", "storageRemoveItem", { error: error.message, key });
-      displayNotification("Error", `storageRemoveItem: OfficeRuntime.Storage failed for ${key}, falling back`);
-      if (typeof localStorage !== "undefined") {
-        localStorage.removeItem(key);
-        displayNotification("Info", `storageRemoveItem: Fallback to localStorage for ${key}`);
-      } else {
-        delete storage[key];
-        displayNotification("Info", `storageRemoveItem: Fallback to in-memory for ${key}`);
-      }
-    });
-  } else if (typeof localStorage !== "undefined") {
+  if (typeof localStorage !== "undefined") {
     localStorage.removeItem(key);
     displayNotification("Info", `storageRemoveItem: Using localStorage for ${key}`);
   } else {
@@ -797,74 +744,158 @@ function validateSignature(event) {
  * @param {Office.MessageCompose} item - The email item.
  * @param {string} currentSignature - The current signature in the email body.
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
- * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
 function validateSignatureChanges(item, currentSignature, event) {
   try {
-    const originalSignatureKey = storageGetItem("tempSignature");
-    const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
+    const hostName = Office.context.mailbox.diagnostics.hostName;
+    const isClassicOutlook = hostName === "Outlook";
 
-    // displayNotification(
-    //   "Info",
-    //   `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
-    //     rawMatchedSignature ? rawMatchedSignature.length : "null"
-    //   }`
-    // );
-    // displayNotification(
-    //   "Info",
-    //   `validateSignatureChanges: Before normalize - currentSignatureLength: ${currentSignature ? currentSignature.length : "null"}`
-    // );
+    let originalSignatureKey, rawMatchedSignature;
+    if (isClassicOutlook) {
+      // Step 1: Detect signature key from current signature
+      originalSignatureKey = detectSignatureKey(currentSignature);
+      displayNotification(
+        "Info",
+        `validateSignatureChanges: Detected originalSignatureKey from current signature: ${originalSignatureKey || "null"}, host: ${hostName}`
+      );
+
+      if (!originalSignatureKey) {
+        displayError("Could not detect M3 signature. Please select a signature from the ribbon.", event);
+        event.completed({ allowEvent: false });
+        return;
+      }
+
+      // Step 2: Fetch the signature and compare
+      fetchSignature(originalSignatureKey, (fetchedSignature, error) => {
+        if (error || !fetchedSignature) {
+          displayNotification(
+            "Error",
+            `validateSignatureChanges: Failed to fetch ${originalSignatureKey}, error: ${error?.message || "null"}`
+          );
+          displayError("Failed to validate signature. Please reselect.", event);
+          event.completed({ allowEvent: false });
+          return;
+        }
+
+        rawMatchedSignature = fetchedSignature;
+        displayNotification(
+          "Info",
+          `validateSignatureChanges: Fetched signature for ${originalSignatureKey}, length: ${rawMatchedSignature.length}`
+        );
+
+        // Step 3 & 4: Compare and decide
+        const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
+        const cleanFetchedSignature = SignatureManager.normalizeSignature(rawMatchedSignature);
+
+        const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/[^"']+))["'][^>]*>/i;
+        const currentLogoMatch = currentSignature.match(logoRegex);
+        let currentLogoUrl = currentLogoMatch ? currentLogoMatch[1].split("?")[0] : null;
+        const expectedLogoMatch = rawMatchedSignature.match(logoRegex);
+        let expectedLogoUrl = expectedLogoMatch ? expectedLogoMatch[1].split("?")[0] : null;
+
+        const isTextValid = cleanCurrentSignature === cleanFetchedSignature;
+        const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
+
+        displayNotification(
+          "Info",
+          `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
+        );
+
+        if (isTextValid && isLogoValid) {
+          displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
+          event.completed({ allowEvent: true });
+        } else {
+          displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
+          SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
+            displayNotification(
+              "Info",
+              `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
+            );
+
+            if (error || !restored) {
+              logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
+              displayNotification("Error", "validateSignatureChanges: Restore failed, displaying error");
+              displayError("Failed to restore the original M3 signature. Please reselect.", event);
+            } else {
+              logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
+              displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
+              displayError(
+                "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                event
+              );
+            }
+            event.completed({ allowEvent: false });
+          });
+        }
+      });
+      return; // Exit early for async handling in Classic Outlook
+    } else {
+      // Non-Classic Outlook (OWA, New Outlook, mobile) uses existing storage-based logic
+      originalSignatureKey = storageGetItem("tempSignature");
+      rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
+      displayNotification(
+        "Info",
+        `validateSignatureChanges: originalSignatureKey: ${originalSignatureKey || "null"}, rawMatchedSignatureLength: ${
+          rawMatchedSignature ? rawMatchedSignature.length : "null"
+        }, source: ${storageGetItem("tempSignature") ? "localStorage" : "in-memory"}`
+      );
+    }
+
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: Before normalize - currentSignatureLength: ${currentSignature ? currentSignature.length : "null"}`
+    );
     const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
-    // displayNotification(
-    //   "Info",
-    //   `validateSignatureChanges: After normalize current - cleanCurrentSignatureLength: ${cleanCurrentSignature ? cleanCurrentSignature.length : "null"}`
-    // );
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: After normalize current - cleanCurrentSignatureLength: ${cleanCurrentSignature ? cleanCurrentSignature.length : "null"}`
+    );
 
-    // displayNotification(
-    //   "Info",
-    //   `validateSignatureChanges: Before normalize cached - rawMatchedSignature: ${rawMatchedSignature ? "present" : "null"}`
-    // );
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: Before normalize cached - rawMatchedSignature: ${rawMatchedSignature ? "present" : "null"}`
+    );
     const cleanCachedSignature = SignatureManager.normalizeSignature(rawMatchedSignature);
-    // displayNotification(
-    //   "Info",
-    //   `validateSignatureChanges: After normalize cached - cleanCachedSignatureLength: ${cleanCachedSignature ? cleanCachedSignature.length : "null"}`
-    // );
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: After normalize cached - cleanCachedSignatureLength: ${cleanCachedSignature ? cleanCachedSignature.length : "null"}`
+    );
 
     const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/[^"']+))["'][^>]*>/i;
-    // displayNotification("Info", "validateSignatureChanges: Before logo match");
+    displayNotification("Info", "validateSignatureChanges: Before logo match");
     const currentLogoMatch = currentSignature.match(logoRegex);
     let currentLogoUrl = currentLogoMatch ? currentLogoMatch[1].split("?")[0] : null;
-    // displayNotification(
-    //   "Info",
-    //   `validateSignatureChanges: After logo match current - currentLogoUrl: ${currentLogoUrl}`
-    // );
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: After logo match current - currentLogoUrl: ${currentLogoUrl}`
+    );
 
     const expectedLogoMatch = rawMatchedSignature ? rawMatchedSignature.match(logoRegex) : null;
     let expectedLogoUrl = expectedLogoMatch ? expectedLogoMatch[1].split("?")[0] : null;
-    // displayNotification(
-    //   "Info",
-    //   `validateSignatureChanges: After logo match cached - expectedLogoUrl: ${expectedLogoUrl}`
-    // );
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: After logo match cached - expectedLogoUrl: ${expectedLogoUrl}`
+    );
 
     const isTextValid = cleanCurrentSignature === cleanCachedSignature;
     const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
 
-    // displayNotification(
-    //   "Info",
-    //   `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
-    // );
+    displayNotification(
+      "Info",
+      `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
+    );
 
-    // logger.log("debug", "validateSignatureChanges", {
-    //   rawCurrentSignatureLength: currentSignature.length,
-    //   rawMatchedSignatureLength: rawMatchedSignature ? rawMatchedSignature.length : 0,
-    //   cleanCurrentSignature,
-    //   cleanCachedSignature,
-    //   originalSignatureKey,
-    //   currentLogoUrl,
-    //   expectedLogoUrl,
-    //   isTextValid,
-    //   isLogoValid,
-    // });
+    logger.log("debug", "validateSignatureChanges", {
+      rawCurrentSignatureLength: currentSignature.length,
+      rawMatchedSignatureLength: rawMatchedSignature ? rawMatchedSignature.length : 0,
+      cleanCurrentSignature,
+      cleanCachedSignature,
+      originalSignatureKey,
+      currentLogoUrl,
+      expectedLogoUrl,
+      isTextValid,
+      isLogoValid,
+    });
 
     if (isTextValid && isLogoValid) {
       storageRemoveItem("tempSignature");
@@ -873,10 +904,10 @@ function validateSignatureChanges(item, currentSignature, event) {
     } else {
       displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
       SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
-        // displayNotification(
-        //   "Info",
-        //   `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
-        // );
+        displayNotification(
+          "Info",
+          `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
+        );
 
         if (error || !restored) {
           logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
@@ -890,12 +921,10 @@ function validateSignatureChanges(item, currentSignature, event) {
             event
           );
         }
-        // displayNotification("Info", "validateSignatureChanges: Ensuring event completion");
         event.completed({ allowEvent: false });
       });
     }
   } catch (error) {
-    displayNotification("Error", `validateSignatureChanges: Exception - ${error.message}`);
     logger.log("error", "validateSignatureChanges", { error: error.message, stack: error.stack });
     displayError("An unexpected error occurred during signature validation.", event);
   }
