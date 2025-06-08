@@ -6,6 +6,33 @@ import { createNestablePublicClientApplication } from "@azure/msal-browser";
 import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
 
+// Robust storage fallback
+const storage = typeof localStorage !== "undefined" ? localStorage : {};
+
+function storageSetItem(key, value) {
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(key, value);
+  } else {
+    storage[key] = value; // Store in a simple object
+  }
+}
+
+function storageGetItem(key) {
+  if (typeof localStorage !== "undefined") {
+    return localStorage.getItem(key);
+  } else {
+    return storage[key] || null; // Return null if key doesn't exist
+  }
+}
+
+function storageRemoveItem(key) {
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(key);
+  } else {
+    delete storage[key]; // Remove from the fallback object
+  }
+}
+
 /**
  * Centralized logger for structured logging with timestamps.
  * @type {Object}
@@ -172,7 +199,7 @@ const SignatureManager = {
   restoreSignature(item, signature, signatureKey, callback) {
     logger.log("info", "restoreSignatureAsync", { signatureKey, cachedSignatureLength: signature?.length });
     if (!signature) {
-      signature = localStorage.getItem(`signature_${signatureKey}`);
+      signature = storageGetItem(`signature_${signatureKey}`);
       logger.log("info", "restoreSignatureAsync", {
         status: "Falling back to signatureKey",
         fallbackLength: signature?.length,
@@ -535,7 +562,7 @@ function fetchMessageById(messageId, callback) {
 }
 
 /**
- * Adds a signature to the email and saves it to localStorage.
+ * Adds a signature to the email and saves it to storage.
  * @param {string} signatureKey - The signature key (e.g., "m3Signature").
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  * @param {boolean} isAutoApplied - Whether the signature is auto-applied.
@@ -544,9 +571,9 @@ function fetchMessageById(messageId, callback) {
 function addSignature(signatureKey, event, isAutoApplied, callback) {
   const item = Office.context.mailbox.item;
 
-  localStorage.removeItem("tempSignature");
-  localStorage.setItem("tempSignature", signatureKey);
-  const cachedSignature = localStorage.getItem(`signature_${signatureKey}`);
+  storageRemoveItem("tempSignature");
+  storageSetItem("tempSignature", signatureKey);
+  const cachedSignature = storageGetItem(`signature_${signatureKey}`);
 
   if (cachedSignature && !isAutoApplied) {
     const signatureWithMarker = "<!-- signature -->" + cachedSignature.trim();
@@ -617,7 +644,7 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
               bodyLength: result.value.length,
             });
           }
-          localStorage.setItem(`signature_${signatureKey}`, template);
+          storageSetItem(`signature_${signatureKey}`, template);
           event.completed();
           callback();
         });
@@ -680,8 +707,8 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
   displayNotification("Info", `validateSignatureChanges is starting`);
 
   try {
-    const originalSignatureKey = localStorage.getItem("tempSignature");
-    const rawMatchedSignature = localStorage.getItem(`signature_${originalSignatureKey}`);
+    const originalSignatureKey = storageGetItem("tempSignature");
+    const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
     displayNotification(
       "Info",
       `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
@@ -746,7 +773,7 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
     });
 
     if (isTextValid && isLogoValid) {
-      localStorage.removeItem("tempSignature");
+      storageRemoveItem("tempSignature");
       displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
       event.completed({ allowEvent: true });
     } else {
@@ -832,10 +859,10 @@ function onNewMessageComposeHandler(event) {
       }
     } else {
       if (isMobile) {
-        const mobileDefaultSignatureKey = localStorage.getItem("mobileDefaultSignature");
+        const mobileDefaultSignatureKey = storageGetItem("mobileDefaultSignature");
         if (mobileDefaultSignatureKey) {
-          localStorage.removeItem("tempSignature");
-          localStorage.setItem("tempSignature", mobileDefaultSignatureKey);
+          storageRemoveItem("tempSignature");
+          storageSetItem("tempSignature", mobileDefaultSignatureKey);
           addSignature(mobileDefaultSignatureKey, event, true, () => {
             completeWithState(event, null, null);
           });
@@ -856,7 +883,6 @@ function onNewMessageComposeHandler(event) {
  */
 function processEmailId(messageId, event) {
   fetchMessageById(messageId, (message, fetchError) => {
-    console.log(messageId, message, fetchError);
     if (fetchError) {
       logger.log("error", "onNewMessageComposeHandler", { error: fetchError.message });
       completeWithState(event, "Error", fetchError.message);
@@ -901,8 +927,8 @@ function processEmailId(messageId, event) {
       matchedSignatureKey,
     });
 
-    localStorage.removeItem("tempSignature");
-    localStorage.setItem("tempSignature", matchedSignatureKey);
+    storageRemoveItem("tempSignature");
+    storageSetItem("tempSignature", matchedSignatureKey);
     addSignature(matchedSignatureKey, event, true, () => {
       completeWithState(event, null, null);
     });
