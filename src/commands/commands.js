@@ -701,6 +701,9 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function validateSignature(event) {
+  const hostName = Office.context.mailbox.diagnostics.hostName;
+  const isClassicOutlook = hostName === "Outlook";
+
   const item = Office.context.mailbox.item;
   if (!item) {
     logger.log("error", "validateSignature", { error: "No mailbox item" });
@@ -723,7 +726,7 @@ function validateSignature(event) {
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
-      validateSignatureChanges(item, currentSignature, event);
+      validateSignatureChanges(item, currentSignature, event, isClassicOutlook);
     }
   });
 }
@@ -734,11 +737,8 @@ function validateSignature(event) {
  * @param {string} currentSignature - The current signature in the email body.
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
-function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
+function validateSignatureChanges(item, currentSignature, event, isClassicOutlook) {
   try {
-    const hostName = Office.context.mailbox.diagnostics.hostName;
-    const isClassicOutlook = hostName === "Outlook";
-
     if (isClassicOutlook) {
       // Step 1: Detect signature key from current signature
       const originalSignatureKey = detectSignatureKey(currentSignature);
