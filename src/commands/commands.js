@@ -7,33 +7,33 @@ import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
 
 function storageSetItem(key, value) {
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem(key, value);
-    displayNotification("Info", `localStorage.setItem(${key}, ${value})`);
-  } else {
-    storage[key] = value; // Store in a simple object
-    displayNotification("Info", `storage[${key}] = ${value}`);
-  }
+  // if (typeof localStorage !== "undefined") {
+  //   localStorage.setItem(key, value);
+  //   displayNotification("Info", `localStorage.setItem(${key}, ${value})`);
+  // } else {
+  storage[key] = value; // Store in a simple object
+  displayNotification("Info", `storage[${key}] = ${value}`);
+  // }
 }
 
 function storageGetItem(key) {
-  if (typeof localStorage !== "undefined") {
-    displayNotification("Info", `GET localStorage.getItem(${key}) = ${localStorage.getItem(key)}`);
-    return localStorage.getItem(key);
-  } else {
-    displayNotification("Info", `GET storage[${key}] = ${storage[key]}`);
-    return storage[key] || null; // Return null if key doesn't exist
-  }
+  // if (typeof localStorage !== "undefined") {
+  //   displayNotification("Info", `GET localStorage.getItem(${key}) = ${localStorage.getItem(key)}`);
+  //   return localStorage.getItem(key);
+  // } else {
+  displayNotification("Info", `GET storage[${key}] = ${storage[key]}`);
+  return storage[key] || null; // Return null if key doesn't exist
+  // }
 }
 
 function storageRemoveItem(key) {
-  if (typeof localStorage !== "undefined") {
-    displayNotification("Info", `localStorage remove ${key}`);
-    localStorage.removeItem(key);
-  } else {
-    displayNotification("Info", `storage remove ${key}`);
-    delete storage[key]; // Remove from the fallback object
-  }
+  // if (typeof localStorage !== "undefined") {
+  //   displayNotification("Info", `localStorage remove ${key}`);
+  //   localStorage.removeItem(key);
+  // } else {
+  displayNotification("Info", `storage remove ${key}`);
+  delete storage[key]; // Remove from the fallback object
+  // }
 }
 
 /**
@@ -1005,4 +1005,4 @@ Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandle
 let isMobile = false;
 let isClassicOutlook = false;
 let tempSignature = {};
-let storage = typeof localStorage !== "undefined" ? localStorage : {};
+let storage = {};
