@@ -719,10 +719,9 @@ function validateSignature(event) {
     }
 
     const body = bodyResult.value;
-    // const currentSignature = isClassicOutlook
-    //   ? SignatureManager.extractSignatureForOutlookClassic(body)
-    //   : SignatureManager.extractSignature(body);
-    const currentSignature = SignatureManager.extractSignature(body);
+    const currentSignature = isClassicOutlook
+      ? SignatureManager.extractSignatureForOutlookClassic(body)
+      : SignatureManager.extractSignature(body);
 
     displayNotification(
       "Info",
@@ -749,10 +748,10 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
     if (isClassicOutlook) {
       // Step 1: Detect signature key from current signature
       const originalSignatureKey = detectSignatureKey(currentSignature);
-      displayNotification(
-        "Info",
-        `validateSignatureChanges: Detected originalSignatureKey from current signature: ${originalSignatureKey || "null"}, currentSignature: ${currentSignature.length}`
-      );
+      // displayNotification(
+      //   "Info",
+      //   `validateSignatureChanges: Detected originalSignatureKey from current signature: ${originalSignatureKey || "null"}, currentSignature: ${currentSignature.length}`
+      // );
 
       if (!originalSignatureKey) {
         displayError("Could not detect M3 signature. Please select a signature from the ribbon.", event);
