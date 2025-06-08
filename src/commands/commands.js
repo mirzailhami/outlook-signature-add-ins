@@ -676,6 +676,12 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
   const originalSignatureKey = localStorage.getItem("tempSignature");
   const rawMatchedSignature = localStorage.getItem(`signature_${originalSignatureKey}`);
 
+  displayNotification(
+    "Info",
+    `validateSignatureChanges: Keys - originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
+      rawMatchedSignature ? rawMatchedSignature.length : "null"
+    }`
+  );
   try {
     displayNotification(
       "Info",
