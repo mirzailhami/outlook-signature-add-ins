@@ -784,11 +784,15 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
 
         displayNotification(
           "Info",
+          `currentLogoUrl: ${currentLogoUrl.length || "null"}, expectedLogoUrl: ${expectedLogoUrl.length || "null"},
+            cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
+            cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
+        );
+
+        displayNotification(
+          "Info",
           `validateSignatureChanges: 
-          isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid},
-          currentLogoUrl: ${currentLogoUrl.length || "null"}, expectedLogoUrl: ${expectedLogoUrl.length || "null"},
-          cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
-          cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
+          isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}`
         );
 
         if (isTextValid && isLogoValid) {
