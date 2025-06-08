@@ -781,7 +781,7 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
           return;
         }
 
-        const rawMatchedSignature = fetchedSignature;
+        const rawMatchedSignature = SignatureManager.extractSignatureForOutlookClassic(fetchedSignature);
         displayNotification(
           "Info",
           `validateSignatureChanges: Fetched signature for ${originalSignatureKey}, length: ${rawMatchedSignature.length}`
@@ -802,7 +802,7 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
 
         displayNotification(
           "Info",
-          `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
+          `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl.length}, expectedLogoUrl: ${expectedLogoUrl.length}`
         );
 
         if (isTextValid && isLogoValid) {
