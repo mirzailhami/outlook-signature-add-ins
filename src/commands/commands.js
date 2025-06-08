@@ -579,15 +579,14 @@ function fetchMessageById(messageId, callback) {
  */
 function addSignature(signatureKey, event, isAutoApplied, callback) {
   const item = Office.context.mailbox.item;
-
-  // Use RoamingSettings for persistent storage
   const roamingSettings = Office.context.roamingSettings;
   const currentTempKey = roamingSettings.get("tempSignature");
+
   if (currentTempKey !== signatureKey) {
     roamingSettings.set("tempSignature", signatureKey);
     roamingSettings.saveAsync();
   }
-  const cachedSignature = storageGetItem(`signature_${signatureKey}`); // Keep local storage for signatures
+  const cachedSignature = roamingSettings.get(`signature_${signatureKey}`); // Use RoamingSettings
 
   displayNotification(
     "Info",
@@ -656,6 +655,9 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
           }
           return;
         }
+        roamingSettings.set(`signature_${signatureKey}`, template); // Store in RoamingSettings
+        roamingSettings.saveAsync();
+        displayNotification("Info", `addSignature: Signature stored for ${signatureKey}, length: ${template.length}`);
         item.body.getAsync("html", (result) => {
           if (result.status === Office.AsyncResultStatus.Succeeded) {
             logger.log("debug", "addSignature", {
@@ -663,7 +665,6 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
               bodyLength: result.value.length,
             });
           }
-          storageSetItem(`signature_${signatureKey}`, template); // Keep signatures in local storage
           event.completed();
           callback();
         });
@@ -719,13 +720,11 @@ function validateSignature(event) {
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
 function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
-  displayNotification("Info", `validateSignatureChanges is starting`);
-
   try {
     const roamingSettings = Office.context.roamingSettings;
     const originalSignatureKey = roamingSettings.get("tempSignature");
     displayNotification("Info", `validateSignatureChanges: Retrieved tempSignature: ${originalSignatureKey || "null"}`);
-    const rawMatchedSignature = originalSignatureKey ? storageGetItem(`signature_${originalSignatureKey}`) : null;
+    const rawMatchedSignature = originalSignatureKey ? roamingSettings.get(`signature_${originalSignatureKey}`) : null;
     displayNotification(
       "Info",
       `validateSignatureChanges: originalSignatureKey: ${originalSignatureKey || "null"}, rawMatchedSignatureLength: ${
