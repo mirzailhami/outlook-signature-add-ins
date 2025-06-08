@@ -10,17 +10,19 @@ import { Client } from "@microsoft/microsoft-graph-client";
 let storage = typeof localStorage !== "undefined" ? localStorage : {};
 
 function storageSetItem(key, value) {
+  const hostName = Office.context.mailbox.diagnostics.hostName;
+  const isClassicOutlook = hostName === "Outlook";
   displayNotification(
     "Info",
-    `storageSetItem: Setting ${key} = ${value}, using ${
-      Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
+    `storageSetItem: Setting ${key} = ${value}, host: ${hostName}, using ${
+      isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
         ? "OfficeRuntime.Storage"
         : typeof localStorage !== "undefined"
           ? "localStorage"
           : "in-memory storage"
     }`
   );
-  if (Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
+  if (isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
     OfficeRuntime.Storage.setItem(key, value).catch((error) => {
       logger.log("error", "storageSetItem", { error: error.message, key, value });
       displayNotification("Error", `storageSetItem: OfficeRuntime.Storage failed for ${key}, falling back`);
@@ -42,17 +44,19 @@ function storageSetItem(key, value) {
 }
 
 function storageGetItem(key) {
+  const hostName = Office.context.mailbox.diagnostics.hostName;
+  const isClassicOutlook = hostName === "Outlook";
   displayNotification(
     "Info",
-    `storageGetItem: Getting ${key}, using ${
-      Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
+    `storageGetItem: Getting ${key}, host: ${hostName}, using ${
+      isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
         ? "OfficeRuntime.Storage"
         : typeof localStorage !== "undefined"
           ? "localStorage"
           : "in-memory storage"
     }`
   );
-  if (Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
+  if (isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
     return OfficeRuntime.Storage.getItem(key).catch((error) => {
       logger.log("error", "storageGetItem", { error: error.message, key });
       displayNotification("Error", `storageGetItem: OfficeRuntime.Storage failed for ${key}, falling back`);
@@ -78,17 +82,19 @@ function storageGetItem(key) {
 }
 
 function storageRemoveItem(key) {
+  const hostName = Office.context.mailbox.diagnostics.hostName;
+  const isClassicOutlook = hostName === "Outlook";
   displayNotification(
     "Info",
-    `storageRemoveItem: Removing ${key}, using ${
-      Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
+    `storageRemoveItem: Removing ${key}, host: ${hostName}, using ${
+      isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
         ? "OfficeRuntime.Storage"
         : typeof localStorage !== "undefined"
           ? "localStorage"
           : "in-memory storage"
     }`
   );
-  if (Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
+  if (isClassicOutlook && Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
     OfficeRuntime.Storage.removeItem(key).catch((error) => {
       logger.log("error", "storageRemoveItem", { error: error.message, key });
       displayNotification("Error", `storageRemoveItem: OfficeRuntime.Storage failed for ${key}, falling back`);
