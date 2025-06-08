@@ -777,7 +777,7 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
         }
 
         // Step 2.5: Extract and validate the fetched signature
-        const rawMatchedSignature = SignatureManager.extractSignatureForOutlookClassic(fetchedSignature);
+        const rawMatchedSignature = fetchedSignature;
         if (!rawMatchedSignature) {
           displayNotification(
             "Error",
