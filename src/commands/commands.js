@@ -580,15 +580,18 @@ function fetchMessageById(messageId, callback) {
 function addSignature(signatureKey, event, isAutoApplied, callback) {
   const item = Office.context.mailbox.item;
 
-  const currentTempKey = storageGetItem("tempSignature");
+  // Use RoamingSettings for persistent storage
+  const roamingSettings = Office.context.roamingSettings;
+  const currentTempKey = roamingSettings.get("tempSignature");
   if (currentTempKey !== signatureKey) {
-    storageSetItem("tempSignature", signatureKey);
+    roamingSettings.set("tempSignature", signatureKey);
+    roamingSettings.saveAsync();
   }
-  const cachedSignature = storageGetItem(`signature_${signatureKey}`);
+  const cachedSignature = storageGetItem(`signature_${signatureKey}`); // Keep local storage for signatures
 
   displayNotification(
     "Info",
-    `addSignature: signatureKey: ${signatureKey}, currentTempKey: ${currentTempKey}, cachedSignatureLength: ${cachedSignature ? cachedSignature.length : "null"}`
+    `addSignature: signatureKey: ${signatureKey}, currentTempKey: ${currentTempKey || "null"}, cachedSignatureLength: ${cachedSignature ? cachedSignature.length : "null"}`
   );
 
   if (cachedSignature && !isAutoApplied) {
@@ -660,7 +663,7 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
               bodyLength: result.value.length,
             });
           }
-          storageSetItem(`signature_${signatureKey}`, template);
+          storageSetItem(`signature_${signatureKey}`, template); // Keep signatures in local storage
           event.completed();
           callback();
         });
@@ -719,12 +722,13 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
   displayNotification("Info", `validateSignatureChanges is starting`);
 
   try {
-    const originalSignatureKey = storageGetItem("tempSignature");
-    displayNotification("Info", `validateSignatureChanges: Retrieved tempSignature: ${originalSignatureKey}`);
+    const roamingSettings = Office.context.roamingSettings;
+    const originalSignatureKey = roamingSettings.get("tempSignature");
+    displayNotification("Info", `validateSignatureChanges: Retrieved tempSignature: ${originalSignatureKey || "null"}`);
     const rawMatchedSignature = originalSignatureKey ? storageGetItem(`signature_${originalSignatureKey}`) : null;
     displayNotification(
       "Info",
-      `validateSignatureChanges: originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
+      `validateSignatureChanges: originalSignatureKey: ${originalSignatureKey || "null"}, rawMatchedSignatureLength: ${
         rawMatchedSignature ? rawMatchedSignature.length : "null"
       }`
     );
@@ -786,7 +790,8 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
     });
 
     if (isTextValid && isLogoValid) {
-      storageRemoveItem("tempSignature");
+      roamingSettings.remove("tempSignature");
+      roamingSettings.saveAsync();
       displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
       event.completed({ allowEvent: true });
     } else {
