@@ -746,11 +746,6 @@ function validateSignature(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
-  displayNotification(
-    "Info",
-    `validateSignatureChanges is starting, host: ${Office.context.mailbox.diagnostics.hostName}`
-  );
-
   try {
     const hostName = Office.context.mailbox.diagnostics.hostName;
     const isClassicOutlook = hostName === "Outlook";
@@ -774,14 +769,24 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
         if (error || !fetchedSignature) {
           displayNotification(
             "Error",
-            `validateSignatureChanges: Failed to fetch ${originalSignatureKey}, error: ${error?.message || "null"}`
+            `validateSignatureChanges: Failed to fetch ${originalSignatureKey}, error: ${error?.message || "null"}, fetchedSignature: ${fetchedSignature || "null"}`
           );
           displayError("Failed to validate signature. Please reselect.", event);
           event.completed({ allowEvent: false });
           return;
         }
 
+        // Step 2.5: Extract and validate the fetched signature
         const rawMatchedSignature = SignatureManager.extractSignatureForOutlookClassic(fetchedSignature);
+        if (!rawMatchedSignature) {
+          displayNotification(
+            "Error",
+            `validateSignatureChanges: extractSignatureForOutlookClassic returned null for ${originalSignatureKey}`
+          );
+          displayError("Failed to process fetched signature. Please reselect.", event);
+          event.completed({ allowEvent: false });
+          return;
+        }
         displayNotification(
           "Info",
           `validateSignatureChanges: Fetched signature for ${originalSignatureKey}, length: ${rawMatchedSignature.length}`
@@ -798,11 +803,12 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
         let expectedLogoUrl = expectedLogoMatch ? expectedLogoMatch[1].split("?")[0] : null;
 
         const isTextValid = cleanCurrentSignature === cleanFetchedSignature;
-        const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
+        const isLogoValid =
+          !expectedLogoUrl || (currentLogoUrl && expectedLogoUrl && currentLogoUrl === expectedLogoUrl);
 
         displayNotification(
           "Info",
-          `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl.length}, expectedLogoUrl: ${expectedLogoUrl.length}`
+          `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl || "null"}, expectedLogoUrl: ${expectedLogoUrl || "null"}`
         );
 
         if (isTextValid && isLogoValid) {
@@ -838,56 +844,20 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
     // Non-Classic Outlook (OWA, New Outlook, mobile) uses existing storage-based logic
     const originalSignatureKey = storageGetItem("tempSignature");
     const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: originalSignatureKey: ${originalSignatureKey || "null"}, rawMatchedSignatureLength: ${
-        rawMatchedSignature ? rawMatchedSignature.length : "null"
-      }, source: ${storageGetItem("tempSignature") ? "localStorage" : "in-memory"}`
-    );
 
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: Before normalize - currentSignatureLength: ${currentSignature ? currentSignature.length : "null"}`
-    );
     const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: After normalize current - cleanCurrentSignatureLength: ${cleanCurrentSignature ? cleanCurrentSignature.length : "null"}`
-    );
-
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: Before normalize cached - rawMatchedSignature: ${rawMatchedSignature ? "present" : "null"}`
-    );
     const cleanCachedSignature = SignatureManager.normalizeSignature(rawMatchedSignature);
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: After normalize cached - cleanCachedSignatureLength: ${cleanCachedSignature ? cleanCachedSignature.length : "null"}`
-    );
 
     const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/[^"']+))["'][^>]*>/i;
-    displayNotification("Info", "validateSignatureChanges: Before logo match");
+
     const currentLogoMatch = currentSignature.match(logoRegex);
     let currentLogoUrl = currentLogoMatch ? currentLogoMatch[1].split("?")[0] : null;
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: After logo match current - currentLogoUrl: ${currentLogoUrl}`
-    );
 
     const expectedLogoMatch = rawMatchedSignature ? rawMatchedSignature.match(logoRegex) : null;
     let expectedLogoUrl = expectedLogoMatch ? expectedLogoMatch[1].split("?")[0] : null;
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: After logo match cached - expectedLogoUrl: ${expectedLogoUrl}`
-    );
 
     const isTextValid = cleanCurrentSignature === cleanCachedSignature;
     const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
-
-    displayNotification(
-      "Info",
-      `validateSignatureChanges: Validation - isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}, currentLogoUrl: ${currentLogoUrl}, expectedLogoUrl: ${expectedLogoUrl}`
-    );
 
     logger.log("debug", "validateSignatureChanges", {
       rawCurrentSignatureLength: currentSignature.length,
@@ -904,23 +874,14 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
 
     if (isTextValid && isLogoValid) {
       storageRemoveItem("tempSignature");
-      displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
       event.completed({ allowEvent: true });
     } else {
-      displayNotification("Info", "validateSignatureChanges: Signature invalid, attempting restore");
       SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
-        displayNotification(
-          "Info",
-          `validateSignatureChanges: Restore completed - restored: ${restored}, error: ${error ? error.message : "none"}`
-        );
-
         if (error || !restored) {
           logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
-          displayNotification("Error", "validateSignatureChanges: Restore failed, displaying error");
           displayError("Failed to restore the original M3 signature. Please reselect.", event);
         } else {
           logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
-          displayNotification("Info", "validateSignatureChanges: Restore succeeded, displaying modified alert");
           displayError(
             "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
             event
