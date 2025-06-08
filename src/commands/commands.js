@@ -578,70 +578,25 @@ function fetchMessageById(messageId, callback) {
  * @param {function()} callback - Callback when done.
  */
 function addSignature(signatureKey, event, isAutoApplied, callback) {
-  const item = Office.context.mailbox.item;
+  try {
+    const item = Office.context.mailbox.item;
 
-  storageRemoveItem("tempSignature");
-  storageSetItem("tempSignature", signatureKey);
-  const cachedSignature = storageGetItem(`signature_${signatureKey}`);
+    storageRemoveItem("tempSignature");
+    storageSetItem("tempSignature", signatureKey);
+    const cachedSignature = storageGetItem(`signature_${signatureKey}`);
 
-  if (cachedSignature && !isAutoApplied) {
-    const signatureWithMarker = "<!-- signature -->" + cachedSignature.trim();
-    item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
-      if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-        if (isMobile) {
-          appendDebugLogToBody(item, "addSignature Error (Cached)", "Message", asyncResult.error.message);
-        }
-        if (!isAutoApplied) {
-          event.completed();
-          callback();
-        } else {
-          displayError("Failed to set cached signature.", event);
-          callback();
-        }
-        return;
-      }
-      item.body.getAsync("html", (result) => {
-        if (result.status === Office.AsyncResultStatus.Succeeded) {
-          logger.log("debug", "addSignature", {
-            bodyContainsMarker: result.value.includes("<!-- signature -->"),
-            bodyLength: result.value.length,
-          });
-        }
-        event.completed();
-        callback();
-      });
-    });
-  } else {
-    fetchSignature(signatureKey, (template, error) => {
-      if (error) {
-        if (isMobile) {
-          appendDebugLogToBody(item, "addSignature Error (Fetch)", "Message", error.message);
-        }
-        logger.log("error", "addSignature", { error: error.message });
-        displayNotification("Error", `Failed to fetch ${signatureKey}.`, true);
-        if (!isAutoApplied) {
-          event.completed();
-          callback();
-        } else {
-          displayError(`Failed to fetch ${signatureKey}.`, event);
-          callback();
-        }
-        return;
-      }
-
-      const signatureWithMarker = "<!-- signature -->" + template.trim();
+    if (cachedSignature && !isAutoApplied) {
+      const signatureWithMarker = "<!-- signature -->" + cachedSignature.trim();
       item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
         if (asyncResult.status === Office.AsyncResultStatus.Failed) {
           if (isMobile) {
-            appendDebugLogToBody(item, "addSignature Error (Set)", "Message", asyncResult.error.message);
+            appendDebugLogToBody(item, "addSignature Error (Cached)", "Message", asyncResult.error.message);
           }
-          logger.log("error", "addSignature", { error: asyncResult.error.message });
-          displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
           if (!isAutoApplied) {
             event.completed();
             callback();
           } else {
-            displayError(`Failed to apply ${signatureKey}.`, event);
+            displayError("Failed to set cached signature.", event);
             callback();
           }
           return;
@@ -653,13 +608,63 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
               bodyLength: result.value.length,
             });
           }
-          storageSetItem(`signature_${signatureKey}`, template);
-          tempSignature[signatureKey] = template;
           event.completed();
           callback();
         });
       });
-    });
+    } else {
+      fetchSignature(signatureKey, (template, error) => {
+        if (error) {
+          if (isMobile) {
+            appendDebugLogToBody(item, "addSignature Error (Fetch)", "Message", error.message);
+          }
+          logger.log("error", "addSignature", { error: error.message });
+          displayNotification("Error", `Failed to fetch ${signatureKey}.`, true);
+          if (!isAutoApplied) {
+            event.completed();
+            callback();
+          } else {
+            displayError(`Failed to fetch ${signatureKey}.`, event);
+            callback();
+          }
+          return;
+        }
+
+        const signatureWithMarker = "<!-- signature -->" + template.trim();
+        item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
+          if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+            if (isMobile) {
+              appendDebugLogToBody(item, "addSignature Error (Set)", "Message", asyncResult.error.message);
+            }
+            logger.log("error", "addSignature", { error: asyncResult.error.message });
+            displayNotification("Error", `Failed to apply ${signatureKey}.`, true);
+            if (!isAutoApplied) {
+              event.completed();
+              callback();
+            } else {
+              displayError(`Failed to apply ${signatureKey}.`, event);
+              callback();
+            }
+            return;
+          }
+          item.body.getAsync("html", (result) => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+              logger.log("debug", "addSignature", {
+                bodyContainsMarker: result.value.includes("<!-- signature -->"),
+                bodyLength: result.value.length,
+              });
+            }
+            storageSetItem(`signature_${signatureKey}`, template);
+            tempSignature[signatureKey] = template;
+            event.completed();
+            callback();
+          });
+        });
+      });
+    }
+  } catch (error) {
+    displayNotification("Error", `addSignature: Exception - ${error.message}`);
+    displayError(`Unexpected error occurred during addSignature: ${error.message}`, event);
   }
 }
 
@@ -700,7 +705,7 @@ function validateSignature(event) {
           "Info",
           `currentSignature: ${currentSignature.length}, isReplyOrForward: ${isReplyOrForward}`
         );
-        validateSignatureChanges(item, currentSignature, event, isReplyOrForward);
+        validateSignatureChanges(item, currentSignature, event);
       });
     }
   });
@@ -713,18 +718,19 @@ function validateSignature(event) {
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
-function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
+function validateSignatureChanges(item, currentSignature, event) {
   try {
     const originalSignatureKey = storageGetItem("tempSignature");
     const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
-    console.log(originalSignatureKey);
-    console.log(tempSignature[originalSignatureKey]);
-    displayNotification(
-      "Info",
-      `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
-        rawMatchedSignature ? rawMatchedSignature.length : "null"
-      }`
-    );
+    // console.log(originalSignatureKey);
+    // console.log(tempSignature[originalSignatureKey]);
+    displayNotification("Info", `tempSignature[originalSignatureKey]: ${tempSignature[originalSignatureKey]}`);
+    // displayNotification(
+    //   "Info",
+    //   `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
+    //     rawMatchedSignature ? rawMatchedSignature.length : "null"
+    //   }`
+    // );
     // displayNotification(
     //   "Info",
     //   `validateSignatureChanges: Before normalize - currentSignatureLength: ${currentSignature ? currentSignature.length : "null"}`
@@ -775,7 +781,6 @@ function validateSignatureChanges(item, currentSignature, event, isReplyOrForwar
     //   cleanCurrentSignature,
     //   cleanCachedSignature,
     //   originalSignatureKey,
-    //   isReplyOrForward,
     //   currentLogoUrl,
     //   expectedLogoUrl,
     //   isTextValid,
