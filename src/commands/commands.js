@@ -135,18 +135,26 @@ const SignatureManager = {
   normalizeSignature(sig) {
     if (!sig) return "";
 
-    // Decode HTML entities first
-    const textarea = document.createElement("textarea");
-    textarea.innerHTML = sig;
-    let normalized = textarea.value;
+    let normalized = sig;
 
-    // Replace HTML entities
-    const htmlEntities = { " ": " ", "&": "&", "<": "<", ">": ">", '"': '"' };
+    // Manual HTML entity decoding
+    const htmlEntities = {
+      "&amp;": "&",
+      "&lt;": "<",
+      "&gt;": ">",
+      "&quot;": '"',
+      "&nbsp;": " ",
+      "&#160;": " ",
+      "&#39;": "'",
+      "&apos;": "'",
+    };
     for (const [entity, char] of Object.entries(htmlEntities)) {
       normalized = normalized.replace(new RegExp(entity, "gi"), char);
     }
+
     // Remove HTML tags
     normalized = normalized.replace(/<[^>]+>/g, " ");
+
     // Clean up text
     normalized = normalized
       .replace(/[\r\n]+/g, " ") // Replace newlines with a single space
@@ -156,6 +164,7 @@ const SignatureManager = {
       .replace(/\s+(email:)/gi, "$1") // Remove spaces before "email:"
       .trim() // Remove leading/trailing spaces
       .toLowerCase();
+
     return normalized;
   },
 
