@@ -815,34 +815,34 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
             if (error || !restored) {
               displayError("Failed to restore the original M3 signature. Please reselect.", event);
             } else {
-              item.body.getAsync(Office.CoercionType.Html, (bodyResult) => {
-                if (bodyResult.status !== Office.AsyncResultStatus.Succeeded) {
-                  displayNotification(
-                    "Error",
-                    `validateSignatureChanges: Failed to get body, error: ${bodyResult.error.message}`
-                  );
-                  displayError("Failed to validate restored signature.", event);
-                  return;
-                }
-                let currentBody = bodyResult.value;
-                displayNotification("Info", `currentBody: ${currentBody.substring(0, 20) || "null"}`);
-                item.body.setAsync(currentBody + " ", { coercionType: Office.CoercionType.Html }, (setResult) => {
-                  if (setResult.status !== Office.AsyncResultStatus.Succeeded) {
-                    displayNotification(
-                      "Error",
-                      `validateSignatureChanges: Failed to update body, error: ${setResult.error.message}`
-                    );
-                    displayError("Failed to apply restored signature.", event);
-                    return;
-                  }
-                  // item.saveAsync(() => {
-                  displayError(
-                    "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                    event
-                  );
-                });
-                // });
-              });
+              // item.body.getAsync(Office.CoercionType.Html, (bodyResult) => {
+              // if (bodyResult.status !== Office.AsyncResultStatus.Succeeded) {
+              //   displayNotification(
+              //     "Error",
+              //     `validateSignatureChanges: Failed to get body, error: ${bodyResult.error.message}`
+              //   );
+              //   displayError("Failed to validate restored signature.", event);
+              //   return;
+              // }
+              // let currentBody = bodyResult.value;
+              // displayNotification("Info", `currentBody: ${currentBody.substring(0, 50) || "null"}`);
+              // item.body.setAsync(currentBody + " ", { coercionType: Office.CoercionType.Html }, (setResult) => {
+              //   if (setResult.status !== Office.AsyncResultStatus.Succeeded) {
+              //     displayNotification(
+              //       "Error",
+              //       `validateSignatureChanges: Failed to update body, error: ${setResult.error.message}`
+              //     );
+              //     displayError("Failed to apply restored signature.", event);
+              //     return;
+              //   }
+              // item.saveAsync(() => {
+              displayError(
+                "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                event
+              );
+              // });
+              // });
+              // });
             }
             return;
           });
