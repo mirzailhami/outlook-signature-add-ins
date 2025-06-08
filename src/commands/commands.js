@@ -580,13 +580,15 @@ function fetchMessageById(messageId, callback) {
 function addSignature(signatureKey, event, isAutoApplied, callback) {
   const item = Office.context.mailbox.item;
 
-  storageRemoveItem("tempSignature");
-  storageSetItem("tempSignature", signatureKey);
+  const currentTempKey = storageGetItem("tempSignature");
+  if (currentTempKey !== signatureKey) {
+    storageSetItem("tempSignature", signatureKey);
+  }
   const cachedSignature = storageGetItem(`signature_${signatureKey}`);
 
   displayNotification(
     "Info",
-    `signatureKey: ${signatureKey}, cachedSignatureLength: ${cachedSignature ? cachedSignature.length : "null"}`
+    `addSignature: signatureKey: ${signatureKey}, currentTempKey: ${currentTempKey}, cachedSignatureLength: ${cachedSignature ? cachedSignature.length : "null"}`
   );
 
   if (cachedSignature && !isAutoApplied) {
@@ -714,12 +716,15 @@ function validateSignature(event) {
  * @param {boolean} isReplyOrForward - Whether the email is a reply/forward.
  */
 function validateSignatureChanges(item, currentSignature, event, isReplyOrForward) {
+  displayNotification("Info", `validateSignatureChanges is starting`);
+
   try {
     const originalSignatureKey = storageGetItem("tempSignature");
-    const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
+    displayNotification("Info", `validateSignatureChanges: Retrieved tempSignature: ${originalSignatureKey}`);
+    const rawMatchedSignature = originalSignatureKey ? storageGetItem(`signature_${originalSignatureKey}`) : null;
     displayNotification(
       "Info",
-      `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
+      `validateSignatureChanges: originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
         rawMatchedSignature ? rawMatchedSignature.length : "null"
       }`
     );
