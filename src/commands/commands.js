@@ -6,34 +6,107 @@ import { createNestablePublicClientApplication } from "@azure/msal-browser";
 import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
 
+// Robust storage fallback with logging
+let storage = typeof localStorage !== "undefined" ? localStorage : {};
+
 function storageSetItem(key, value) {
-  // if (typeof localStorage !== "undefined") {
-  //   localStorage.setItem(key, value);
-  //   displayNotification("Info", `localStorage.setItem(${key}, ${value})`);
-  // } else {
-  displayNotification("Info", `SET storage[${key}] = ${value.length}`);
-  storage[key] = value; // Store in a simple object
-  // }
+  displayNotification(
+    "Info",
+    `storageSetItem: Setting ${key} = ${value}, using ${
+      Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
+        ? "OfficeRuntime.Storage"
+        : typeof localStorage !== "undefined"
+          ? "localStorage"
+          : "in-memory storage"
+    }`
+  );
+  if (Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
+    OfficeRuntime.Storage.setItem(key, value).catch((error) => {
+      logger.log("error", "storageSetItem", { error: error.message, key, value });
+      displayNotification("Error", `storageSetItem: OfficeRuntime.Storage failed for ${key}, falling back`);
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(key, value);
+        displayNotification("Info", `storageSetItem: Fallback to localStorage for ${key} = ${value}`);
+      } else {
+        storage[key] = value;
+        displayNotification("Info", `storageSetItem: Fallback to in-memory for ${key} = ${value}`);
+      }
+    });
+  } else if (typeof localStorage !== "undefined") {
+    localStorage.setItem(key, value);
+    displayNotification("Info", `storageSetItem: Using localStorage for ${key} = ${value}`);
+  } else {
+    storage[key] = value;
+    displayNotification("Info", `storageSetItem: Using in-memory for ${key} = ${value}`);
+  }
 }
 
 function storageGetItem(key) {
-  // if (typeof localStorage !== "undefined") {
-  //   displayNotification("Info", `GET localStorage.getItem(${key}) = ${localStorage.getItem(key)}`);
-  //   return localStorage.getItem(key);
-  // } else {
-  displayNotification("Info", `GET storage[${key}] = ${storage[key]}`);
-  return storage[key] || null; // Return null if key doesn't exist
-  // }
+  displayNotification(
+    "Info",
+    `storageGetItem: Getting ${key}, using ${
+      Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
+        ? "OfficeRuntime.Storage"
+        : typeof localStorage !== "undefined"
+          ? "localStorage"
+          : "in-memory storage"
+    }`
+  );
+  if (Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
+    return OfficeRuntime.Storage.getItem(key).catch((error) => {
+      logger.log("error", "storageGetItem", { error: error.message, key });
+      displayNotification("Error", `storageGetItem: OfficeRuntime.Storage failed for ${key}, falling back`);
+      if (typeof localStorage !== "undefined") {
+        const value = localStorage.getItem(key);
+        displayNotification("Info", `storageGetItem: Fallback to localStorage for ${key} = ${value || "null"}`);
+        return value;
+      } else {
+        const value = storage[key] || null;
+        displayNotification("Info", `storageGetItem: Fallback to in-memory for ${key} = ${value || "null"}`);
+        return value;
+      }
+    });
+  } else if (typeof localStorage !== "undefined") {
+    const value = localStorage.getItem(key);
+    displayNotification("Info", `storageGetItem: Using localStorage for ${key} = ${value || "null"}`);
+    return value;
+  } else {
+    const value = storage[key] || null;
+    displayNotification("Info", `storageGetItem: Using in-memory for ${key} = ${value || "null"}`);
+    return value;
+  }
 }
 
 function storageRemoveItem(key) {
-  // if (typeof localStorage !== "undefined") {
-  //   displayNotification("Info", `localStorage remove ${key}`);
-  //   localStorage.removeItem(key);
-  // } else {
-  displayNotification("Info", `DEL storage ${key}`);
-  delete storage[key]; // Remove from the fallback object
-  // }
+  displayNotification(
+    "Info",
+    `storageRemoveItem: Removing ${key}, using ${
+      Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")
+        ? "OfficeRuntime.Storage"
+        : typeof localStorage !== "undefined"
+          ? "localStorage"
+          : "in-memory storage"
+    }`
+  );
+  if (Office.context.requirements.isSetSupported("OfficeRuntime", "1.1")) {
+    OfficeRuntime.Storage.removeItem(key).catch((error) => {
+      logger.log("error", "storageRemoveItem", { error: error.message, key });
+      displayNotification("Error", `storageRemoveItem: OfficeRuntime.Storage failed for ${key}, falling back`);
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(key);
+        displayNotification("Info", `storageRemoveItem: Fallback to localStorage for ${key}`);
+      } else {
+        delete storage[key];
+        displayNotification("Info", `storageRemoveItem: Fallback to in-memory for ${key}`);
+      }
+    });
+  } else if (typeof localStorage !== "undefined") {
+    localStorage.removeItem(key);
+    displayNotification("Info", `storageRemoveItem: Using localStorage for ${key}`);
+  } else {
+    delete storage[key];
+    displayNotification("Info", `storageRemoveItem: Using in-memory for ${key}`);
+  }
 }
 
 /**
@@ -584,9 +657,8 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
   try {
     const item = Office.context.mailbox.item;
 
-    // storageRemoveItem("tempSignature");
+    storageRemoveItem("tempSignature");
     storageSetItem("tempSignature", signatureKey);
-    // tempSignature["key"] = signatureKey;
     const cachedSignature = storageGetItem(`signature_${signatureKey}`);
 
     if (cachedSignature && !isAutoApplied) {
@@ -659,7 +731,6 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
               });
             }
             storageSetItem(`signature_${signatureKey}`, template);
-            tempSignature[signatureKey] = template;
             event.completed();
             callback();
           });
@@ -726,9 +797,7 @@ function validateSignatureChanges(item, currentSignature, event) {
   try {
     const originalSignatureKey = storageGetItem("tempSignature");
     const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
-    // console.log(originalSignatureKey);
-    // console.log(tempSignature[originalSignatureKey]);
-    displayNotification("Info", `tempSignature[originalSignatureKey]: ${tempSignature[originalSignatureKey]}`);
+
     // displayNotification(
     //   "Info",
     //   `originalSignatureKey: ${originalSignatureKey}, rawMatchedSignatureLength: ${
@@ -1004,5 +1073,3 @@ Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandle
 
 let isMobile = false;
 let isClassicOutlook = false;
-let tempSignature = {};
-let storage = {};
