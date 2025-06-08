@@ -790,15 +790,19 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
 
         displayNotification(
           "Info",
-          `currentLogoUrl: ${currentLogoUrl.length || "null"}, expectedLogoUrl: ${expectedLogoUrl.length || "null"},
-            cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
-            cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
+          `currentLogoUrl: ${currentLogoUrl.length || "null"},
+          expectedLogoUrl: ${expectedLogoUrl.length || "null"},
+          currentSignature: ${currentSignature.length || "null"},
+          rawMatchedSignature: ${rawMatchedSignature.length || "null"},
+          cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
+          cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
         );
 
         displayNotification(
           "Info",
           `validateSignatureChanges: 
-          isTextValid: ${isTextValid}, isLogoValid: ${isLogoValid}`
+          isTextValid: ${isTextValid},
+          isLogoValid: ${isLogoValid}`
         );
 
         if (isTextValid && isLogoValid) {
