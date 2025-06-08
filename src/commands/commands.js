@@ -723,6 +723,11 @@ function validateSignature(event) {
       ? SignatureManager.extractSignatureForOutlookClassic(body)
       : SignatureManager.extractSignature(body);
 
+    displayNotification(
+      "Info",
+      `validateSignature: currentSignature length: ${currentSignature?.length || "null"}, isClassicOutlook: ${isClassicOutlook}`
+    );
+
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
@@ -735,6 +740,7 @@ function validateSignature(event) {
  * Validates if the signature has been modified or changed.
  * @param {Office.MessageCompose} item - The email item.
  * @param {string} currentSignature - The current signature in the email body.
+ * @param {boolean} isClassicOutlook - Whether the Outlook version is classic.
  * @param {Office.AddinCommands.Event} event - The Outlook event object.
  */
 function validateSignatureChanges(item, currentSignature, event, isClassicOutlook) {
