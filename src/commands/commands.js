@@ -547,6 +547,7 @@ function getGraphAccessToken(callback) {
             callback(popupResponse.accessToken, null);
           },
           (popupError) => {
+            displayNotification("Info", `Origin: ${window.location.origin}, Error: ${popupError.message}`);
             logger.log("error", "acquireTokenPopup", { popupError: popupError.message });
             callback(null, new Error(`Failed to acquire access token: ${popupError.message}`));
           }
