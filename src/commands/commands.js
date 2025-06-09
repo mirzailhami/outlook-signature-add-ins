@@ -514,12 +514,32 @@ function getGraphAccessToken(callback) {
     const defaultSSO = {
       allowSignInPrompt: false,
       allowConsentPrompt: false,
-      //    forMSGraphAccess: true, // Leave commented during development testing (sideload) or you get a 13012 error from getAccessToken.
+      // forMSGraphAccess: true, // Uncomment for production with verified deployment
     };
     const options = JSON.parse(JSON.stringify(defaultSSO));
-    OfficeRuntime.auth.getAccessToken(options).then((accessToken) => {
-      callback(accessToken, null);
-    });
+
+    OfficeRuntime.auth
+      .getAccessToken(options)
+      .then((accessToken) => {
+        displayNotification("Info", "getGraphAccessToken: Token acquired successfully in Classic Outlook");
+        callback(accessToken, null);
+      })
+      .catch((error) => {
+        displayNotification(
+          "Error",
+          `getGraphAccessToken: Failed in Classic Outlook - ${error.code} - ${error.message}`
+        );
+        if (error.code === 13004) {
+          // untrusted_origin
+          displayNotification(
+            "Info",
+            "Untrusted origin detected. Please ensure .well-known file and manifest are correct."
+          );
+          callback(null, new Error("Untrusted origin error. Check configuration."));
+        } else {
+          callback(null, error);
+        }
+      });
   } else {
     initializePCA((initError) => {
       if (initError) {
