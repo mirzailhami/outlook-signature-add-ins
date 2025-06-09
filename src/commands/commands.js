@@ -997,16 +997,19 @@ function onNewMessageComposeHandler(event) {
  */
 function processEmailId(messageId, event) {
   try {
+    isClassicOutlook = Office.context?.mailbox?.diagnostics?.hostName === "Outlook";
+
     fetchMessageById(messageId, (message, fetchError) => {
       if (fetchError) {
-        logger.log("error", "onNewMessageComposeHandler", { error: fetchError.message });
         displayNotification("Info", `Origin: ${window.location.origin}`);
         completeWithState(event, "Error", fetchError.message);
         return;
       }
 
       const emailBody = message.body?.content || "";
-      const extractedSignature = SignatureManager.extractSignature(emailBody);
+      const extractedSignature = isClassicOutlook
+        ? SignatureManager.extractSignatureForOutlookClassic(emailBody)
+        : SignatureManager.extractSignature(emailBody);
 
       if (!extractedSignature) {
         logger.log("warn", "onNewMessageComposeHandler", { status: "No signature found in email" });
