@@ -1033,10 +1033,10 @@ function processEmailId(messageId, event, isClassicOutlook = false) {
       return;
     }
 
-    displayNotification(
-      "Info",
-      `emailBody: ${emailBody.length}, extractedSignature length: ${extractedSignature.length}`
-    );
+    // displayNotification(
+    //   "Info",
+    //   `emailBody: ${emailBody.length}, extractedSignature length: ${extractedSignature.length}`
+    // );
 
     logger.log("info", "onNewMessageComposeHandler", {
       status: "Signature extracted from email",
