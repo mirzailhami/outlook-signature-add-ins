@@ -950,12 +950,10 @@ function onNewMessageComposeHandler(event) {
       } else {
         if (isClassicOutlook) {
           let itemId = Office.context.mailbox.item?.itemId || null;
-          if (itemId === null || itemId == undefined) {
-            item.saveAsync(function (result) {
-              itemId = result?.value || "xx";
-              completeWithState(event, "Info", itemId || "Failed to get itemId.");
-            });
-          }
+          Office.context.mailbox.item.saveAsync(function (result) {
+            itemId = result?.value || "xx";
+            completeWithState(event, "Info", itemId || "Failed to get itemId.");
+          });
           // var restId = Office.context.mailbox.convertToRestId(itemId, Office.MailboxEnums.RestVersion.v2_0);
           // displayNotification("Info", `itemId: ${itemId || "none"}`);
           // displayNotification("Info", `restId: ${restId || "none"}`);
