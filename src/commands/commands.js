@@ -1004,21 +1004,13 @@ function onNewMessageComposeHandler(event) {
  */
 function processEmailId(messageId, event, isClassicOutlook = false) {
   try {
+    displayNotification("Info", `Processing email ID: ${messageId}, isClassicOutlook: ${isClassicOutlook}`);
     fetchMessageById(messageId, (message, fetchError) => {
       if (fetchError) {
         displayNotification("Info", `Origin: ${window.location.origin}`);
         completeWithState(event, "Error", fetchError.message);
         return;
       }
-
-      // displayNotification(
-      //   "Info",
-      //   `Origin: ${window.location.origin},
-      //   messageId: ${messageId},
-      //   subject: ${message.subject || "No subject"},`
-      // );
-
-      console.log(message);
 
       const emailBody = message.body?.content || "";
       const extractedSignature = isClassicOutlook
@@ -1036,6 +1028,11 @@ function processEmailId(messageId, event, isClassicOutlook = false) {
         );
         return;
       }
+
+      displayNotification(
+        "Info",
+        `emailBody: ${emailBody.length}, extractedSignature length: ${extractedSignature.length}`
+      );
 
       logger.log("info", "onNewMessageComposeHandler", {
         status: "Signature extracted from email",
