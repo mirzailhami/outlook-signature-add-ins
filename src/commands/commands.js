@@ -995,7 +995,8 @@ function onNewMessageComposeHandler(event) {
                 appendDebugLogToBody(item, "getItemIdAsync", itemIdResult.error.message);
               }
               messageId = itemIdResult.value;
-              processEmailId(messageId, event, true);
+              displayNotification("Info", `Retrieved message ID: ${messageId}`);
+              // processEmailId(messageId, event, true);
             });
           });
         } else {
