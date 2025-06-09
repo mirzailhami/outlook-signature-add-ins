@@ -984,15 +984,47 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
+          const item = Office.context.mailbox.item;
+          appendDebugLogToBody(item, "isClassicOutlook", "Starting save process");
+          displayNotification("Info", "Starting save process for Classic Outlook");
+
           item.saveAsync((saveResult) => {
+            appendDebugLogToBody(
+              item,
+              "saveAsync",
+              `Status: ${saveResult.status}, Error: ${saveResult.error?.message || "none"}`
+            );
+            logger.log("info", "saveAsync", { status: saveResult.status, error: saveResult.error?.message || "none" });
             if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
-              completeWithState(event, "Error", saveResult.error.message);
-              return;
+              logger.log("error", "onNewMessageComposeHandler", { error: saveResult.error?.message || "Save failed" });
+              completeWithState(event, "Error", saveResult.error?.message || "Failed to save draft.");
+              appendDebugLogToBody(item, "saveAsync", `Failed: ${saveResult.error?.message || "Unknown error"}`);
+              return; // Stop execution on failure
             }
+            appendDebugLogToBody(item, "saveAsync", "Draft saved successfully");
+            displayNotification("Info", "Draft saved successfully");
+
             item.getItemIdAsync((itemIdResult) => {
+              appendDebugLogToBody(
+                item,
+                "getItemIdAsync",
+                `Status: ${itemIdResult.status}, Error: ${itemIdResult.error?.message || "none"}`
+              );
+              logger.log("info", "getItemIdAsync", {
+                status: itemIdResult.status,
+                error: itemIdResult.error?.message || "none",
+              });
               if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
-                completeWithState(event, "Error", itemIdResult.error.message);
-                return;
+                logger.log("error", "onNewMessageComposeHandler", {
+                  error: itemIdResult.error?.message || "Get ID failed",
+                });
+                completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
+                appendDebugLogToBody(
+                  item,
+                  "getItemIdAsync",
+                  `Failed: ${itemIdResult.error?.message || "Unknown error"}`
+                );
+                return; // Stop execution on failure
               }
               messageId = itemIdResult.value;
               try {
@@ -1002,7 +1034,8 @@ function onNewMessageComposeHandler(event) {
                 logger.log("error", "displayNotification", { error: displayError.message });
                 appendDebugLogToBody(item, "displayNotification", `Failed: ${displayError.message} - ${messageId}`);
               }
-              displayNotification("Info", `Retrieved message ID: ${messageId}`);
+              displayNotification("Info", `Retrieved message ID: ${messageId}`); // Duplicate for reliability
+              // Uncomment to continue flow
               // processEmailId(messageId, event, true);
             });
           });
