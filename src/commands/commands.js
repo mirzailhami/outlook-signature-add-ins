@@ -949,26 +949,22 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          const item = Office.context.mailbox.item;
-          displayNotification("Info", `conversationId: ${item.conversationId}`);
-          processEmailId(item.conversationId, event, true);
+          item.saveAsync((saveResult) => {
+            if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
+              completeWithState(event, "Error", saveResult.error?.message || "Failed to save draft.");
+              return; // Stop execution on failure
+            }
+            displayNotification("Info", "Draft saved successfully");
 
-          // item.saveAsync((saveResult) => {
-          //   if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
-          //     completeWithState(event, "Error", saveResult.error?.message || "Failed to save draft.");
-          //     return; // Stop execution on failure
-          //   }
-          //   displayNotification("Info", "Draft saved successfully");
-
-          //   item.getItemIdAsync((itemIdResult) => {
-          //     if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
-          //       completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
-          //       return; // Stop execution on failure
-          //     }
-          //     displayNotification("Info", `Retrieved message ID: ${itemIdResult.value}`);
-          //     // processEmailId(itemIdResult.value, event, true);
-          //   });
-          // });
+            item.getItemIdAsync((itemIdResult) => {
+              if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
+                completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
+                return; // Stop execution on failure
+              }
+              displayNotification("Info", `Retrieved message ID: ${itemIdResult.value}`);
+              processEmailId(itemIdResult.value, event, true);
+            });
+          });
         } else {
           item.getItemIdAsync((itemIdResult) => {
             if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
