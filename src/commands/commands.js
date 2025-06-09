@@ -446,7 +446,7 @@ function displayNotification(type, message, persistent = false) {
       }
     });
   } catch (error) {
-    logger.log("error", "displayNotification", { error: error.message });
+    logger.log("error", "displayNotification", { error: error.message.substring(0, 140) });
   }
 }
 
@@ -507,11 +507,11 @@ function initializePCA(callback) {
  * @param {function(string|null, Error|null)} callback - Callback with token or error.
  */
 function getGraphAccessToken(callback) {
-  // if (Office.context.requirements.isSetSupported("NestedAppAuth", "1.1")) {
-  //   displayNotification("Info", "Nested App Auth supported.");
-  // } else {
-  //   displayNotification("Info", "Nested App Auth not supported, falling back to alternate auth.");
-  // }
+  if (Office.context.requirements.isSetSupported("NestedAppAuth", "1.1")) {
+    displayNotification("Info", "Nested App Auth supported.");
+  } else {
+    displayNotification("Info", "Nested App Auth not supported, falling back to alternate auth.");
+  }
 
   initializePCA((initError) => {
     if (initError) {
@@ -955,13 +955,15 @@ function onNewMessageComposeHandler(event) {
         if (isClassicOutlook) {
           item.saveAsync((saveResult) => {
             if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
-              completeWithState(event, "Error", saveResult.error.message);
-              return;
+              // completeWithState(event, "Error", saveResult.error.message);
+              // return;
+              appendDebugLogToBody(item, "saveAsync", saveResult.error.message);
             }
             item.getItemIdAsync((itemIdResult) => {
               if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
-                completeWithState(event, "Error", itemIdResult.error.message);
-                return;
+                // completeWithState(event, "Error", itemIdResult.error.message);
+                // return;
+                appendDebugLogToBody(item, "getItemIdAsync", itemIdResult.error.message);
               }
               messageId = itemIdResult.value;
               processEmailId(messageId, event, true);
