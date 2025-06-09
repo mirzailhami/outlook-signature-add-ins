@@ -949,7 +949,7 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          item.getItemIdAsync(function (result) {
+          item.saveAsync(function (result) {
             if (result.status === Office.AsyncResultStatus.Failed) {
               completeWithState(event, "Error", result.error?.message || "Failed to get item ID.");
               return;
