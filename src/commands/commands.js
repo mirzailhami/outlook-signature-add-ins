@@ -507,12 +507,11 @@ function initializePCA(callback) {
  * @param {function(string|null, Error|null)} callback - Callback with token or error.
  */
 function getGraphAccessToken(callback) {
-  if (Office.context.requirements.isSetSupported("NestedAppAuth", "1.1")) {
-    displayNotification("Info", "Nested App Auth supported.");
-  } else {
-    displayNotification("Info", "Nested App Auth not supported, falling back to alternate auth.");
-    // Implement fallback (e.g., OAuth popup)
-  }
+  // if (Office.context.requirements.isSetSupported("NestedAppAuth", "1.1")) {
+  //   displayNotification("Info", "Nested App Auth supported.");
+  // } else {
+  //   displayNotification("Info", "Nested App Auth not supported, falling back to alternate auth.");
+  // }
 
   initializePCA((initError) => {
     if (initError) {
@@ -539,7 +538,6 @@ function getGraphAccessToken(callback) {
             callback(popupResponse.accessToken, null);
           },
           (popupError) => {
-            displayNotification("Info", `Origin: ${window.location.origin}, Error: ${popupError.message}`);
             logger.log("error", "acquireTokenPopup", { popupError: popupError.message });
             callback(null, new Error(`Failed to acquire access token: ${popupError.message}`));
           }
@@ -1002,6 +1000,7 @@ function processEmailId(messageId, event) {
   fetchMessageById(messageId, (message, fetchError) => {
     if (fetchError) {
       logger.log("error", "onNewMessageComposeHandler", { error: fetchError.message });
+      displayNotification("Info", `Origin: ${window.location.origin}`);
       completeWithState(event, "Error", fetchError.message);
       return;
     }
