@@ -836,10 +836,10 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
               //     return;
               //   }
               // item.saveAsync(() => {
-              displayError(
-                "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                event
-              );
+              // displayError(
+              //   "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+              //   event
+              // );
               event.completed({ allowEvent: true });
               // });
               // });
@@ -946,6 +946,15 @@ function onNewMessageComposeHandler(event) {
         messageId = item.conversationId;
         processEmailId(messageId, event);
       } else {
+        if (isClassicOutlook) {
+          item.saveAsync((saveResult) => {
+            if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
+              completeWithState(event, "Error", saveResult.error.message);
+              return;
+            }
+          });
+        }
+
         item.getItemIdAsync((itemIdResult) => {
           if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
             logger.log("error", "onNewMessageComposeHandler", { error: itemIdResult.error.message });
