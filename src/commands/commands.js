@@ -949,19 +949,18 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          item.saveAsync(function (result) {
+          item.saveAsync((result) => {
             if (result.status === Office.AsyncResultStatus.Failed) {
               completeWithState(event, "Error", result.error?.message || "Failed to save.");
               return;
             }
-            displayNotification("Info", `Draft saved successfully. Retrieving message ID...`);
+            displayNotification("Info", `Draft saved. ID: ${result?.value || "none"}`);
             item.getItemIdAsync((itemIdResult) => {
               if (itemIdResult.status === Office.AsyncResultStatus.Failed) {
                 completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
                 return;
               }
-              messageId = itemIdResult.value;
-              completeWithState(event, "Info", `Retrieved message ID: ${messageId}`);
+              completeWithState(event, "Info", `Retrieved message ID: ${itemIdResult?.value || "none"}`);
               return;
               // processEmailId(messageId, event, true);
             });
