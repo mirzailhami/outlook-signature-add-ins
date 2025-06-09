@@ -968,7 +968,6 @@ function onNewMessageComposeHandler(event) {
             return;
           }
           messageId = itemIdResult.value;
-          logger.log("info", "getItemIdAsync for OWA/Classic", { messageId });
           processEmailId(messageId, event);
         });
       }
@@ -997,58 +996,62 @@ function onNewMessageComposeHandler(event) {
  * @param {Office.AddinCommands.Event} event - The event object.
  */
 function processEmailId(messageId, event) {
-  fetchMessageById(messageId, (message, fetchError) => {
-    if (fetchError) {
-      logger.log("error", "onNewMessageComposeHandler", { error: fetchError.message });
-      displayNotification("Info", `Origin: ${window.location.origin}`);
-      completeWithState(event, "Error", fetchError.message);
-      return;
-    }
+  try {
+    fetchMessageById(messageId, (message, fetchError) => {
+      if (fetchError) {
+        logger.log("error", "onNewMessageComposeHandler", { error: fetchError.message });
+        displayNotification("Info", `Origin: ${window.location.origin}`);
+        completeWithState(event, "Error", fetchError.message);
+        return;
+      }
 
-    const emailBody = message.body?.content || "";
-    const extractedSignature = SignatureManager.extractSignature(emailBody);
+      const emailBody = message.body?.content || "";
+      const extractedSignature = SignatureManager.extractSignature(emailBody);
 
-    if (!extractedSignature) {
-      logger.log("warn", "onNewMessageComposeHandler", { status: "No signature found in email" });
-      completeWithState(
-        event,
-        "Info",
-        isMobile
-          ? "No signature found in email. Please select an M3 signature from the task pane."
-          : "No signature found in email. Please select an M3 signature from the ribbon."
-      );
-      return;
-    }
+      if (!extractedSignature) {
+        logger.log("warn", "onNewMessageComposeHandler", { status: "No signature found in email" });
+        completeWithState(
+          event,
+          "Info",
+          isMobile
+            ? "No signature found in email. Please select an M3 signature from the task pane."
+            : "No signature found in email. Please select an M3 signature from the ribbon."
+        );
+        return;
+      }
 
-    logger.log("info", "onNewMessageComposeHandler", {
-      status: "Signature extracted from email",
-      signatureLength: extractedSignature.length,
+      logger.log("info", "onNewMessageComposeHandler", {
+        status: "Signature extracted from email",
+        signatureLength: extractedSignature.length,
+      });
+
+      const matchedSignatureKey = detectSignatureKey(extractedSignature);
+      if (!matchedSignatureKey) {
+        logger.log("warn", "onNewMessageComposeHandler", { status: "Could not detect signature key" });
+        completeWithState(
+          event,
+          "Info",
+          isMobile
+            ? "Could not detect signature type. Please select an M3 signature from the task pane."
+            : "Could not detect signature type. Please select an M3 signature from the ribbon."
+        );
+        return;
+      }
+
+      logger.log("info", "onNewMessageComposeHandler", {
+        status: "Detected signature key from content",
+        matchedSignatureKey,
+      });
+
+      storageRemoveItem("tempSignature");
+      storageSetItem("tempSignature", matchedSignatureKey);
+      addSignature(matchedSignatureKey, event, true, () => {
+        completeWithState(event, null, null);
+      });
     });
-
-    const matchedSignatureKey = detectSignatureKey(extractedSignature);
-    if (!matchedSignatureKey) {
-      logger.log("warn", "onNewMessageComposeHandler", { status: "Could not detect signature key" });
-      completeWithState(
-        event,
-        "Info",
-        isMobile
-          ? "Could not detect signature type. Please select an M3 signature from the task pane."
-          : "Could not detect signature type. Please select an M3 signature from the ribbon."
-      );
-      return;
-    }
-
-    logger.log("info", "onNewMessageComposeHandler", {
-      status: "Detected signature key from content",
-      matchedSignatureKey,
-    });
-
-    storageRemoveItem("tempSignature");
-    storageSetItem("tempSignature", matchedSignatureKey);
-    addSignature(matchedSignatureKey, event, true, () => {
-      completeWithState(event, null, null);
-    });
-  });
+  } catch (error) {
+    displayNotification("Error", `processEmailId: Exception - ${error.message}`);
+  }
 }
 
 /**
