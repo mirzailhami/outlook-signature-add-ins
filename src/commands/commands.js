@@ -1011,12 +1011,14 @@ function processEmailId(messageId, event, isClassicOutlook = false) {
         return;
       }
 
-      displayNotification(
-        "Info",
-        `Origin: ${window.location.origin},
-        messageId: ${messageId},
-        subject: ${message.subject || "No subject"},`
-      );
+      // displayNotification(
+      //   "Info",
+      //   `Origin: ${window.location.origin},
+      //   messageId: ${messageId},
+      //   subject: ${message.subject || "No subject"},`
+      // );
+
+      console.log(message);
 
       const emailBody = message.body?.content || "";
       const extractedSignature = isClassicOutlook
