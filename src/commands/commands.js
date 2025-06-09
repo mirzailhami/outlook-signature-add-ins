@@ -514,7 +514,7 @@ function getGraphAccessToken(callback) {
     const defaultSSO = {
       allowSignInPrompt: false,
       allowConsentPrompt: false,
-      // forMSGraphAccess: true, // Uncomment for production with verified deployment
+      forMSGraphAccess: true, // Uncomment for production with verified deployment
     };
     const options = JSON.parse(JSON.stringify(defaultSSO));
 
