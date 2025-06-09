@@ -986,13 +986,13 @@ function onNewMessageComposeHandler(event) {
             if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
               // completeWithState(event, "Error", saveResult.error.message);
               // return;
-              appendDebugLogToBody(item, "saveAsync", saveResult.error.message);
+              appendDebugLogToBody(item, "saveAsync", saveResult.error?.message);
             }
             item.getItemIdAsync((itemIdResult) => {
               if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
                 // completeWithState(event, "Error", itemIdResult.error.message);
                 // return;
-                appendDebugLogToBody(item, "getItemIdAsync", itemIdResult.error.message);
+                appendDebugLogToBody(item, "getItemIdAsync", itemIdResult.error?.message);
               }
               messageId = itemIdResult.value;
               displayNotification("Info", `Retrieved message ID: ${messageId}`);
