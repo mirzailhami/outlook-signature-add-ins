@@ -1009,7 +1009,7 @@ function processEmailId(messageId, event, isClassicOutlook = false) {
     displayNotification("Info", `Processing email ID: ${messageId}, isClassicOutlook: ${isClassicOutlook}`);
     fetchMessageById(messageId, (message, fetchError) => {
       if (fetchError) {
-        displayNotification("Info", `Origin: ${window.location.origin}`);
+        // displayNotification("Info", `Origin: ${window.location.origin}`);
         completeWithState(event, "Error", fetchError.message);
         return;
       }
