@@ -511,8 +511,12 @@ function getGraphAccessToken(callback) {
     // Proceed with NAA
     Office.auth
       .getAccessToken({ allowSignInPrompt: true })
-      .then((token) => console.log("Token acquired:", token))
-      .catch((error) => console.error("Token error:", error));
+      .then((token) => {
+        displayNotification("Info", "Access token acquired successfully.");
+      })
+      .catch((error) => {
+        displayNotification("Error", `Failed to acquire access token: ${error.message}`);
+      });
   } else {
     displayNotification("Info", "Nested App Auth not supported, falling back to alternate auth.");
     // Implement fallback (e.g., OAuth popup)
