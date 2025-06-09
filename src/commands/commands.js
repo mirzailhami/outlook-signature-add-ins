@@ -985,16 +985,23 @@ function onNewMessageComposeHandler(event) {
           item.saveAsync((saveResult) => {
             if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
               completeWithState(event, "Error", saveResult.error.message);
-              // return;
+              return;
               // appendDebugLogToBody(item, "saveAsync", saveResult.error?.message);
             }
             item.getItemIdAsync((itemIdResult) => {
               if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
                 completeWithState(event, "Error", itemIdResult.error.message);
-                // return;
+                return;
                 // appendDebugLogToBody(item, "getItemIdAsync", itemIdResult.error?.message);
               }
               messageId = itemIdResult.value;
+              try {
+                displayNotification("Info", `Retrieved message ID: ${messageId}`);
+                appendDebugLogToBody(item, "messageId", messageId); // Fallback log
+              } catch (displayError) {
+                logger.log("error", "displayNotification", { error: displayError.message });
+                appendDebugLogToBody(item, "displayNotification", `Failed: ${displayError.message} - ${messageId}`);
+              }
               displayNotification("Info", `Retrieved message ID: ${messageId}`);
               // processEmailId(messageId, event, true);
             });
