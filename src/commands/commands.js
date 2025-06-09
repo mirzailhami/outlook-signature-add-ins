@@ -946,12 +946,13 @@ function onNewMessageComposeHandler(event) {
       let messageId;
       if (isMobile) {
         messageId = item.conversationId;
+        appendDebugLogToBody(item, `messageId`, messageId || "null");
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          let itemId = Office.context.mailbox.item.conversationId;
-          appendDebugLogToBody(item, `itemId`, itemId || "null");
-          completeWithState(event, "Info", itemId || "Failed to get itemId.");
+          messageId = item.conversationId;
+          appendDebugLogToBody(item, `messageId`, messageId || "null");
+          completeWithState(event, "Info", messageId || "Failed to get itemId.");
           // var restId = Office.context.mailbox.convertToRestId(itemId, Office.MailboxEnums.RestVersion.v2_0);
           // displayNotification("Info", `itemId: ${itemId || "none"}`);
           // displayNotification("Info", `restId: ${restId || "none"}`);
