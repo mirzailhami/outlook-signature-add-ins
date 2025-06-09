@@ -951,10 +951,20 @@ function onNewMessageComposeHandler(event) {
         if (isClassicOutlook) {
           item.saveAsync(function (result) {
             if (result.status === Office.AsyncResultStatus.Failed) {
-              completeWithState(event, "Error", result.error?.message || "Failed to get item ID.");
+              completeWithState(event, "Error", result.error?.message || "Failed to save.");
               return;
             }
-            completeWithState(event, "Info", result.value);
+            completeWithState(event, "Info", JSON.stringify(result));
+            item.getItemIdAsync((itemIdResult) => {
+              if (itemIdResult.status === Office.AsyncResultStatus.Failed) {
+                completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
+                return;
+              }
+              messageId = itemIdResult.value;
+              completeWithState(event, "Info", `Retrieved message ID: ${messageId}`);
+              return;
+              // processEmailId(messageId, event, true);
+            });
             return;
           });
           // item.saveAsync((saveResult) => {
