@@ -507,73 +507,73 @@ function initializePCA(callback) {
  * @param {function(string|null, Error|null)} callback - Callback with token or error.
  */
 function getGraphAccessToken(callback) {
-  const hostName = Office.context.mailbox.diagnostics.hostName;
-  const isClassicOutlook = hostName === "Outlook";
+  // const hostName = Office.context.mailbox.diagnostics.hostName;
+  // const isClassicOutlook = hostName === "Outlook";
 
-  if (isClassicOutlook) {
-    const defaultSSO = {
-      allowSignInPrompt: false,
-      allowConsentPrompt: false,
-      // forMSGraphAccess: true, // Uncomment for production with verified deployment
+  // if (isClassicOutlook) {
+  //   const defaultSSO = {
+  //     allowSignInPrompt: false,
+  //     allowConsentPrompt: false,
+  //     // forMSGraphAccess: true, // Uncomment for production with verified deployment
+  //   };
+  //   const options = JSON.parse(JSON.stringify(defaultSSO));
+
+  //   OfficeRuntime.auth
+  //     .getAccessToken(options)
+  //     .then((accessToken) => {
+  //       displayNotification("Info", "getGraphAccessToken: Token acquired successfully in Classic Outlook");
+  //       callback(accessToken, null);
+  //     })
+  //     .catch((error) => {
+  //       displayNotification(
+  //         "Error",
+  //         `getGraphAccessToken: Failed in Classic Outlook - ${error.code} - ${error.message}`
+  //       );
+  //       if (error.code === 13004) {
+  //         // untrusted_origin
+  //         displayNotification(
+  //           "Info",
+  //           "Untrusted origin detected. Please ensure .well-known file and manifest are correct."
+  //         );
+  //         callback(null, new Error("Untrusted origin error. Check configuration."));
+  //       } else {
+  //         callback(null, error);
+  //       }
+  //     });
+  // } else {
+  initializePCA((initError) => {
+    if (initError) {
+      callback(null, initError);
+      return;
+    }
+
+    const tokenRequest = {
+      scopes: ["User.Read", "Mail.ReadWrite", "Mail.Read", "openid", "profile"],
     };
-    const options = JSON.parse(JSON.stringify(defaultSSO));
 
-    OfficeRuntime.auth
-      .getAccessToken(options)
-      .then((accessToken) => {
-        displayNotification("Info", "getGraphAccessToken: Token acquired successfully in Classic Outlook");
-        callback(accessToken, null);
-      })
-      .catch((error) => {
-        displayNotification(
-          "Error",
-          `getGraphAccessToken: Failed in Classic Outlook - ${error.code} - ${error.message}`
+    logger.log("info", "acquireTokenSilent", { status: "Attempting to acquire token silently" });
+    pca.acquireTokenSilent(tokenRequest).then(
+      (silentResponse) => {
+        logger.log("info", "acquireTokenSilent", { status: "Token acquired silently" });
+        callback(silentResponse.accessToken, null);
+      },
+      (silentError) => {
+        logger.log("warn", "acquireTokenSilent", { error: silentError.message });
+        logger.log("info", "acquireTokenPopup", { status: "Falling back to interactive token acquisition" });
+        pca.acquireTokenPopup(tokenRequest).then(
+          (popupResponse) => {
+            logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
+            callback(popupResponse.accessToken, null);
+          },
+          (popupError) => {
+            logger.log("error", "acquireTokenPopup", { popupError: popupError.message });
+            callback(null, new Error(`Failed to acquire access token: ${popupError.message}`));
+          }
         );
-        if (error.code === 13004) {
-          // untrusted_origin
-          displayNotification(
-            "Info",
-            "Untrusted origin detected. Please ensure .well-known file and manifest are correct."
-          );
-          callback(null, new Error("Untrusted origin error. Check configuration."));
-        } else {
-          callback(null, error);
-        }
-      });
-  } else {
-    initializePCA((initError) => {
-      if (initError) {
-        callback(null, initError);
-        return;
       }
-
-      const tokenRequest = {
-        scopes: ["User.Read", "Mail.ReadWrite", "Mail.Read", "openid", "profile"],
-      };
-
-      logger.log("info", "acquireTokenSilent", { status: "Attempting to acquire token silently" });
-      pca.acquireTokenSilent(tokenRequest).then(
-        (silentResponse) => {
-          logger.log("info", "acquireTokenSilent", { status: "Token acquired silently" });
-          callback(silentResponse.accessToken, null);
-        },
-        (silentError) => {
-          logger.log("warn", "acquireTokenSilent", { error: silentError.message });
-          logger.log("info", "acquireTokenPopup", { status: "Falling back to interactive token acquisition" });
-          pca.acquireTokenPopup(tokenRequest).then(
-            (popupResponse) => {
-              logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
-              callback(popupResponse.accessToken, null);
-            },
-            (popupError) => {
-              logger.log("error", "acquireTokenPopup", { popupError: popupError.message });
-              callback(null, new Error(`Failed to acquire access token: ${popupError.message}`));
-            }
-          );
-        }
-      );
-    });
-  }
+    );
+  });
+  // }
 }
 
 /**
