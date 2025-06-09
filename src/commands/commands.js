@@ -507,8 +507,8 @@ function initializePCA(callback) {
  * @param {function(string|null, Error|null)} callback - Callback with token or error.
  */
 function getGraphAccessToken(callback) {
-  // const hostName = Office.context.mailbox.diagnostics.hostName;
-  // const isClassicOutlook = hostName === "Outlook";
+  const hostName = Office.context.mailbox.diagnostics.hostName;
+  const isClassicOutlook = hostName === "Outlook";
 
   if (isClassicOutlook) {
     const defaultSSO = {
