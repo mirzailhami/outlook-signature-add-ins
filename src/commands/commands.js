@@ -954,7 +954,7 @@ function onNewMessageComposeHandler(event) {
               completeWithState(event, "Error", result.error?.message || "Failed to save.");
               return;
             }
-            completeWithState(event, "Info", JSON.stringify(result));
+            displayNotification("Info", `Draft saved successfully. Retrieving message ID...`);
             item.getItemIdAsync((itemIdResult) => {
               if (itemIdResult.status === Office.AsyncResultStatus.Failed) {
                 completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
