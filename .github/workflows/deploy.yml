@@ -25,7 +25,7 @@ jobs:
       - name: Build production assets
         run: npm run build
         env:
-          ASSET_BASE_URL: /outlook-signature-add-ins/
+          ASSET_BASE_URL: https://mirzailhami.github.io/outlook-signature-add-ins
           NODE_ENV: production
 
       - name: Deploy to GitHub Pages
