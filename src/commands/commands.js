@@ -985,7 +985,8 @@ function onNewMessageComposeHandler(event) {
       } else {
         if (isClassicOutlook) {
           const item = Office.context.mailbox.item;
-          completeWithState(event, "Info", `conversationId: ${item.conversationId}`);
+          displayNotification("Info", `conversationId: ${item.conversationId}`);
+          processEmailId(item.conversationId, event, true);
 
           // item.saveAsync((saveResult) => {
           //   if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
@@ -1040,8 +1041,6 @@ function onNewMessageComposeHandler(event) {
  */
 function processEmailId(messageId, event, isClassicOutlook = false) {
   try {
-    displayNotification("Info", `Processing email ID: ${messageId}, isClassicOutlook: ${isClassicOutlook}`);
-
     fetchMessageById(messageId, (message, fetchError) => {
       if (fetchError) {
         // displayNotification("Info", `Origin: ${window.location.origin}`);
