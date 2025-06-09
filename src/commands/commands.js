@@ -949,11 +949,18 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          var itemId = Office.context.mailbox.item.itemId;
-          var restId = Office.context.mailbox.convertToRestId(itemId, Office.MailboxEnums.RestVersion.v2_0);
-          displayNotification("Info", `itemId: ${itemId || "none"}`);
-          displayNotification("Info", `restId: ${restId || "none"}`);
-          event.completed();
+          let itemId = item.itemId;
+          if (itemId === null || itemId == undefined) {
+            item.saveAsync(function (result) {
+              itemId = result.value;
+              completeWithState(event, "Info", itemId || "Failed to get itemId.");
+            });
+          }
+          // var restId = Office.context.mailbox.convertToRestId(itemId, Office.MailboxEnums.RestVersion.v2_0);
+          // displayNotification("Info", `itemId: ${itemId || "none"}`);
+          // displayNotification("Info", `restId: ${restId || "none"}`);
+          // event.completed();
+
           // item.saveAsync((saveResult) => {
           //   if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
           //     completeWithState(event, "Error", saveResult.error?.message || "Failed to save draft.");
