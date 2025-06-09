@@ -949,23 +949,11 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          item.saveAsync((result) => {
-            if (result.status === Office.AsyncResultStatus.Failed) {
-              completeWithState(event, "Error", result.error?.message || "Failed to save.");
-              return;
-            }
-            displayNotification("Info", `Draft saved. ID: ${result?.value || "none"}`);
-            item.getItemIdAsync((itemIdResult) => {
-              if (itemIdResult.status === Office.AsyncResultStatus.Failed) {
-                completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
-                return;
-              }
-              completeWithState(event, "Info", `Retrieved message ID: ${itemIdResult?.value || "none"}`);
-              return;
-              // processEmailId(messageId, event, true);
-            });
-            return;
-          });
+          var itemId = Office.context.mailbox.item.itemId;
+          var restId = Office.context.mailbox.convertToRestId(itemId, Office.MailboxEnums.RestVersion.v2_0);
+          displayNotification("Info", `itemId: ${itemId || "none"}`);
+          displayNotification("Info", `restId: ${restId || "none"}`);
+          event.completed();
           // item.saveAsync((saveResult) => {
           //   if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
           //     completeWithState(event, "Error", saveResult.error?.message || "Failed to save draft.");
