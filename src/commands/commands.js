@@ -949,11 +949,9 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          let itemId = Office.context.mailbox.item?.itemId || null;
-          Office.context.mailbox.item.saveAsync(function (result) {
-            itemId = result?.value || "xx";
-            completeWithState(event, "Info", itemId || "Failed to get itemId.");
-          });
+          let itemId = Office.context.mailbox.item.conversationId;
+          appendDebugLogToBody(item, `itemId`, itemId || "null");
+          completeWithState(event, "Info", itemId || "Failed to get itemId.");
           // var restId = Office.context.mailbox.convertToRestId(itemId, Office.MailboxEnums.RestVersion.v2_0);
           // displayNotification("Info", `itemId: ${itemId || "none"}`);
           // displayNotification("Info", `restId: ${restId || "none"}`);
