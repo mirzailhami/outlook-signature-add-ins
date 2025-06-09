@@ -994,14 +994,23 @@ function onNewMessageComposeHandler(event) {
             }
             displayNotification("Info", "Draft saved successfully");
 
-            item.getItemIdAsync((itemIdResult) => {
-              if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
-                completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
-                return; // Stop execution on failure
-              }
-              displayNotification("Info", `Retrieved message ID: ${itemIdResult.value}`);
-              // processEmailId(itemIdResult.value, event, true);
-            });
+            setTimeout(() => {
+              item.getItemIdAsync((itemIdResult) => {
+                if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
+                  displayNotification(
+                    "Error",
+                    `Failed to get item ID: ${itemIdResult.error?.message || "Unknown error"}`
+                  );
+                  completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
+                  return; // Stop execution on failure
+                }
+                const messageId = itemIdResult.value;
+                displayNotification("Info", `Retrieved message ID: ${messageId}`);
+                // Uncomment to continue flow
+                // processEmailId(messageId, event, true);
+                completeWithState(event); // Complete the event after success
+              });
+            }, 500); // 500ms delay
           });
         } else {
           item.getItemIdAsync((itemIdResult) => {
