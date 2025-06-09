@@ -953,9 +953,10 @@ function onNewMessageComposeHandler(event) {
           if (itemId === null || itemId == undefined) {
             item.saveAsync(function (result) {
               itemId = result.value;
-              completeWithState(event, "Info", itemId || "Failed to get itemId.");
+              displayNotification("Info", "Draft saved successfully");
             });
           }
+          completeWithState(event, "Info", itemId || "Failed to get itemId.");
           // var restId = Office.context.mailbox.convertToRestId(itemId, Office.MailboxEnums.RestVersion.v2_0);
           // displayNotification("Info", `itemId: ${itemId || "none"}`);
           // displayNotification("Info", `restId: ${restId || "none"}`);
