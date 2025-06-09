@@ -949,10 +949,6 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          Office.context.mailbox.diagnostics.mailboxVersion.then(function (version) {
-            displayNotification("Info", `Mailbox version: ${version}`);
-          });
-
           Office.context.mailbox.item.getItemIdAsync(function (result) {
             if (result.status === Office.AsyncResultStatus.Failed) {
               completeWithState(event, "Error", asyncResult.error?.message || "Failed to get item ID.");
