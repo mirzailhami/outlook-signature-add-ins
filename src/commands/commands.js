@@ -958,18 +958,16 @@ function onNewMessageComposeHandler(event) {
               completeWithState(event, "Error", saveResult.error.message);
               return;
             }
+            item.getItemIdAsync((itemIdResult) => {
+              if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
+                completeWithState(event, "Error", itemIdResult.error.message);
+                return;
+              }
+              messageId = itemIdResult.value;
+              processEmailId(messageId, event);
+            });
           });
         }
-
-        item.getItemIdAsync((itemIdResult) => {
-          if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
-            logger.log("error", "onNewMessageComposeHandler", { error: itemIdResult.error.message });
-            completeWithState(event, "Error", itemIdResult.error.message);
-            return;
-          }
-          messageId = itemIdResult.value;
-          processEmailId(messageId, event);
-        });
       }
     } else {
       if (isMobile) {
@@ -1005,6 +1003,13 @@ function processEmailId(messageId, event) {
         completeWithState(event, "Error", fetchError.message);
         return;
       }
+
+      displayNotification(
+        "Info",
+        `Origin: ${window.location.origin},
+        messageId: ${messageId},
+        subject: ${message.subject || "No subject"},`
+      );
 
       const emailBody = message.body?.content || "";
       const extractedSignature = isClassicOutlook
