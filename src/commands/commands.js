@@ -964,8 +964,17 @@ function onNewMessageComposeHandler(event) {
                 return;
               }
               messageId = itemIdResult.value;
-              processEmailId(messageId, event);
+              processEmailId(messageId, event, true);
             });
+          });
+        } else {
+          item.getItemIdAsync((itemIdResult) => {
+            if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
+              completeWithState(event, "Error", itemIdResult.error.message);
+              return;
+            }
+            messageId = itemIdResult.value;
+            processEmailId(messageId, event);
           });
         }
       }
@@ -993,10 +1002,8 @@ function onNewMessageComposeHandler(event) {
  * @param {string} messageId - The ID of the email to process.
  * @param {Office.AddinCommands.Event} event - The event object.
  */
-function processEmailId(messageId, event) {
+function processEmailId(messageId, event, isClassicOutlook = false) {
   try {
-    isClassicOutlook = Office.context?.mailbox?.diagnostics?.hostName === "Outlook";
-
     fetchMessageById(messageId, (message, fetchError) => {
       if (fetchError) {
         displayNotification("Info", `Origin: ${window.location.origin}`);
