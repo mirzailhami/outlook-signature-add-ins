@@ -507,44 +507,53 @@ function initializePCA(callback) {
  * @param {function(string|null, Error|null)} callback - Callback with token or error.
  */
 function getGraphAccessToken(callback) {
-  if (Office.context.requirements.isSetSupported("NestedAppAuth", "1.1")) {
-    displayNotification("Info", "Nested App Auth supported.");
-  } else {
-    displayNotification("Info", "Nested App Auth not supported, falling back to alternate auth.");
-  }
+  const hostName = Office.context.mailbox.diagnostics.hostName;
+  const isClassicOutlook = hostName === "Outlook";
 
-  initializePCA((initError) => {
-    if (initError) {
-      callback(null, initError);
-      return;
-    }
-
-    const tokenRequest = {
-      scopes: ["User.Read", "Mail.ReadWrite", "Mail.Read", "openid", "profile"],
+  if (isClassicOutlook) {
+    const defaultSSO = {
+      allowSignInPrompt: false,
+      allowConsentPrompt: false,
+      //    forMSGraphAccess: true, // Leave commented during development testing (sideload) or you get a 13012 error from getAccessToken.
     };
-
-    logger.log("info", "acquireTokenSilent", { status: "Attempting to acquire token silently" });
-    pca.acquireTokenSilent(tokenRequest).then(
-      (silentResponse) => {
-        logger.log("info", "acquireTokenSilent", { status: "Token acquired silently" });
-        callback(silentResponse.accessToken, null);
-      },
-      (silentError) => {
-        logger.log("warn", "acquireTokenSilent", { error: silentError.message });
-        logger.log("info", "acquireTokenPopup", { status: "Falling back to interactive token acquisition" });
-        pca.acquireTokenPopup(tokenRequest).then(
-          (popupResponse) => {
-            logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
-            callback(popupResponse.accessToken, null);
-          },
-          (popupError) => {
-            logger.log("error", "acquireTokenPopup", { popupError: popupError.message });
-            callback(null, new Error(`Failed to acquire access token: ${popupError.message}`));
-          }
-        );
+    const options = JSON.parse(JSON.stringify(defaultSSO));
+    OfficeRuntime.auth.getAccessToken(options).then((accessToken) => {
+      callback(accessToken, null);
+    });
+  } else {
+    initializePCA((initError) => {
+      if (initError) {
+        callback(null, initError);
+        return;
       }
-    );
-  });
+
+      const tokenRequest = {
+        scopes: ["User.Read", "Mail.ReadWrite", "Mail.Read", "openid", "profile"],
+      };
+
+      logger.log("info", "acquireTokenSilent", { status: "Attempting to acquire token silently" });
+      pca.acquireTokenSilent(tokenRequest).then(
+        (silentResponse) => {
+          logger.log("info", "acquireTokenSilent", { status: "Token acquired silently" });
+          callback(silentResponse.accessToken, null);
+        },
+        (silentError) => {
+          logger.log("warn", "acquireTokenSilent", { error: silentError.message });
+          logger.log("info", "acquireTokenPopup", { status: "Falling back to interactive token acquisition" });
+          pca.acquireTokenPopup(tokenRequest).then(
+            (popupResponse) => {
+              logger.log("info", "acquireTokenPopup", { status: "Token acquired interactively" });
+              callback(popupResponse.accessToken, null);
+            },
+            (popupError) => {
+              logger.log("error", "acquireTokenPopup", { popupError: popupError.message });
+              callback(null, new Error(`Failed to acquire access token: ${popupError.message}`));
+            }
+          );
+        }
+      );
+    });
+  }
 }
 
 /**
@@ -1007,6 +1016,7 @@ function onNewMessageComposeHandler(event) {
 function processEmailId(messageId, event, isClassicOutlook = false) {
   try {
     displayNotification("Info", `Processing email ID: ${messageId}, isClassicOutlook: ${isClassicOutlook}`);
+
     fetchMessageById(messageId, (message, fetchError) => {
       if (fetchError) {
         // displayNotification("Info", `Origin: ${window.location.origin}`);
