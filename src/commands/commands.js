@@ -949,10 +949,10 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          let itemId = item.itemId;
+          let itemId = Office.context.mailbox.item?.itemId || null;
           if (itemId === null || itemId == undefined) {
             item.saveAsync(function (result) {
-              itemId = result.value;
+              itemId = result?.value || "xx";
               displayNotification("Info", "Draft saved successfully");
             });
           }
