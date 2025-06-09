@@ -507,6 +507,17 @@ function initializePCA(callback) {
  * @param {function(string|null, Error|null)} callback - Callback with token or error.
  */
 function getGraphAccessToken(callback) {
+  if (Office.context.requirements.isSetSupported("NestedAppAuth", "1.1")) {
+    // Proceed with NAA
+    Office.auth
+      .getAccessToken({ allowSignInPrompt: true })
+      .then((token) => console.log("Token acquired:", token))
+      .catch((error) => console.error("Token error:", error));
+  } else {
+    displayNotification("Info", "Nested App Auth not supported, falling back to alternate auth.");
+    // Implement fallback (e.g., OAuth popup)
+  }
+
   initializePCA((initError) => {
     if (initError) {
       callback(null, initError);
