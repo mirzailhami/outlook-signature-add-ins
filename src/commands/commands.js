@@ -964,7 +964,9 @@ function onNewMessageComposeHandler(event) {
 
   displayNotification(
     `Info`,
-    `Platform: ${Office.context.mailbox.diagnostics.hostName}, Version: ${Office.context.mailbox.diagnostics.hostVersion}`
+    `Platform: ${Office.context.mailbox.diagnostics.hostName},
+    Version: ${Office.context.mailbox.diagnostics.hostVersion},
+    isClassicOutlook: ${isClassicOutlook}`
   );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
     if (error) {
