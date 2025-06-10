@@ -950,10 +950,10 @@ function onNewMessageComposeHandler(event) {
               completeWithState(event, "Error", result.error?.message);
               return;
             }
-            // messageId = Office.context.mailbox.convertToRestId(result.value, Office.MailboxEnums.RestVersion.v2_0);
-            completeWithState(event, "Info", result.value);
-            return;
-            // processEmailId(messageId, event);
+            messageId = result.value; // Office.context.mailbox.convertToRestId(result.value, Office.MailboxEnums.RestVersion.v2_0);
+            // completeWithState(event, "Info", result.value);
+            // return;
+            processEmailId(messageId, event);
           });
         } else {
           item.getItemIdAsync((itemIdResult) => {
