@@ -19,10 +19,10 @@ function storageSetItem(key, value) {
   // );
   if (typeof localStorage !== "undefined") {
     localStorage.setItem(key, value);
-    // displayNotification("Info", `storageSetItem: Using localStorage for ${key} = ${value}`);
+    displayNotification("Info", `storageSetItem: Using localStorage for ${key} = ${value}`);
   } else {
     storage[key] = value;
-    // displayNotification("Info", `storageSetItem: Using in-memory for ${key} = ${value}`);
+    displayNotification("Info", `storageSetItem: Using in-memory for ${key} = ${value}`);
   }
 }
 
@@ -36,11 +36,11 @@ function storageGetItem(key) {
   // );
   if (typeof localStorage !== "undefined") {
     const value = localStorage.getItem(key);
-    // displayNotification("Info", `storageGetItem: Using localStorage for ${key} = ${value || "null"}`);
+    displayNotification("Info", `storageGetItem: Using localStorage for ${key} = ${value || "null"}`);
     return value;
   } else {
     const value = storage[key] || null;
-    // displayNotification("Info", `storageGetItem: Using in-memory for ${key} = ${value || "null"}`);
+    displayNotification("Info", `storageGetItem: Using in-memory for ${key} = ${value || "null"}`);
     return value;
   }
 }
@@ -55,10 +55,10 @@ function storageRemoveItem(key) {
   // );
   if (typeof localStorage !== "undefined") {
     localStorage.removeItem(key);
-    // displayNotification("Info", `storageRemoveItem: Using localStorage for ${key}`);
+    displayNotification("Info", `storageRemoveItem: Using localStorage for ${key}`);
   } else {
     delete storage[key];
-    // displayNotification("Info", `storageRemoveItem: Using in-memory for ${key}`);
+    displayNotification("Info", `storageRemoveItem: Using in-memory for ${key}`);
   }
 }
 
@@ -492,7 +492,7 @@ function initializePCA(callback) {
     (pcaInstance) => {
       pca = pcaInstance;
       isPCAInitialized = true;
-      logger.log("info", "initializePCA", { status: "PCA initialized successfully" });
+      // logger.log("info", "initializePCA", { status: "PCA initialized successfully" });
       callback(null);
     },
     (error) => {
