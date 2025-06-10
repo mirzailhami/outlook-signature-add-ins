@@ -990,7 +990,7 @@ function onNewMessageComposeHandler(event) {
 function processEmailId(messageId, event) {
   fetchMessageById(messageId, (message, fetchError) => {
     if (fetchError) {
-      // displayNotification("Info", `Origin: ${window.location.origin}`);
+      displayNotification("Info", messageId);
       completeWithState(event, "Error", fetchError.message);
       return;
     }
