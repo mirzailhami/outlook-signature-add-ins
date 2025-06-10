@@ -950,8 +950,9 @@ function onNewMessageComposeHandler(event) {
               completeWithState(event, "Error", result.error?.message);
               return;
             }
-            messageId = Office.context.mailbox.convertToRestId(result.value, Office.MailboxEnums.RestVersion.v2_0);
-            completeWithState(event, "Info", messageId);
+            // messageId = Office.context.mailbox.convertToRestId(result.value, Office.MailboxEnums.RestVersion.v2_0);
+            completeWithState(event, "Info", result.value);
+            return;
             // processEmailId(messageId, event, true);
           });
         } else {
