@@ -953,7 +953,7 @@ function onNewMessageComposeHandler(event) {
             // messageId = Office.context.mailbox.convertToRestId(result.value, Office.MailboxEnums.RestVersion.v2_0);
             completeWithState(event, "Info", result.value);
             return;
-            // processEmailId(messageId, event, true);
+            // processEmailId(messageId, event);
           });
         } else {
           item.getItemIdAsync((itemIdResult) => {
@@ -993,7 +993,6 @@ function onNewMessageComposeHandler(event) {
 function processEmailId(messageId, event) {
   fetchMessageById(messageId, (message, fetchError) => {
     if (fetchError) {
-      displayNotification("Info", messageId);
       completeWithState(event, "Error", fetchError.message);
       return;
     }
@@ -1039,7 +1038,7 @@ function processEmailId(messageId, event) {
     storageRemoveItem("tempSignature");
     storageSetItem("tempSignature", matchedSignatureKey);
     addSignature(matchedSignatureKey, event, true, () => {
-      completeWithState(event, "Info", `matchedSignatureKey: ${matchedSignatureKey}`);
+      completeWithState(event, null, null);
       return;
     });
   });
