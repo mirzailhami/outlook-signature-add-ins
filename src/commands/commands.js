@@ -993,7 +993,7 @@ function onNewMessageComposeHandler(event) {
 function processEmailId(messageId, event) {
   fetchMessageById(messageId, (message, fetchError) => {
     if (fetchError) {
-      completeWithState(event, "Error", fetchError.message);
+      completeWithState(event, "Error", messageId);
       return;
     }
 
