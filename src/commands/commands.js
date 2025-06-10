@@ -952,30 +952,9 @@ function onNewMessageComposeHandler(event) {
         if (isClassicOutlook) {
           Office.context.mailbox.item.saveAsync(function callback(result) {
             messageId = result.value;
-            completeWithState(event, "Info", messageId || "Failed to get itemId.");
+            displayNotification("Info", messageId);
+            processEmailId(itemIdResult.value, event, true);
           });
-          // appendDebugLogToBody(item, `messageId`, messageId || "null");
-          // var restId = Office.context.mailbox.convertToRestId(itemId, Office.MailboxEnums.RestVersion.v2_0);
-          // displayNotification("Info", `itemId: ${itemId || "none"}`);
-          // displayNotification("Info", `restId: ${restId || "none"}`);
-          // event.completed();
-
-          // item.saveAsync((saveResult) => {
-          //   if (saveResult.status !== Office.AsyncResultStatus.Succeeded) {
-          //     completeWithState(event, "Error", saveResult.error?.message || "Failed to save draft.");
-          //     return; // Stop execution on failure
-          //   }
-          //   displayNotification("Info", "Draft saved successfully");
-
-          //   item.getItemIdAsync((itemIdResult) => {
-          //     if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
-          //       completeWithState(event, "Error", itemIdResult.error?.message || "Failed to get item ID.");
-          //       return; // Stop execution on failure
-          //     }
-          //     displayNotification("Info", `Retrieved message ID: ${itemIdResult.value}`);
-          //     processEmailId(itemIdResult.value, event, true);
-          //   });
-          // });
         } else {
           item.getItemIdAsync((itemIdResult) => {
             if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
