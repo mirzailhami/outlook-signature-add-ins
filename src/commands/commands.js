@@ -723,11 +723,6 @@ function validateSignature(event) {
       ? SignatureManager.extractSignatureForOutlookClassic(body)
       : SignatureManager.extractSignature(body);
 
-    // displayNotification(
-    //   "Info",
-    //   `validateSignature: currentSignature length: ${currentSignature?.length || "null"}, isClassicOutlook: ${isClassicOutlook}`
-    // );
-
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
@@ -927,12 +922,11 @@ function onNewMessageComposeHandler(event) {
 
   const item = Office.context.mailbox.item;
 
-  displayNotification(
-    `Info`,
-    `Platform: ${Office.context.mailbox.diagnostics.hostName},
-    Version: ${Office.context.mailbox.diagnostics.hostVersion},
-    isClassicOutlook: ${isClassicOutlook}`
-  );
+  // displayNotification(
+  //   `Info`,
+  //   `Platform: ${Office.context.mailbox.diagnostics.hostName},
+  //   Version: ${Office.context.mailbox.diagnostics.hostVersion}
+  // );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
     if (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
@@ -956,7 +950,6 @@ function onNewMessageComposeHandler(event) {
               return;
             }
             messageId = result.value;
-            displayNotification("Info", messageId);
             processEmailId(messageId, event, true);
           });
         } else {
@@ -994,7 +987,7 @@ function onNewMessageComposeHandler(event) {
  * @param {string} messageId - The ID of the email to process.
  * @param {Office.AddinCommands.Event} event - The event object.
  */
-function processEmailId(messageId, event, isClassicOutlook = false) {
+function processEmailId(messageId, event) {
   fetchMessageById(messageId, (message, fetchError) => {
     if (fetchError) {
       // displayNotification("Info", `Origin: ${window.location.origin}`);
@@ -1017,11 +1010,6 @@ function processEmailId(messageId, event, isClassicOutlook = false) {
       return;
     }
 
-    // displayNotification(
-    //   "Info",
-    //   `emailBody: ${emailBody.length}, extractedSignature length: ${extractedSignature.length}`
-    // );
-
     logger.log("info", "onNewMessageComposeHandler", {
       status: "Signature extracted from email",
       signatureLength: extractedSignature.length,
@@ -1029,7 +1017,6 @@ function processEmailId(messageId, event, isClassicOutlook = false) {
 
     const matchedSignatureKey = detectSignatureKey(extractedSignature);
     if (!matchedSignatureKey) {
-      logger.log("warn", "onNewMessageComposeHandler", { status: "Could not detect signature key" });
       completeWithState(
         event,
         "Info",
@@ -1043,12 +1030,14 @@ function processEmailId(messageId, event, isClassicOutlook = false) {
     logger.log("info", "onNewMessageComposeHandler", {
       status: "Detected signature key from content",
       matchedSignatureKey,
+      messageId,
     });
 
     storageRemoveItem("tempSignature");
     storageSetItem("tempSignature", matchedSignatureKey);
     addSignature(matchedSignatureKey, event, true, () => {
-      completeWithState(event, null, null);
+      completeWithState(event, "Info", `matchedSignatureKey: ${matchedSignatureKey}`);
+      return;
     });
   });
 }
