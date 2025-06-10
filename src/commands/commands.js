@@ -922,11 +922,11 @@ function onNewMessageComposeHandler(event) {
 
   const item = Office.context.mailbox.item;
 
-  // displayNotification(
-  //   `Info`,
-  //   `Platform: ${Office.context.mailbox.diagnostics.hostName},
-  //   Version: ${Office.context.mailbox.diagnostics.hostVersion}
-  // );
+  displayNotification(
+    `Info`,
+    `Platform: ${Office.context.mailbox.diagnostics.hostName},
+    Version: ${Office.context.mailbox.diagnostics.hostVersion}`
+  );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
     if (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
