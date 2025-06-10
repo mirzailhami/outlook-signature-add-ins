@@ -935,6 +935,7 @@ function onNewMessageComposeHandler(event) {
     }
 
     if (isReplyOrForward) {
+      // console.log(Office.context.mailbox);
       logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
 
       let messageId;
@@ -949,8 +950,9 @@ function onNewMessageComposeHandler(event) {
               completeWithState(event, "Error", result.error?.message);
               return;
             }
-            messageId = result.value;
-            processEmailId(messageId, event, true);
+            messageId = Office.context.mailbox.convertToRestId(result.value, Office.MailboxEnums.RestVersion.v2_0);
+            completeWithState(event, "Info", messageId);
+            // processEmailId(messageId, event, true);
           });
         } else {
           item.getItemIdAsync((itemIdResult) => {
