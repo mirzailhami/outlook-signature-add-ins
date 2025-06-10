@@ -594,7 +594,8 @@ function fetchMessageById(messageId, callback) {
       })
       .catch((graphError) => {
         logger.log("error", "fetchMessageById", { error: graphError.message, messageId });
-        callback(null, new Error(`Failed to fetch email by ID: ${graphError.message}`));
+        appendDebugLogToBody(Office.context.mailbox.item, "messageId", messageId, "error", graphError.message);
+        callback(null, new Error(`Failed to fetch ${messageId}: ${graphError.message}`));
       });
   });
 }
