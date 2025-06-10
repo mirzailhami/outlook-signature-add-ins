@@ -951,9 +951,13 @@ function onNewMessageComposeHandler(event) {
       } else {
         if (isClassicOutlook) {
           Office.context.mailbox.item.saveAsync(function callback(result) {
+            if (result.status !== Office.AsyncResultStatus.Succeeded) {
+              completeWithState(event, "Error", result.error?.message);
+              return;
+            }
             messageId = result.value;
             displayNotification("Info", messageId);
-            processEmailId(itemIdResult.value, event, true);
+            processEmailId(messageId, event, true);
           });
         } else {
           item.getItemIdAsync((itemIdResult) => {
