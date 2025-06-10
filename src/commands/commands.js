@@ -1003,9 +1003,7 @@ function processEmailId(messageId, event, isClassicOutlook = false) {
     }
 
     const emailBody = message.body?.content || "";
-    const extractedSignature = isClassicOutlook
-      ? SignatureManager.extractSignatureForOutlookClassic(emailBody)
-      : SignatureManager.extractSignature(emailBody);
+    const extractedSignature = SignatureManager.extractSignature(emailBody);
 
     if (!extractedSignature) {
       logger.log("warn", "onNewMessageComposeHandler", { status: "No signature found in email" });
