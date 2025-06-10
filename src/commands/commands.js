@@ -1,7 +1,5 @@
 /* global Office, console */
 
-/* eslint-disable no-undef */
-
 import { createNestablePublicClientApplication } from "@azure/msal-browser";
 import "isomorphic-fetch";
 import { Client } from "@microsoft/microsoft-graph-client";
@@ -10,55 +8,34 @@ import { Client } from "@microsoft/microsoft-graph-client";
 let storage = typeof localStorage !== "undefined" ? localStorage : {};
 
 function storageSetItem(key, value) {
-  // const hostName = Office.context.mailbox.diagnostics.hostName;
-  // displayNotification(
-  //   "Info",
-  //   `storageSetItem: Setting ${key} = ${value}, host: ${hostName}, using ${
-  //     typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
-  //   }`
-  // );
   if (typeof localStorage !== "undefined") {
     localStorage.setItem(key, value);
-    displayNotification("Info", `storageSetItem: Using localStorage for ${key} = ${value}`);
+    // displayNotification("Info", `storageSetItem: Using localStorage for ${key} = ${value}`);
   } else {
     storage[key] = value;
-    displayNotification("Info", `storageSetItem: Using in-memory for ${key} = ${value}`);
+    // displayNotification("Info", `storageSetItem: Using in-memory for ${key} = ${value}`);
   }
 }
 
 function storageGetItem(key) {
-  // const hostName = Office.context.mailbox.diagnostics.hostName;
-  // displayNotification(
-  //   "Info",
-  //   `storageGetItem: Getting ${key}, host: ${hostName}, using ${
-  //     typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
-  //   }`
-  // );
   if (typeof localStorage !== "undefined") {
     const value = localStorage.getItem(key);
-    displayNotification("Info", `storageGetItem: Using localStorage for ${key} = ${value || "null"}`);
+    // displayNotification("Info", `storageGetItem: Using localStorage for ${key} = ${value || "null"}`);
     return value;
   } else {
     const value = storage[key] || null;
-    displayNotification("Info", `storageGetItem: Using in-memory for ${key} = ${value || "null"}`);
+    // displayNotification("Info", `storageGetItem: Using in-memory for ${key} = ${value || "null"}`);
     return value;
   }
 }
 
 function storageRemoveItem(key) {
-  // const hostName = Office.context.mailbox.diagnostics.hostName;
-  // displayNotification(
-  //   "Info",
-  //   `storageRemoveItem: Removing ${key}, host: ${hostName}, using ${
-  //     typeof localStorage !== "undefined" ? "localStorage" : "in-memory storage"
-  //   }`
-  // );
   if (typeof localStorage !== "undefined") {
     localStorage.removeItem(key);
-    displayNotification("Info", `storageRemoveItem: Using localStorage for ${key}`);
+    // displayNotification("Info", `storageRemoveItem: Using localStorage for ${key}`);
   } else {
     delete storage[key];
-    displayNotification("Info", `storageRemoveItem: Using in-memory for ${key}`);
+    // displayNotification("Info", `storageRemoveItem: Using in-memory for ${key}`);
   }
 }
 
@@ -922,11 +899,11 @@ function onNewMessageComposeHandler(event) {
 
   const item = Office.context.mailbox.item;
 
-  displayNotification(
-    `Info`,
-    `Platform: ${Office.context.mailbox.diagnostics.hostName},
-    Version: ${Office.context.mailbox.diagnostics.hostVersion}`
-  );
+  // displayNotification(
+  //   `Info`,
+  //   `Platform: ${Office.context.mailbox.diagnostics.hostName},
+  //   Version: ${Office.context.mailbox.diagnostics.hostVersion}`
+  // );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
     if (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
@@ -950,10 +927,15 @@ function onNewMessageComposeHandler(event) {
               completeWithState(event, "Error", result.error?.message);
               return;
             }
-            messageId = result.value; // Office.context.mailbox.convertToRestId(result.value, Office.MailboxEnums.RestVersion.v2_0);
-            // completeWithState(event, "Info", result.value);
-            // return;
-            processEmailId(messageId, event);
+            if (result.value) {
+              messageId = result.value; // Office.context.mailbox.convertToRestId(result.value, Office.MailboxEnums.RestVersion.v2_0);
+              // completeWithState(event, "Info", result.value);
+              // return;
+              processEmailId(messageId, event);
+            } else {
+              completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
+              return;
+            }
           });
         } else {
           item.getItemIdAsync((itemIdResult) => {
