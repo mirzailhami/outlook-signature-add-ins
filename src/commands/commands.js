@@ -705,6 +705,7 @@ function validateSignature(event) {
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
+      displayNotification("Info", `Body length: ${body.length}, Signature length: ${currentSignature.length}`);
       validateSignatureChanges(item, currentSignature, event, isClassicOutlook);
     }
   });
