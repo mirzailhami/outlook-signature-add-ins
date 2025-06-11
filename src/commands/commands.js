@@ -248,10 +248,11 @@ const SignatureManager = {
           logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
           Office.context.mailbox.item.body.setSignatureAsync(
             signatureWithMarker,
-            { coercionType: Office.CoercionType.Html, callback },
+            { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
             (asyncResult) => {
               // displayNotification("Info", `Signature restored startIndex`);
-              callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
+              // callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
+              displayError("xxx", asyncResult.asyncContext);
             }
           );
         } else {
@@ -781,10 +782,8 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
             event,
             (restored, error, eventReturn) => {
               if (error || !restored) {
-                logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
                 displayError("Failed to restore the original M3 signature. Please reselect.", eventReturn);
               } else {
-                logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
                 displayError(
                   "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
                   eventReturn
