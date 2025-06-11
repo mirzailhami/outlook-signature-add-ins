@@ -882,11 +882,11 @@ function onNewMessageComposeHandler(event) {
 
   const item = Office.context.mailbox.item;
 
-  // displayNotification(
-  //   `Info`,
-  //   `Platform: ${Office.context.mailbox.diagnostics.hostName},
-  //   Version: ${Office.context.mailbox.diagnostics.hostVersion}`
-  // );
+  displayNotification(
+    `Info`,
+    `Platform: ${Office.context.mailbox.diagnostics.hostName},
+    Version: ${Office.context.mailbox.diagnostics.hostVersion}`
+  );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
     if (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
@@ -1039,12 +1039,6 @@ function processEmailId(messageId, event) {
     storageRemoveItem("tempSignature");
     storageSetItem("tempSignature", matchedSignatureKey);
     addSignature(matchedSignatureKey, event, true, () => {
-      if (isClassicOutlook) {
-        setTimeout(() => {
-          event.completed();
-        }, 500);
-        return;
-      }
       event.completed();
       return;
     });
