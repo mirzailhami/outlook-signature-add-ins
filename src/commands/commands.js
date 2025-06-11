@@ -454,8 +454,10 @@ const auth = {
   authority: "https://login.microsoftonline.com/common",
 };
 
-Office.onReady(() => {
-  console.log("Office.js is ready");
+Office.onReady(function () {
+  Office.initialize(function () {
+    console.log("Office.js is ready");
+  });
 });
 
 /**
@@ -688,7 +690,7 @@ function validateSignature(event) {
     return;
   }
 
-  item.body.getAsync(Office.CoercionType.Html, (bodyResult) => {
+  Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function (bodyResult) {
     if (bodyResult.status !== Office.AsyncResultStatus.Succeeded) {
       logger.log("error", "validateSignature", { error: "Failed to get body" });
       displayError("Failed to get email body.", event);
@@ -786,6 +788,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
           SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
             if (error || !restored) {
               displayError("Failed to restore the original M3 signature. Please reselect.", event);
+              return;
             } else {
               // item.body.getAsync(Office.CoercionType.Html, (bodyResult) => {
               // if (bodyResult.status !== Office.AsyncResultStatus.Succeeded) {
@@ -800,24 +803,24 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
               // displayNotification("Info", `currentBody: ${currentBody.substring(0, 50) || "null"}`);
               // item.body.setAsync(currentBody + " ", { coercionType: Office.CoercionType.Html }, (setResult) => {
               //   if (setResult.status !== Office.AsyncResultStatus.Succeeded) {
-              //     displayNotification(
-              //       "Error",
-              //       `validateSignatureChanges: Failed to update body, error: ${setResult.error.message}`
-              //     );
               //     displayError("Failed to apply restored signature.", event);
               //     return;
               //   }
-              // item.saveAsync(() => {
-              // displayError(
-              //   "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-              //   event
-              // );
-              event.completed({ allowEvent: true });
-              // });
-              // });
+              Office.context.mailbox.item.saveAsync(function (result) {
+                if (result.status !== Office.AsyncResultStatus.Succeeded) {
+                  completeWithState(event, "Error", result.error?.message);
+                  return;
+                }
+                console.log("Item saved successfully!");
+                displayError(
+                  "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                  event
+                );
+                return;
+              });
+              // event.completed({ allowEvent: true });
               // });
             }
-            return;
           });
         }
       });
