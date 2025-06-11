@@ -129,7 +129,7 @@ const SignatureManager = {
     const match = body.match(regex);
     if (match) {
       const signature = match[1].trim();
-      displayNotification("Info", `Body: ${body.length}, Regex match: ${signature.length}`);
+      // displayNotification("Info", `Body: ${body.length}, Regex match: ${signature.length}`);
       logger.log("info", "extractSignatureForOutlookClassic", { method: "table", signatureLength: signature.length });
       return signature;
     }
@@ -732,7 +732,7 @@ function validateSignature(event) {
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
-      displayNotification("Info", `Body length: ${body.length}, Signature length: ${currentSignature.length}`);
+      // displayNotification("Info", `Body length: ${body.length}, Signature length: ${currentSignature.length}`);
       validateSignatureChanges(item, currentSignature, event, isClassicOutlook);
     }
   });
