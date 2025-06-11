@@ -249,7 +249,7 @@ const SignatureManager = {
           Office.context.mailbox.item.body.setSignatureAsync(
             signatureWithMarker,
             { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
-            () => {
+            (result) => {
               displayNotification("Info", `Signature restored: ${currentBody.length}`);
               Office.context.mailbox.item.saveAsync({ asyncContext: result.asyncContext }, (asyncResult) => {
                 // callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
