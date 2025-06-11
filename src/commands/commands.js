@@ -129,7 +129,7 @@ const SignatureManager = {
     const match = body.match(regex);
     if (match) {
       const signature = match[1].trim();
-      displayNotification("Info", `extractSignatureForOutlookClassic: Using regex match: ${signature.length}`);
+      displayNotification("Info", `Body: ${body.length}, Regex match: ${signature.length}`);
       logger.log("info", "extractSignatureForOutlookClassic", { method: "table", signatureLength: signature.length });
       return signature;
     }
@@ -249,10 +249,13 @@ const SignatureManager = {
           Office.context.mailbox.item.body.setSignatureAsync(
             signatureWithMarker,
             { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
-            (asyncResult) => {
-              // displayNotification("Info", `Signature restored startIndex`);
-              // callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
-              displayError("xxx", asyncResult.asyncContext);
+            () => {
+              displayNotification("Info", `Signature restored: ${currentBody.length}`);
+              Office.context.mailbox.item.saveAsync({ asyncContext: result.asyncContext }, (asyncResult) => {
+                // callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
+                displayError("xxx", asyncResult.asyncContext);
+                return;
+              });
             }
           );
         } else {
@@ -774,7 +777,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         if (isTextValid && isLogoValid) {
           event.completed({ allowEvent: true });
         } else {
-          // restore the signature
           SignatureManager.restoreSignature(
             item,
             rawMatchedSignature,
