@@ -762,26 +762,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         const isLogoValid =
           !expectedLogoUrl || (currentLogoUrl && expectedLogoUrl && currentLogoUrl === expectedLogoUrl);
 
-        // displayNotification(
-        //   "Info",
-        //   `currentLogoUrl: ${currentLogoUrl.length || "null"},
-        //   expectedLogoUrl: ${expectedLogoUrl.length || "null"}`
-        // );
-
-        // displayNotification(
-        //   "Info",
-        //   `currentSignature: ${currentSignature.length || "null"},
-        //   rawMatchedSignature: ${rawMatchedSignature.length || "null"}`
-        // );
-
-        // displayNotification(
-        //   "Info",
-        //   `cleanCurrentSignature: ${cleanCurrentSignature.length || "null"},
-        //   cleanFetchedSignature: ${cleanFetchedSignature.length || "null"}`
-        // );
-
         if (isTextValid && isLogoValid) {
-          // displayNotification("Info", "validateSignatureChanges: Signature valid, allowing send");
           event.completed({ allowEvent: true });
         } else {
           // restore the signature
@@ -806,74 +787,74 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
               //     displayError("Failed to apply restored signature.", event);
               //     return;
               //   }
-              Office.context.mailbox.item.saveAsync(function (result) {
-                if (result.status !== Office.AsyncResultStatus.Succeeded) {
-                  completeWithState(event, "Error", result.error?.message);
+              Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function () {
+                Office.context.mailbox.item.saveAsync(function (result) {
+                  if (result.status !== Office.AsyncResultStatus.Succeeded) {
+                    completeWithState(event, "Error", result.error?.message);
+                    return;
+                  }
+                  displayNotification("Info", "Signature restored successfully.");
+                  displayError(
+                    "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                    event
+                  );
                   return;
-                }
-                console.log("Item saved successfully!");
-                displayError(
-                  "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                  event
-                );
-                return;
+                });
               });
-              // event.completed({ allowEvent: true });
-              // });
             }
           });
         }
       });
-      return; // Exit early for async handling in Classic Outlook
-    }
-
-    // Non-Classic Outlook (OWA, New Outlook, mobile) uses existing storage-based logic
-    const originalSignatureKey = storageGetItem("tempSignature");
-    const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
-
-    const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
-    const cleanCachedSignature = SignatureManager.normalizeSignature(rawMatchedSignature);
-
-    const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/[^"']+))["'][^>]*>/i;
-
-    const currentLogoMatch = currentSignature.match(logoRegex);
-    let currentLogoUrl = currentLogoMatch ? currentLogoMatch[1].split("?")[0] : null;
-
-    const expectedLogoMatch = rawMatchedSignature ? rawMatchedSignature.match(logoRegex) : null;
-    let expectedLogoUrl = expectedLogoMatch ? expectedLogoMatch[1].split("?")[0] : null;
-
-    const isTextValid = cleanCurrentSignature === cleanCachedSignature;
-    const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
-
-    logger.log("debug", "validateSignatureChanges", {
-      rawCurrentSignatureLength: currentSignature.length,
-      rawMatchedSignatureLength: rawMatchedSignature ? rawMatchedSignature.length : 0,
-      cleanCurrentSignature,
-      cleanCachedSignature,
-      originalSignatureKey,
-      currentLogoUrl,
-      expectedLogoUrl,
-      isTextValid,
-      isLogoValid,
-    });
-
-    if (isTextValid && isLogoValid) {
-      storageRemoveItem("tempSignature");
-      event.completed({ allowEvent: true });
+      return;
     } else {
-      SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
-        if (error || !restored) {
-          logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
-          displayError("Failed to restore the original M3 signature. Please reselect.", event);
-        } else {
-          logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
-          displayError(
-            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-            event
-          );
-        }
-        event.completed({ allowEvent: false });
+      // Non-Classic Outlook (OWA, New Outlook, mobile) uses existing storage-based logic
+      const originalSignatureKey = storageGetItem("tempSignature");
+      const rawMatchedSignature = storageGetItem(`signature_${originalSignatureKey}`);
+
+      const cleanCurrentSignature = SignatureManager.normalizeSignature(currentSignature);
+      const cleanCachedSignature = SignatureManager.normalizeSignature(rawMatchedSignature);
+
+      const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/[^"']+))["'][^>]*>/i;
+
+      const currentLogoMatch = currentSignature.match(logoRegex);
+      let currentLogoUrl = currentLogoMatch ? currentLogoMatch[1].split("?")[0] : null;
+
+      const expectedLogoMatch = rawMatchedSignature ? rawMatchedSignature.match(logoRegex) : null;
+      let expectedLogoUrl = expectedLogoMatch ? expectedLogoMatch[1].split("?")[0] : null;
+
+      const isTextValid = cleanCurrentSignature === cleanCachedSignature;
+      const isLogoValid = !expectedLogoUrl || currentLogoUrl === expectedLogoUrl;
+
+      logger.log("debug", "validateSignatureChanges", {
+        rawCurrentSignatureLength: currentSignature.length,
+        rawMatchedSignatureLength: rawMatchedSignature ? rawMatchedSignature.length : 0,
+        cleanCurrentSignature,
+        cleanCachedSignature,
+        originalSignatureKey,
+        currentLogoUrl,
+        expectedLogoUrl,
+        isTextValid,
+        isLogoValid,
       });
+
+      if (isTextValid && isLogoValid) {
+        storageRemoveItem("tempSignature");
+        event.completed({ allowEvent: true });
+      } else {
+        SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
+          if (error || !restored) {
+            logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
+            displayError("Failed to restore the original M3 signature. Please reselect.", event);
+          } else {
+            logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
+            displayError(
+              "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+              event
+            );
+          }
+          event.completed({ allowEvent: false });
+        });
+      }
     }
   } catch (error) {
     displayNotification("Error", `validateSignatureChanges: Exception - ${error.message}`);
