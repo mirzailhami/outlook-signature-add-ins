@@ -116,6 +116,10 @@ const SignatureManager = {
     if (startIndex !== -1) {
       const endIndex = body.indexOf("</body>", startIndex);
       const signature = body.slice(startIndex + marker.length, endIndex !== -1 ? endIndex : undefined).trim();
+      displayNotification(
+        "Info",
+        `extractSignatureForOutlookClassic: Using marker at index ${startIndex}: ${signature.length}`
+      );
       logger.log("info", "extractSignatureForOutlookClassic", { method: "marker", signatureLength: signature.length });
       return signature;
     }
@@ -125,6 +129,7 @@ const SignatureManager = {
     const match = body.match(regex);
     if (match) {
       const signature = match[1].trim();
+      displayNotification("Info", `extractSignatureForOutlookClassic: Using regex match: ${signature.length}`);
       logger.log("info", "extractSignatureForOutlookClassic", { method: "table", signatureLength: signature.length });
       return signature;
     }
@@ -245,9 +250,7 @@ const SignatureManager = {
             signatureWithMarker,
             { coercionType: Office.CoercionType.Html, callback },
             (asyncResult) => {
-              displayNotification("Info", `Signature restored startIndex`);
-              // asyncResult.event.completed();
-              // callback(asyncResult);
+              // displayNotification("Info", `Signature restored startIndex`);
               callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
             }
           );
@@ -261,9 +264,7 @@ const SignatureManager = {
             newBody,
             { coercionType: Office.CoercionType.Html, callback },
             (asyncResult) => {
-              displayNotification("Info", `Signature restored endIndex`);
-              // callback(asyncResult);
-              // asyncResult.event.completed();
+              // displayNotification("Info", `Signature restored endIndex`);
               callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
             }
           );
