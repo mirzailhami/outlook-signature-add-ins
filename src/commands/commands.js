@@ -249,16 +249,19 @@ const SignatureManager = {
           Office.context.mailbox.item.body.setSignatureAsync(
             signatureWithMarker,
             { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
-            (result) => {
-              displayNotification(
-                "Info",
-                `Signature restored: ${currentBody.length}, signatureWithMarker: ${signatureWithMarker.length}`
+            (asyncResult) => {
+              // displayNotification(
+              //   "Info",
+              //   `Signature restored: ${currentBody.length}, signatureWithMarker: ${signatureWithMarker.length}`
+              // );
+              // Office.context.mailbox.item.saveAsync({ asyncContext: result.asyncContext }, (asyncResult) => {
+              callback(
+                asyncResult.status !== Office.AsyncResultStatus.Failed,
+                asyncResult.error || null,
+                asyncResult.asyncContext
               );
-              Office.context.mailbox.item.saveAsync({ asyncContext: result.asyncContext }, (asyncResult) => {
-                // callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
-                displayError("xxx", asyncResult.asyncContext);
-                return;
-              });
+              return;
+              // });
             }
           );
         } else {
@@ -882,11 +885,11 @@ function onNewMessageComposeHandler(event) {
 
   const item = Office.context.mailbox.item;
 
-  displayNotification(
-    `Info`,
-    `Platform: ${Office.context.mailbox.diagnostics.hostName},
-    Version: ${Office.context.mailbox.diagnostics.hostVersion}`
-  );
+  // displayNotification(
+  //   `Info`,
+  //   `Platform: ${Office.context.mailbox.diagnostics.hostName},
+  //   Version: ${Office.context.mailbox.diagnostics.hostVersion}`
+  // );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
     if (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
@@ -913,44 +916,6 @@ function onNewMessageComposeHandler(event) {
             if (result.value) {
               messageId = result.value;
               processEmailId(messageId, event);
-              event.completed();
-              // fetchMessageById(messageId, (message, fetchError) => {
-              //   if (fetchError) {
-              //     completeWithState(event, "Error", messageId);
-              //     return;
-              //   }
-
-              //   const emailBody = message.body?.content || "";
-              //   const extractedSignature = SignatureManager.extractSignature(emailBody);
-
-              //   if (!extractedSignature) {
-              //     completeWithState(
-              //       event,
-              //       "Info",
-              //       isMobile
-              //         ? "No signature found in email. Please select an M3 signature from the task pane."
-              //         : "No signature found in email. Please select an M3 signature from the ribbon."
-              //     );
-              //     return;
-              //   }
-
-              //   const matchedSignatureKey = detectSignatureKey(extractedSignature);
-              //   if (!matchedSignatureKey) {
-              //     completeWithState(
-              //       event,
-              //       "Info",
-              //       isMobile
-              //         ? "Could not detect signature type. Please select an M3 signature from the task pane."
-              //         : "Could not detect signature type. Please select an M3 signature from the ribbon."
-              //     );
-              //     return;
-              //   }
-
-              //   addSignature(matchedSignatureKey, event, true, () => {
-              //     completeWithState(event, null, null);
-              //     return;
-              //   });
-              // });
             } else {
               completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
               return;
