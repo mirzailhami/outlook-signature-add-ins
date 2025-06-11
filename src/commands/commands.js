@@ -211,7 +211,7 @@ const SignatureManager = {
    * @param {string} signatureKey - The signature key for fallback.
    * @param {function(boolean, Error|null)} callback - Callback with success and error.
    */
-  restoreSignature(item, signature, signatureKey, callback) {
+  restoreSignature(item, signature, signatureKey, event, callback) {
     logger.log("info", "restoreSignatureAsync", { signatureKey, cachedSignatureLength: signature?.length });
     if (!signature) {
       signature = storageGetItem(`signature_${signatureKey}`);
@@ -227,31 +227,47 @@ const SignatureManager = {
     }
 
     const signatureWithMarker = "<!-- signature -->" + signature.trim();
-    item.body.getAsync("html", { asyncContext: { signatureWithMarker, callback } }, (result) => {
-      if (result.status !== Office.AsyncResultStatus.Succeeded) {
-        logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
-        callback(false, new Error("Failed to get current body"));
-        return;
-      }
+    Office.context.mailbox.item.body.getAsync(
+      Office.CoercionType.Html,
+      { asyncContext: { signatureWithMarker, callback } },
+      function (result) {
+        if (result.status !== Office.AsyncResultStatus.Succeeded) {
+          logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
+          callback(false, new Error("Failed to get current body"), event);
+          return;
+        }
 
-      const currentBody = result.value || "";
-      const startIndex = currentBody.indexOf("<!-- signature -->");
-      if (startIndex === -1) {
-        logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
-        item.body.setSignatureAsync(signatureWithMarker, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
-          callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null);
-        });
-      } else {
-        const endIndex =
-          currentBody.indexOf("</body>", startIndex) !== -1
-            ? currentBody.indexOf("</body>", startIndex)
-            : currentBody.length;
-        const newBody = currentBody.substring(0, startIndex) + signatureWithMarker + currentBody.substring(endIndex);
-        item.body.setAsync(newBody, { coercionType: Office.CoercionType.Html }, (asyncResult) => {
-          callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null);
-        });
+        const currentBody = result.value || "";
+        const startIndex = currentBody.indexOf("<!-- signature -->");
+        if (startIndex === -1) {
+          logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
+          Office.context.mailbox.item.body.setSignatureAsync(
+            signatureWithMarker,
+            { coercionType: Office.CoercionType.Html, event },
+            (asyncResult) => {
+              // asyncResult.event.completed();
+              callback(asyncResult);
+              // callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null);
+            }
+          );
+        } else {
+          const endIndex =
+            currentBody.indexOf("</body>", startIndex) !== -1
+              ? currentBody.indexOf("</body>", startIndex)
+              : currentBody.length;
+          const newBody = currentBody.substring(0, startIndex) + signatureWithMarker + currentBody.substring(endIndex);
+          Office.context.mailbox.item.body.setAsync(
+            newBody,
+            { coercionType: Office.CoercionType.Html, event },
+            (asyncResult) => {
+              callback(asyncResult);
+              // asyncResult.event.completed();
+              // callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
+            }
+          );
+        }
       }
-    });
+    );
   },
 };
 
@@ -730,7 +746,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
 
       if (!originalSignatureKey) {
         displayError("Could not detect M3 signature. Please select a signature from the ribbon.", event);
-        event.completed({ allowEvent: false });
         return;
       }
 
@@ -742,7 +757,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
           //   `validateSignatureChanges: Failed to fetch ${originalSignatureKey}, error: ${error?.message || "null"}, fetchedSignature: ${fetchedSignature || "null"}`
           // );
           displayError("Failed to validate signature. Please reselect.", event);
-          event.completed({ allowEvent: false });
           return;
         }
 
@@ -767,41 +781,31 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
           event.completed({ allowEvent: true });
         } else {
           // restore the signature
-          SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, (restored, error) => {
-            if (error || !restored) {
-              displayError("Failed to restore the original M3 signature. Please reselect.", event);
+          SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, event, (asyncResult) => {
+            // asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null
+            if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+              displayError("Failed to restore the original M3 signature. Please reselect.", asyncResult.event);
               return;
             } else {
-              // item.body.getAsync(Office.CoercionType.Html, (bodyResult) => {
-              // if (bodyResult.status !== Office.AsyncResultStatus.Succeeded) {
-              //   displayNotification(
-              //     "Error",
-              //     `validateSignatureChanges: Failed to get body, error: ${bodyResult.error.message}`
-              //   );
-              //   displayError("Failed to validate restored signature.", event);
-              //   return;
-              // }
-              // let currentBody = bodyResult.value;
-              // displayNotification("Info", `currentBody: ${currentBody.substring(0, 50) || "null"}`);
-              // item.body.setAsync(currentBody + " ", { coercionType: Office.CoercionType.Html }, (setResult) => {
-              //   if (setResult.status !== Office.AsyncResultStatus.Succeeded) {
-              //     displayError("Failed to apply restored signature.", event);
+              displayError(
+                "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                asyncResult.event
+              );
+              return;
+              // Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function () {
+              //   Office.context.mailbox.item.saveAsync(function (result) {
+              //     if (result.status !== Office.AsyncResultStatus.Succeeded) {
+              //       completeWithState(event, "Error", result.error?.message);
+              //       return;
+              //     }
+              //     displayNotification("Info", "Signature restored successfully.");
+              //     displayError(
+              //       "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+              //       event
+              //     );
               //     return;
-              //   }
-              Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function () {
-                Office.context.mailbox.item.saveAsync(function (result) {
-                  if (result.status !== Office.AsyncResultStatus.Succeeded) {
-                    completeWithState(event, "Error", result.error?.message);
-                    return;
-                  }
-                  displayNotification("Info", "Signature restored successfully.");
-                  displayError(
-                    "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                    event
-                  );
-                  return;
-                });
-              });
+              //   });
+              // });
             }
           });
         }
