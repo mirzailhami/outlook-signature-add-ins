@@ -739,10 +739,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
     if (isClassicOutlook) {
       // Step 1: Detect signature key from current signature
       const originalSignatureKey = detectSignatureKey(currentSignature);
-      // displayNotification(
-      //   "Info",
-      //   `validateSignatureChanges: Detected originalSignatureKey from current signature: ${originalSignatureKey || "null"}, currentSignature: ${currentSignature.length}`
-      // );
 
       if (!originalSignatureKey) {
         displayError("Could not detect M3 signature. Please select a signature from the ribbon.", event);
@@ -752,10 +748,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
       // Step 2: Fetch the signature and compare
       fetchSignature(originalSignatureKey, (fetchedSignature, error) => {
         if (error || !fetchedSignature) {
-          // displayNotification(
-          //   "Error",
-          //   `validateSignatureChanges: Failed to fetch ${originalSignatureKey}, error: ${error?.message || "null"}, fetchedSignature: ${fetchedSignature || "null"}`
-          // );
           displayError("Failed to validate signature. Please reselect.", event);
           return;
         }
@@ -781,33 +773,24 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
           event.completed({ allowEvent: true });
         } else {
           // restore the signature
-          SignatureManager.restoreSignature(item, rawMatchedSignature, originalSignatureKey, event, (asyncResult) => {
-            // asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null
-            if (asyncResult.status !== Office.AsyncResultStatus.Failed) {
-              displayError(
-                "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                asyncResult.event
-              );
-              return;
-            } else {
-              displayError("Failed to restore the original M3 signature. Please reselect.", asyncResult.event);
-              return;
-              // Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function () {
-              //   Office.context.mailbox.item.saveAsync(function (result) {
-              //     if (result.status !== Office.AsyncResultStatus.Succeeded) {
-              //       completeWithState(event, "Error", result.error?.message);
-              //       return;
-              //     }
-              //     displayNotification("Info", "Signature restored successfully.");
-              //     displayError(
-              //       "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-              //       event
-              //     );
-              //     return;
-              //   });
-              // });
+          SignatureManager.restoreSignature(
+            item,
+            rawMatchedSignature,
+            originalSignatureKey,
+            event,
+            (restored, error, eventReturn) => {
+              if (error || !restored) {
+                logger.log("error", "validateSignatureChanges", { error: error?.message || "Restore failed" });
+                displayError("Failed to restore the original M3 signature. Please reselect.", eventReturn);
+              } else {
+                logger.log("info", "validateSignatureChanges", { status: "Signature restored successfully" });
+                displayError(
+                  "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                  eventReturn
+                );
+              }
             }
-          });
+          );
         }
       });
       return;
