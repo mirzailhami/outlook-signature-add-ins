@@ -250,7 +250,10 @@ const SignatureManager = {
             signatureWithMarker,
             { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
             (result) => {
-              displayNotification("Info", `Signature restored: ${currentBody.length}`);
+              displayNotification(
+                "Info",
+                `Signature restored: ${currentBody.length}, signatureWithMarker: ${signatureWithMarker.length}`
+              );
               Office.context.mailbox.item.saveAsync({ asyncContext: result.asyncContext }, (asyncResult) => {
                 // callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
                 displayError("xxx", asyncResult.asyncContext);
@@ -908,10 +911,59 @@ function onNewMessageComposeHandler(event) {
               return;
             }
             if (result.value) {
-              messageId = result.value; // Office.context.mailbox.convertToRestId(result.value, Office.MailboxEnums.RestVersion.v2_0);
-              // completeWithState(event, "Info", result.value);
-              // return;
-              processEmailId(messageId, event);
+              messageId = result.value;
+              // processEmailId(messageId, event);
+              fetchMessageById(messageId, (message, fetchError) => {
+                if (fetchError) {
+                  completeWithState(event, "Error", messageId);
+                  return;
+                }
+
+                const emailBody = message.body?.content || "";
+                const extractedSignature = SignatureManager.extractSignature(emailBody);
+
+                if (!extractedSignature) {
+                  logger.log("warn", "onNewMessageComposeHandler", { status: "No signature found in email" });
+                  completeWithState(
+                    event,
+                    "Info",
+                    isMobile
+                      ? "No signature found in email. Please select an M3 signature from the task pane."
+                      : "No signature found in email. Please select an M3 signature from the ribbon."
+                  );
+                  return;
+                }
+
+                logger.log("info", "onNewMessageComposeHandler", {
+                  status: "Signature extracted from email",
+                  signatureLength: extractedSignature.length,
+                });
+
+                const matchedSignatureKey = detectSignatureKey(extractedSignature);
+                if (!matchedSignatureKey) {
+                  completeWithState(
+                    event,
+                    "Info",
+                    isMobile
+                      ? "Could not detect signature type. Please select an M3 signature from the task pane."
+                      : "Could not detect signature type. Please select an M3 signature from the ribbon."
+                  );
+                  return;
+                }
+
+                logger.log("info", "onNewMessageComposeHandler", {
+                  status: "Detected signature key from content",
+                  matchedSignatureKey,
+                  messageId,
+                });
+
+                storageRemoveItem("tempSignature");
+                storageSetItem("tempSignature", matchedSignatureKey);
+                addSignature(matchedSignatureKey, event, true, () => {
+                  completeWithState(event, null, null);
+                  return;
+                });
+              });
             } else {
               completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
               return;
