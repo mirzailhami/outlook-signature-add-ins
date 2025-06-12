@@ -905,7 +905,9 @@ function onNewMessageComposeHandler(event) {
       if (isMobile) {
         messageId = item.conversationId;
         appendDebugLogToBody(item, `messageId`, messageId || "null");
-        processEmailId(messageId, event);
+        completeWithState(event, "Info", `reply/forward ${messageId}`);
+        return;
+        // processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
           Office.context.mailbox.item.saveAsync(function callback(result) {
