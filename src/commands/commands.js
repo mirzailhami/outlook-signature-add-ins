@@ -244,41 +244,34 @@ const SignatureManager = {
 
         const currentBody = result.value || "";
         const startIndex = currentBody.indexOf("<!-- signature -->");
-        if (startIndex === -1) {
-          logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
-          Office.context.mailbox.item.body.setAsync(
-            signatureWithMarker,
-            { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
-            (asyncResult) => {
-              // displayNotification(
-              //   "Info",
-              //   `Signature restored: ${currentBody.length}, signatureWithMarker: ${signatureWithMarker.length}`
-              // );
-              // Office.context.mailbox.item.saveAsync({ asyncContext: result.asyncContext }, (asyncResult) => {
-              callback(
-                asyncResult.status !== Office.AsyncResultStatus.Failed,
-                asyncResult.error || null,
-                asyncResult.asyncContext
-              );
-              return;
-              // });
-            }
-          );
-        } else {
-          const endIndex =
-            currentBody.indexOf("</body>", startIndex) !== -1
-              ? currentBody.indexOf("</body>", startIndex)
-              : currentBody.length;
-          const newBody = currentBody.substring(0, startIndex) + signatureWithMarker + currentBody.substring(endIndex);
-          Office.context.mailbox.item.body.setAsync(
-            newBody,
-            { coercionType: Office.CoercionType.Html, callback },
-            (asyncResult) => {
-              // displayNotification("Info", `Signature restored endIndex`);
-              callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
-            }
-          );
-        }
+        // if (startIndex === -1) {
+        //   logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
+        //   Office.context.mailbox.item.body.setAsync(
+        //     signatureWithMarker,
+        //     { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
+        //     (asyncResult) => {
+        //       callback(
+        //         asyncResult.status !== Office.AsyncResultStatus.Failed,
+        //         asyncResult.error || null,
+        //         asyncResult.asyncContext
+        //       );
+        //       return;
+        //     }
+        //   );
+        // } else {
+        const endIndex =
+          currentBody.indexOf("</body>", startIndex) !== -1
+            ? currentBody.indexOf("</body>", startIndex)
+            : currentBody.length;
+        const newBody = currentBody.substring(0, startIndex) + signatureWithMarker + currentBody.substring(endIndex);
+        Office.context.mailbox.item.body.setAsync(
+          newBody,
+          { coercionType: Office.CoercionType.Html, callback },
+          (asyncResult) => {
+            callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
+          }
+        );
+        // }
       }
     );
   },
