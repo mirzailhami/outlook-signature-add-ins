@@ -246,7 +246,7 @@ const SignatureManager = {
         const startIndex = currentBody.indexOf("<!-- signature -->");
         if (startIndex === -1) {
           logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
-          Office.context.mailbox.item.body.setSignatureAsync(
+          Office.context.mailbox.item.body.setAsync(
             signatureWithMarker,
             { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
             (asyncResult) => {
@@ -650,9 +650,9 @@ function addSignature(signatureKey, event, isAutoApplied, callback) {
     } else {
       fetchSignature(signatureKey, (template, error) => {
         if (error) {
-          if (isMobile) {
-            appendDebugLogToBody(item, "addSignature Error (Fetch)", "Message", error.message);
-          }
+          // if (isMobile) {
+          //   appendDebugLogToBody(item, "addSignature Error (Fetch)", "Message", error.message);
+          // }
           logger.log("error", "addSignature", { error: error.message });
           displayNotification("Error", `Failed to fetch ${signatureKey}.`, true);
           if (!isAutoApplied) {
@@ -905,8 +905,6 @@ function onNewMessageComposeHandler(event) {
       if (isMobile) {
         messageId = item.conversationId ? item.conversationId : item.itemId;
         // completeWithState(event, "Error", `messageId: ${messageId}`);
-        // return;
-        // appendDebugLogToBody(item, `messageId`, messageId || "null");
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
