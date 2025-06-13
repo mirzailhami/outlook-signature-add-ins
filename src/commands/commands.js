@@ -231,10 +231,11 @@ const SignatureManager = {
       }
     }
 
-    const signatureWithMarker = "<!-- signature -->" + signature.trim();
+    const signatureWithMarker = '<div id="Signature">' + signature.trim() + "</div>";
+    const signaturePattern = new RegExp(`<div id=["'](?:x_)?Signature(?:_\\w+)?["'](?:[\\s\\S]*)(?:<\\/div>|$)`, "gi"); // Handle x_Signature
     Office.context.mailbox.item.body.getAsync(
       Office.CoercionType.Html,
-      { asyncContext: { signatureWithMarker, callback } },
+      { asyncContext: { signatureWithMarker, signaturePattern, callback, event } },
       function (result) {
         if (result.status !== Office.AsyncResultStatus.Succeeded) {
           logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
@@ -243,35 +244,56 @@ const SignatureManager = {
         }
 
         const currentBody = result.value || "";
-        const startIndex = currentBody.indexOf("<!-- signature -->");
-        // if (startIndex === -1) {
-        //   logger.log("warn", "restoreSignatureAsync", { error: "Signature marker not found, appending instead" });
-        //   Office.context.mailbox.item.body.setAsync(
-        //     signatureWithMarker,
-        //     { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
-        //     (asyncResult) => {
-        //       callback(
-        //         asyncResult.status !== Office.AsyncResultStatus.Failed,
-        //         asyncResult.error || null,
-        //         asyncResult.asyncContext
-        //       );
-        //       return;
-        //     }
-        //   );
-        // } else {
-        const endIndex =
-          currentBody.indexOf("</body>", startIndex) !== -1
-            ? currentBody.indexOf("</body>", startIndex)
-            : currentBody.length;
-        const newBody = currentBody.substring(0, startIndex) + signatureWithMarker + currentBody.substring(endIndex);
+        logger.log("info", "restoreSignatureAsync", {
+          status: "Raw current body",
+          body: currentBody.substring(0, 200) + "...",
+        });
+
+        // Remove existing signature
+        const cleanedBody = currentBody.replace(result.asyncContext.signaturePattern, "").trim();
+        logger.log("info", "restoreSignatureAsync", {
+          status: "Cleaned body length",
+          length: cleanedBody.length,
+          sample: cleanedBody.substring(0, 200) + "...",
+        });
+
+        // Ensure cleanedBody contains only body content up to signature
+        const bodyContentEnd = cleanedBody.search(new RegExp(`<div id=["'](?:x_)?Signature(?:_\\w+)?["']`, "i"));
+        const finalCleanedBody = bodyContentEnd === -1 ? cleanedBody : cleanedBody.substring(0, bodyContentEnd).trim();
+        logger.log("info", "restoreSignatureAsync", {
+          status: "Final cleaned body length",
+          length: finalCleanedBody.length,
+          sample: finalCleanedBody.substring(0, 200) + "...",
+        });
+
+        const newBody = finalCleanedBody + signatureWithMarker;
+        logger.log("info", "restoreSignatureAsync", {
+          status: "New body length",
+          length: newBody.length,
+          sample: newBody.substring(0, 200) + "...",
+        });
+
         Office.context.mailbox.item.body.setAsync(
           newBody,
-          { coercionType: Office.CoercionType.Html, callback },
-          (asyncResult) => {
-            callback(asyncResult.status !== Office.AsyncResultStatus.Failed, asyncResult.error || null, event);
+          { coercionType: Office.CoercionType.Html, asyncContext: event },
+          function (asyncResult) {
+            if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
+              logger.log("error", "restoreSignatureAsync", {
+                error: asyncResult.error?.message || "Failed to set body",
+              });
+              callback(false, asyncResult.error || new Error("Failed to set body"), event);
+              return;
+            }
+
+            logger.log("info", "restoreSignatureAsync", { status: "Signature restored successfully" });
+            displayNotification("Info", "Signature restored successfully");
+
+            setTimeout(() => {
+              callback(true, null, event);
+              // if (event) completeWithState(event);
+            }, 500);
           }
         );
-        // }
       }
     );
   },
