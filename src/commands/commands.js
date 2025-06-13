@@ -925,12 +925,13 @@ function onNewMessageComposeHandler(event) {
         } else {
           item.getItemIdAsync((itemIdResult) => {
             if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
-              completeWithState(event, "Error", itemIdResult.error.message);
+              completeWithState(event, "Error", `getItemIdAsync: ${itemIdResult.error.message}`);
               return;
             }
             messageId = itemIdResult.value;
-            completeWithState(event, "Info", messageId);
+            completeWithState(event, "Info", `messageId: ${messageId}`);
             processEmailId(messageId, event);
+            return;
           });
         }
       }
