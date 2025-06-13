@@ -871,6 +871,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
  */
 function onNewMessageComposeHandler(event) {
   const isAndroid = Office.context?.mailbox?.diagnostics?.hostName === "OutlookAndroid";
+  const isIOS = Office.context?.mailbox?.diagnostics?.hostName === "OutlookIOS";
   isMobile =
     Office.context?.mailbox?.diagnostics?.hostName === "OutlookAndroid" ||
     Office.context?.mailbox?.diagnostics?.hostName === "OutlookIOS";
@@ -898,20 +899,18 @@ function onNewMessageComposeHandler(event) {
     }
 
     if (isReplyOrForward) {
-      // console.log(Office.context.mailbox);
       logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
 
       let messageId;
       if (isAndroid) {
         messageId = item.conversationId;
-        appendDebugLogToBody(item, `messageId`, messageId || "null");
-        return;
-        // processEmailId(messageId, event);
+        // appendDebugLogToBody(item, `messageId`, messageId || "null");
+        processEmailId(messageId, event);
       } else {
-        if (isClassicOutlook) {
+        if (isClassicOutlook || isIOS) {
           Office.context.mailbox.item.saveAsync(function callback(result) {
             if (result.status !== Office.AsyncResultStatus.Succeeded) {
-              completeWithState(event, "Error", result.error?.message);
+              completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
               return;
             }
             if (result.value) {
