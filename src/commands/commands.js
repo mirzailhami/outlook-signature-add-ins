@@ -902,14 +902,14 @@ function onNewMessageComposeHandler(event) {
       logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
 
       let messageId;
-      if (isAndroid) {
+      if (isMobile) {
         messageId = item.conversationId ? item.conversationId : item.itemId;
         // completeWithState(event, "Error", `messageId: ${messageId}`);
         // return;
         // appendDebugLogToBody(item, `messageId`, messageId || "null");
         processEmailId(messageId, event);
       } else {
-        if (isClassicOutlook || isIOS) {
+        if (isClassicOutlook) {
           Office.context.mailbox.item.saveAsync(function callback(result) {
             if (result.status !== Office.AsyncResultStatus.Succeeded) {
               completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
@@ -917,9 +917,9 @@ function onNewMessageComposeHandler(event) {
             }
             if (result.value) {
               messageId = result.value;
-              completeWithState(event, "Error", `saveAsync: ${messageId}`);
-              return;
-              // processEmailId(messageId, event);
+              // completeWithState(event, "Error", `saveAsync: ${messageId}`);
+              // return;
+              processEmailId(messageId, event);
             } else {
               completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
               return;
@@ -932,9 +932,9 @@ function onNewMessageComposeHandler(event) {
               return;
             }
             messageId = itemIdResult.value;
-            completeWithState(event, "Info", `messageId: ${messageId}`);
+            // completeWithState(event, "Info", `messageId: ${messageId}`);
             processEmailId(messageId, event);
-            return;
+            // return;
           });
         }
       }
