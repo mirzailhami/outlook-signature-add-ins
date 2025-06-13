@@ -910,21 +910,22 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          Office.context.mailbox.item.saveAsync(function callback(result) {
-            if (result.status !== Office.AsyncResultStatus.Succeeded) {
-              completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
-              return;
-            }
-            if (result.value) {
-              messageId = result.value;
-              completeWithState(event, "Info", `saveAsync: ${messageId}`);
-              return;
-              // processEmailId(messageId, event);
-            } else {
-              completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
-              return;
-            }
-          });
+          setTimeout(() => {
+            Office.context.mailbox.item.saveAsync(function callback(result) {
+              if (result.status !== Office.AsyncResultStatus.Succeeded) {
+                completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
+                return;
+              }
+              if (result.value) {
+                completeWithState(event, "Info", `saveAsync: ${messageId}`);
+                return;
+                // processEmailId(messageId, event);
+              } else {
+                completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
+                return;
+              }
+            });
+          }, 500);
         } else {
           item.getItemIdAsync((itemIdResult) => {
             if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
