@@ -902,14 +902,14 @@ function onNewMessageComposeHandler(event) {
       logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
 
       let messageId;
-      if (isMobile) {
+      if (isAndroid) {
         messageId = item.conversationId ? item.conversationId : item.itemId;
-        completeWithState(event, "Error", `messageId: ${messageId}`);
-        return;
+        // completeWithState(event, "Error", `messageId: ${messageId}`);
+        // return;
         // appendDebugLogToBody(item, `messageId`, messageId || "null");
-        // processEmailId(messageId, event);
+        processEmailId(messageId, event);
       } else {
-        if (isClassicOutlook) {
+        if (isClassicOutlook || isIOS) {
           Office.context.mailbox.item.saveAsync(function callback(result) {
             if (result.status !== Office.AsyncResultStatus.Succeeded) {
               completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
