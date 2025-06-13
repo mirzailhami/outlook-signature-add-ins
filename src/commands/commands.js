@@ -917,6 +917,7 @@ function onNewMessageComposeHandler(event) {
                 return;
               }
               if (result.value) {
+                messageId = result.value;
                 completeWithState(event, "Info", `saveAsync: ${messageId}`);
                 return;
                 // processEmailId(messageId, event);
