@@ -870,6 +870,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
  * @param {Object} event - The event object from Office.js.
  */
 function onNewMessageComposeHandler(event) {
+  const isAndroid = Office.context?.mailbox?.diagnostics?.hostName === "OutlookAndroid";
   isMobile =
     Office.context?.mailbox?.diagnostics?.hostName === "OutlookAndroid" ||
     Office.context?.mailbox?.diagnostics?.hostName === "OutlookIOS";
@@ -887,8 +888,7 @@ function onNewMessageComposeHandler(event) {
 
   displayNotification(
     `Info`,
-    `Platform: ${Office.context.mailbox.diagnostics.hostName},
-    Version: ${Office.context.mailbox.diagnostics.hostVersion}`
+    `${Office.context.mailbox.diagnostics.hostName} - ${Office.context.mailbox.diagnostics.hostVersion}`
   );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
     if (error) {
@@ -902,10 +902,9 @@ function onNewMessageComposeHandler(event) {
       logger.log("info", "onNewMessageComposeHandler", { status: "Processing reply/forward email" });
 
       let messageId;
-      if (isMobile) {
+      if (isAndroid) {
         messageId = item.conversationId;
         appendDebugLogToBody(item, `messageId`, messageId || "null");
-        completeWithState(event, "Info", `reply/forward ${messageId}`);
         return;
         // processEmailId(messageId, event);
       } else {
@@ -930,6 +929,7 @@ function onNewMessageComposeHandler(event) {
               return;
             }
             messageId = itemIdResult.value;
+            completeWithState(event, "Info", messageId);
             processEmailId(messageId, event);
           });
         }
