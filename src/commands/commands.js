@@ -269,7 +269,7 @@ const SignatureManager = {
             addSignature(signatureKey, event, false, (result) => {
               if (result) {
                 displayNotification("Info", "Signature restored successfully");
-                callback(true, null, asyncResult.asyncContext);
+                callback(true, null, event);
               } else {
                 logger.log("error", "restoreSignatureAsync", { error: "Failed to add signature" });
                 callback(false, new Error("Failed to add signature"), event);
