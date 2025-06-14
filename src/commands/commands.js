@@ -231,62 +231,77 @@ const SignatureManager = {
       }
     }
 
-    const signatureWithMarker = '<div id="Signature">' + signature.trim() + "</div>";
-    const bodyPattern = /<div class="elementToProof"[^>]*>(?:[\s\S]*?)<\/div>/i; // Match only the first elementToProof div
-    const signaturePattern = /<div[^>]*id=["'](?:(?:x_)?Signature|_Signature)(?:_\\w+)?["'][^>]*>(?:[\s\S]*?)<\/div>/gi; // Match all signature divs
-    Office.context.mailbox.item.body.getAsync(
-      Office.CoercionType.Html,
-      { asyncContext: { signatureWithMarker, bodyPattern, signaturePattern, callback, event, attempt: 0 } },
-      function (result) {
-        if (result.status !== Office.AsyncResultStatus.Succeeded) {
-          logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
-          callback(false, new Error("Failed to get current body"), event);
-          return;
-        }
+    const signatureWithMarker = "<!-- signature -->" + signature.trim();
+    item.body.setSignatureAsync(
+      signatureWithMarker,
+      { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
+      (asyncResult) => {
+        displayNotification("Info", "Signature restored successfully");
 
-        const currentBody = result.value || "";
-
-        // Remove all signature blocks
-        let cleanedBody = currentBody.replace(result.asyncContext.signaturePattern, "").trim();
-
-        // Extract only the first elementToProof div as body content
-        const bodyMatch = cleanedBody.match(result.asyncContext.bodyPattern);
-        const finalCleanedBody = bodyMatch ? bodyMatch[0].trim() : "";
-        const newBody = finalCleanedBody;
-
-        Office.context.mailbox.item.body.setAsync(
-          currentBody.trim(),
-          { coercionType: Office.CoercionType.Html, asyncContext: event },
-          function (asyncResult) {
-            if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
-              logger.log("error", "restoreSignatureAsync", {
-                error: asyncResult.error?.message || "Failed to set body",
-              });
-              callback(false, asyncResult.error || new Error("Failed to set body"), event);
-              return;
-            }
-
-            // addSignature(signatureKey, event, false, () => {
-            //   displayNotification("Info", "Restored successfully");
-            //   callback(true, null, event);
-            // });
-
-            Office.context.mailbox.item.body.setSignatureAsync(
-              result.asyncContext.signatureWithMarker.trim(),
-              { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
-              (asyncResult) => {
-                displayNotification("Info", "Signature restored successfully");
-
-                setTimeout(() => {
-                  Office.context.mailbox.item.body.prependAsync("&nbsp;");
-                  callback(true, null, asyncResult.asyncContext);
-                }, 500);
-              }
-            );
-          }
-        );
+        item.body.prependAsync("&nbsp;", { coercionType: Office.CoercionType.Html }, () => {
+          setTimeout(() => {
+            callback(true, null, asyncResult.asyncContext);
+          }, 500);
+        });
       }
     );
+
+    // const signatureWithMarker = '<div id="Signature">' + signature.trim() + "</div>";
+    // const bodyPattern = /<div class="elementToProof"[^>]*>(?:[\s\S]*?)<\/div>/i; // Match only the first elementToProof div
+    // const signaturePattern = /<div[^>]*id=["'](?:(?:x_)?Signature|_Signature)(?:_\\w+)?["'][^>]*>(?:[\s\S]*?)<\/div>/gi; // Match all signature divs
+    // Office.context.mailbox.item.body.getAsync(
+    //   Office.CoercionType.Html,
+    //   { asyncContext: { signatureWithMarker, bodyPattern, signaturePattern, callback, event, attempt: 0 } },
+    //   function (result) {
+    //     if (result.status !== Office.AsyncResultStatus.Succeeded) {
+    //       logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
+    //       callback(false, new Error("Failed to get current body"), event);
+    //       return;
+    //     }
+
+    //     const currentBody = result.value || "";
+
+    //     // Remove all signature blocks
+    //     let cleanedBody = currentBody.replace(result.asyncContext.signaturePattern, "").trim();
+
+    //     // Extract only the first elementToProof div as body content
+    //     const bodyMatch = cleanedBody.match(result.asyncContext.bodyPattern);
+    //     const finalCleanedBody = bodyMatch ? bodyMatch[0].trim() : "";
+    //     const newBody = finalCleanedBody;
+
+    //     Office.context.mailbox.item.body.setAsync(
+    //       currentBody.trim(),
+    //       { coercionType: Office.CoercionType.Html, asyncContext: event },
+    //       function (asyncResult) {
+    //         if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
+    //           logger.log("error", "restoreSignatureAsync", {
+    //             error: asyncResult.error?.message || "Failed to set body",
+    //           });
+    //           callback(false, asyncResult.error || new Error("Failed to set body"), event);
+    //           return;
+    //         }
+
+    //         // addSignature(signatureKey, event, false, () => {
+    //         //   displayNotification("Info", "Restored successfully");
+    //         //   callback(true, null, event);
+    //         // });
+
+    //         Office.context.mailbox.item.body.setSignatureAsync(
+    //           result.asyncContext.signatureWithMarker.trim(),
+    //           { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
+    //           (asyncResult) => {
+    //             displayNotification("Info", "Signature restored successfully");
+
+    //             setTimeout(() => {
+    //               Office.context.mailbox.item.body.prependAsync("&nbsp;");
+    //               callback(true, null, asyncResult.asyncContext);
+    //             }, 500);
+    //           }
+    //         );
+    //       }
+    //     );
+    //   }
+    // );
   },
 };
 
