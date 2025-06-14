@@ -235,7 +235,7 @@ const SignatureManager = {
     const bodyPattern = /<div class="elementToProof"[^>]*>(?:[\s\S]*?)<\/div>/i; // Match only the first elementToProof div
     const signaturePattern = /<div[^>]*id=["'](?:(?:x_)?Signature|_Signature)(?:_\\w+)?["'][^>]*>(?:[\s\S]*?)<\/div>/gi; // Match all signature divs
     Office.context.mailbox.item.body.getAsync(
-      Office.CoercionType.Text,
+      Office.CoercionType.Html,
       { asyncContext: { signatureWithMarker, bodyPattern, signaturePattern, callback, event, attempt: 0 } },
       function (result) {
         if (result.status !== Office.AsyncResultStatus.Succeeded) {
@@ -255,8 +255,8 @@ const SignatureManager = {
         const newBody = finalCleanedBody;
 
         Office.context.mailbox.item.body.setAsync(
-          currentBody.trim(),
-          { coercionType: Office.CoercionType.Text, asyncContext: event },
+          "<div>" + currentBody.trim() + "</div>",
+          { coercionType: Office.CoercionType.Html, asyncContext: event },
           function (asyncResult) {
             if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
               logger.log("error", "restoreSignatureAsync", {
