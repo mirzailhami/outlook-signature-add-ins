@@ -255,7 +255,7 @@ const SignatureManager = {
         const newBody = finalCleanedBody;
 
         Office.context.mailbox.item.body.setAsync(
-          currentBody.trim() + " ",
+          currentBody.trim() + ".",
           { coercionType: Office.CoercionType.Html, asyncContext: event },
           function (asyncResult) {
             if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
@@ -267,7 +267,7 @@ const SignatureManager = {
             }
 
             Office.context.mailbox.item.body.setSignatureAsync(
-              result.asyncContext.signatureWithMarker,
+              result.asyncContext.signatureWithMarker + ".",
               { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
               (asyncResult) => {
                 displayNotification("Info", "Signature restored successfully");
