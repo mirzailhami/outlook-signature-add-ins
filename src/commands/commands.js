@@ -266,14 +266,9 @@ const SignatureManager = {
               return;
             }
 
-            addSignature(signatureKey, event, false, (result) => {
-              if (result) {
-                displayNotification("Info", "Signature restored successfully");
-                callback(true, null, event);
-              } else {
-                logger.log("error", "restoreSignatureAsync", { error: "Failed to add signature" });
-                callback(false, new Error("Failed to add signature"), event);
-              }
+            addSignature(signatureKey, event, false, () => {
+              displayNotification("Info", "Signature restored successfully");
+              callback(true, null, event);
             });
 
             // Office.context.mailbox.item.body.setSignatureAsync(
