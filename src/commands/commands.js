@@ -237,12 +237,7 @@ const SignatureManager = {
       { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
       (asyncResult) => {
         displayNotification("Info", "Signature restored successfully");
-
-        item.body.prependAsync("&nbsp;", { coercionType: Office.CoercionType.Html }, () => {
-          setTimeout(() => {
-            callback(true, null, asyncResult.asyncContext);
-          }, 500);
-        });
+        callback(true, null, asyncResult.asyncContext);
       }
     );
 
@@ -804,20 +799,40 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         if (isTextValid && isLogoValid) {
           event.completed({ allowEvent: true });
         } else {
-          // addSignature(originalSignatureKey, event, false, () => {
-          // Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function (bodyResult) {
-          //   const xxcurrentSignature = SignatureManager.extractSignature(bodyResult.value);
-          //   event.completed({
-          //     allowEvent: false,
-          //     errorMessage: bodyResult.value.length,
-          //     cancelLabel: "OK",
-          //   });
-          //   return;
-          // });
-          displayError(
-            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-            event
-          );
+          addSignature(originalSignatureKey, event, false, () => {
+            Office.context.mailbox.item.body.getTypeAsync((asyncResult) => {
+              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                completeWithState(`Action failed with error:  ${asyncResult.error.message}`);
+                return;
+              }
+
+              const bodyFormat = asyncResult.value;
+              Office.context.mailbox.item.body.prependAsync("&nbsp;", { coercionType: bodyFormat }, (asyncResult) => {
+                if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+                  completeWithState(`Action failed with error:  ${asyncResult.error.message}`);
+                  return;
+                }
+                displayError(
+                  "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                  event
+                );
+                return;
+              });
+            });
+
+            // Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function (bodyResult) {
+            //   const xxcurrentSignature = SignatureManager.extractSignature(bodyResult.value);
+            //   event.completed({
+            //     allowEvent: false,
+            //     errorMessage: bodyResult.value.length,
+            //     cancelLabel: "OK",
+            //   });
+            //   return;
+          });
+          // displayError(
+          //   "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+          //   event
+          // );
           // });
           // SignatureManager.restoreSignature(
           //   item,
