@@ -255,7 +255,7 @@ const SignatureManager = {
         const newBody = finalCleanedBody;
 
         Office.context.mailbox.item.body.setAsync(
-          "<div>" + currentBody.trim() + "</div>",
+          currentBody.trim(),
           { coercionType: Office.CoercionType.Html, asyncContext: event },
           function (asyncResult) {
             if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
@@ -266,22 +266,22 @@ const SignatureManager = {
               return;
             }
 
-            addSignature(signatureKey, event, false, () => {
-              displayNotification("Info", "Restored successfully");
-              callback(true, null, event);
-            });
+            // addSignature(signatureKey, event, false, () => {
+            //   displayNotification("Info", "Restored successfully");
+            //   callback(true, null, event);
+            // });
+            Office.context.mailbox.item.body.prependAsync("&nbsp;");
+            Office.context.mailbox.item.body.setSignatureAsync(
+              result.asyncContext.signatureWithMarker.trim(),
+              { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
+              (asyncResult) => {
+                displayNotification("Info", "Signature restored successfully");
 
-            // Office.context.mailbox.item.body.setSignatureAsync(
-            //   result.asyncContext.signatureWithMarker.trim(),
-            //   { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
-            //   (asyncResult) => {
-            //     displayNotification("Info", "Signature restored successfully");
-
-            //     setTimeout(() => {
-            //       callback(true, null, asyncResult.asyncContext);
-            //     }, 500);
-            //   }
-            // );
+                setTimeout(() => {
+                  callback(true, null, asyncResult.asyncContext);
+                }, 500);
+              }
+            );
           }
         );
       }
@@ -788,21 +788,21 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         if (isTextValid && isLogoValid) {
           event.completed({ allowEvent: true });
         } else {
-          addSignature(originalSignatureKey, event, false, () => {
-            Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function (bodyResult) {
-              const xxcurrentSignature = SignatureManager.extractSignature(bodyResult.value);
-              event.completed({
-                allowEvent: false,
-                errorMessage: bodyResult.value.length,
-                cancelLabel: "OK",
-              });
-              return;
-            });
-            // displayError(
-            //   "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-            //   event
-            // );
-          });
+          // addSignature(originalSignatureKey, event, false, () => {
+          // Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function (bodyResult) {
+          //   const xxcurrentSignature = SignatureManager.extractSignature(bodyResult.value);
+          //   event.completed({
+          //     allowEvent: false,
+          //     errorMessage: bodyResult.value.length,
+          //     cancelLabel: "OK",
+          //   });
+          //   return;
+          // });
+          displayError(
+            "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+            event
+          );
+          // });
           // SignatureManager.restoreSignature(
           //   item,
           //   rawMatchedSignature,
