@@ -793,7 +793,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
               const xxcurrentSignature = SignatureManager.extractSignatureForOutlookClassic(bodyResult.value);
               event.completed({
                 allowEvent: false,
-                errorMessage: SignatureManager.normalizeSignature(xxcurrentSignature),
+                errorMessage: SignatureManager.normalizeSignature(xxcurrentSignature).substring(0, 100),
                 cancelLabel: "OK",
               });
               return;
