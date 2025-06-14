@@ -255,7 +255,7 @@ const SignatureManager = {
         const newBody = finalCleanedBody;
 
         Office.context.mailbox.item.body.setAsync(
-          newBody,
+          currentBody,
           { coercionType: Office.CoercionType.Html, asyncContext: event },
           function (asyncResult) {
             if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
