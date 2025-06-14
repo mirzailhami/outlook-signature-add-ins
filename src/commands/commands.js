@@ -232,10 +232,11 @@ const SignatureManager = {
     }
 
     const signatureWithMarker = '<div id="Signature">' + signature.trim() + "</div>";
-    const signaturePattern = new RegExp(`<div id=["'](?:x_)?Signature(?:_\\w+)?["'](?:[\\s\\S]*)(?:<\\/div>|$)`, "gi"); // Handle x_Signature
+    const bodyPattern = /<div class="elementToProof"[^>]*>(?:[\s\S]*?)<\/div>/i; // Match only the first elementToProof div
+    const signaturePattern = /<div[^>]*id=["'](?:(?:x_)?Signature|_Signature)(?:_\\w+)?["'][^>]*>(?:[\s\S]*?)<\/div>/gi; // Match all signature divs
     Office.context.mailbox.item.body.getAsync(
       Office.CoercionType.Html,
-      { asyncContext: { signatureWithMarker, signaturePattern, callback, event } },
+      { asyncContext: { signatureWithMarker, bodyPattern, signaturePattern, callback, event, attempt: 0 } },
       function (result) {
         if (result.status !== Office.AsyncResultStatus.Succeeded) {
           logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
@@ -244,34 +245,14 @@ const SignatureManager = {
         }
 
         const currentBody = result.value || "";
-        logger.log("info", "restoreSignatureAsync", {
-          status: "Raw current body",
-          body: currentBody.substring(0, 200) + "...",
-        });
 
-        // Remove existing signature
-        const cleanedBody = currentBody.replace(result.asyncContext.signaturePattern, "").trim();
-        logger.log("info", "restoreSignatureAsync", {
-          status: "Cleaned body length",
-          length: cleanedBody.length,
-          sample: cleanedBody.substring(0, 200) + "...",
-        });
+        // Remove all signature blocks
+        let cleanedBody = currentBody.replace(result.asyncContext.signaturePattern, "").trim();
 
-        // Ensure cleanedBody contains only body content up to signature
-        const bodyContentEnd = cleanedBody.search(new RegExp(`<div id=["'](?:x_)?Signature(?:_\\w+)?["']`, "i"));
-        const finalCleanedBody = bodyContentEnd === -1 ? cleanedBody : cleanedBody.substring(0, bodyContentEnd).trim();
-        logger.log("info", "restoreSignatureAsync", {
-          status: "Final cleaned body length",
-          length: finalCleanedBody.length,
-          sample: finalCleanedBody.substring(0, 200) + "...",
-        });
-
-        const newBody = finalCleanedBody + signatureWithMarker;
-        logger.log("info", "restoreSignatureAsync", {
-          status: "New body length",
-          length: newBody.length,
-          sample: newBody.substring(0, 200) + "...",
-        });
+        // Extract only the first elementToProof div as body content
+        const bodyMatch = cleanedBody.match(result.asyncContext.bodyPattern);
+        const finalCleanedBody = bodyMatch ? bodyMatch[0].trim() : "";
+        const newBody = finalCleanedBody;
 
         Office.context.mailbox.item.body.setAsync(
           newBody,
@@ -285,13 +266,17 @@ const SignatureManager = {
               return;
             }
 
-            logger.log("info", "restoreSignatureAsync", { status: "Signature restored successfully" });
-            displayNotification("Info", "Signature restored successfully");
+            Office.context.mailbox.item.body.setSignatureAsync(
+              result.asyncContext.signatureWithMarker,
+              { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
+              (asyncResult) => {
+                displayNotification("Info", "Signature restored successfully");
 
-            setTimeout(() => {
-              callback(true, null, event);
-              // if (event) completeWithState(event);
-            }, 500);
+                setTimeout(() => {
+                  callback(true, null, asyncResult.asyncContext);
+                }, 500);
+              }
+            );
           }
         );
       }
