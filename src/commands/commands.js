@@ -793,7 +793,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
               const xxcurrentSignature = SignatureManager.extractSignature(bodyResult.value);
               event.completed({
                 allowEvent: false,
-                errorMessage: bodyResult.value.substring(0, 100),
+                errorMessage: bodyResult.value.length,
                 cancelLabel: "OK",
               });
               return;
