@@ -788,12 +788,14 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         if (isTextValid && isLogoValid) {
           event.completed({ allowEvent: true });
         } else {
-          addSignature(originalSignatureKey, event, false, () => {
-            displayError(
-              "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-              event
-            );
-          });
+          setTimeout(() => {
+            addSignature(originalSignatureKey, event, false, () => {
+              displayError(
+                "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+                event
+              );
+            });
+          }, 1000);
           // SignatureManager.restoreSignature(
           //   item,
           //   rawMatchedSignature,
