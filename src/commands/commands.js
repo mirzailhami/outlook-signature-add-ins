@@ -266,17 +266,27 @@ const SignatureManager = {
               return;
             }
 
-            Office.context.mailbox.item.body.setSignatureAsync(
-              result.asyncContext.signatureWithMarker.trim(),
-              { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
-              (asyncResult) => {
+            addSignature(signatureKey, event, false, (result) => {
+              if (result) {
                 displayNotification("Info", "Signature restored successfully");
-
-                setTimeout(() => {
-                  callback(true, null, asyncResult.asyncContext);
-                }, 500);
+                callback(true, null, asyncResult.asyncContext);
+              } else {
+                logger.log("error", "restoreSignatureAsync", { error: "Failed to add signature" });
+                callback(false, new Error("Failed to add signature"), event);
               }
-            );
+            });
+
+            // Office.context.mailbox.item.body.setSignatureAsync(
+            //   result.asyncContext.signatureWithMarker.trim(),
+            //   { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
+            //   (asyncResult) => {
+            //     displayNotification("Info", "Signature restored successfully");
+
+            //     setTimeout(() => {
+            //       callback(true, null, asyncResult.asyncContext);
+            //     }, 500);
+            //   }
+            // );
           }
         );
       }
