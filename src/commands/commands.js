@@ -267,7 +267,7 @@ const SignatureManager = {
             }
 
             addSignature(signatureKey, event, false, () => {
-              displayNotification("Info", "Signature restored successfully");
+              displayNotification("Info", "Restored successfully");
               callback(true, null, event);
             });
 
