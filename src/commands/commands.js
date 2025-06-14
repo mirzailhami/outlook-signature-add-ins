@@ -788,22 +788,28 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         if (isTextValid && isLogoValid) {
           event.completed({ allowEvent: true });
         } else {
-          SignatureManager.restoreSignature(
-            item,
-            rawMatchedSignature,
-            originalSignatureKey,
-            event,
-            (restored, error, eventReturn) => {
-              if (error || !restored) {
-                displayError("Failed to restore the original M3 signature. Please reselect.", eventReturn);
-              } else {
-                displayError(
-                  "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                  eventReturn
-                );
-              }
-            }
-          );
+          addSignature(originalSignatureKey, event, false, () => {
+            displayError(
+              "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+              event
+            );
+          });
+          // SignatureManager.restoreSignature(
+          //   item,
+          //   rawMatchedSignature,
+          //   originalSignatureKey,
+          //   event,
+          //   (restored, error, eventReturn) => {
+          //     if (error || !restored) {
+          //       displayError("Failed to restore the original M3 signature. Please reselect.", eventReturn);
+          //     } else {
+          //       displayError(
+          //         "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+          //         eventReturn
+          //       );
+          //     }
+          //   }
+          // );
         }
       });
       return;
