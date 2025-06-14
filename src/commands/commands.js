@@ -788,14 +788,17 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         if (isTextValid && isLogoValid) {
           event.completed({ allowEvent: true });
         } else {
-          setTimeout(() => {
-            addSignature(originalSignatureKey, event, false, () => {
-              displayError(
-                "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                event
-              );
+          addSignature(originalSignatureKey, event, false, () => {
+            Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function (bodyResult) {
+              const xxcurrentSignature = SignatureManager.extractSignatureForOutlookClassic(bodyResult.value);
+              displayError(SignatureManager.normalizeSignature(xxcurrentSignature));
+              return;
             });
-          }, 1000);
+            // displayError(
+            //   "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+            //   event
+            // );
+          });
           // SignatureManager.restoreSignature(
           //   item,
           //   rawMatchedSignature,
