@@ -270,7 +270,7 @@ const SignatureManager = {
             //   displayNotification("Info", "Restored successfully");
             //   callback(true, null, event);
             // });
-            Office.context.mailbox.item.body.prependAsync("&nbsp;");
+
             Office.context.mailbox.item.body.setSignatureAsync(
               result.asyncContext.signatureWithMarker.trim(),
               { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
@@ -278,6 +278,7 @@ const SignatureManager = {
                 displayNotification("Info", "Signature restored successfully");
 
                 setTimeout(() => {
+                  Office.context.mailbox.item.body.prependAsync("&nbsp;");
                   callback(true, null, asyncResult.asyncContext);
                 }, 500);
               }
