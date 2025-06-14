@@ -791,7 +791,11 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
           addSignature(originalSignatureKey, event, false, () => {
             Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function (bodyResult) {
               const xxcurrentSignature = SignatureManager.extractSignatureForOutlookClassic(bodyResult.value);
-              displayError(SignatureManager.normalizeSignature(xxcurrentSignature), event);
+              event.completed({
+                allowEvent: false,
+                errorMessage: SignatureManager.normalizeSignature(xxcurrentSignature),
+                cancelLabel: "OK",
+              });
               return;
             });
             // displayError(
