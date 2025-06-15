@@ -867,7 +867,7 @@ function onNewMessageComposeHandler(event) {
       if (isMobile) {
         if (isIOS) {
           messageId = item.inReplyTo;
-          completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
+          completeWithState(event, "Error", `inReplyTo for ${messageId}`);
           return;
         } else {
           messageId = item?.conversationId || item?.itemId;
