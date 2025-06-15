@@ -248,6 +248,14 @@ const SignatureManager = {
  * @returns {string|null} The matched signature key, or null if no match.
  */
 function detectSignatureKey(signatureText) {
+  const signatureKey = {
+    m3: "m3Signature",
+    m2: "m2Signature",
+    morven: "morvenSignature",
+    morgan: "morganSignature",
+    mona: "monaSignature",
+  };
+
   // Step 1: Logo-based detection
   const logoRegex = /<img[^>]+src=["'](.*?(?:m3signatures\/logo\/([^?"']+))(?:\?[^"']*)?)["'][^>]*>/i;
   const logoMatch = signatureText.match(logoRegex);
@@ -258,31 +266,48 @@ function detectSignatureKey(signatureText) {
     const logoPrefixMatch = logoFile.match(/^([a-z0-9]+)(?:_v\d+)?\.png$/i);
     const logoPrefix = logoPrefixMatch ? logoPrefixMatch[1] : null;
 
-    if (logoPrefix) {
-      const logoPrefixToKey = {
-        morven: "morvenSignature",
-        morgan: "morganSignature",
-        mona: "monaSignature",
-        m2: "m2Signature",
-        m3: "m3Signature",
-      };
-      const keyFromLogo = logoPrefixToKey[logoPrefix.toLowerCase()];
-      if (keyFromLogo) {
-        logger.log("info", "logoDetection", {
-          logoFile,
-          logoPrefix,
-          keyFromLogo,
-        });
-        return keyFromLogo;
-      }
-    } else {
+    if (!logoPrefix) {
       logger.log("error", "logoDetection", {
         status: "Invalid logo file name format",
         logoFile,
       });
+      return;
+    }
+
+    const keyFromLogo = signatureKey[logoPrefix.toLowerCase()];
+    if (keyFromLogo) {
+      logger.log("info", "logoDetection", {
+        logoFile,
+        logoPrefix,
+        keyFromLogo,
+      });
+      return keyFromLogo;
     }
   }
 
+  // Step 2: Text-based detection as fallback
+  const textPatterns = {
+    m3: /(Mona Offshore Wind Limited|Morgan Offshore Wind Limited|Morven Offshore Wind Limited)/i,
+    m2: /(Mona Offshore Wind Limited|Morgan Offshore Wind Limited)/i,
+    morven: /Morven Offshore Wind Limited/i,
+    morgan: /Morgan Offshore Wind Limited/i,
+    mona: /Mona Offshore Wind Limited/i,
+  };
+
+  for (const [key, pattern] of Object.entries(textPatterns)) {
+    if (pattern.test(signatureText)) {
+      logger.log("info", "textDetection", {
+        detectedText: signatureText.match(pattern)[0],
+        key: signatureKey[key],
+      });
+      return signatureKey[key];
+    }
+  }
+
+  logger.log("warn", "textDetection", {
+    status: "No matching text pattern found",
+    signatureText: signatureText.substring(0, 200) + "...",
+  });
   return null;
 }
 
@@ -865,22 +890,12 @@ function onNewMessageComposeHandler(event) {
 
       let messageId;
       if (isMobile) {
-        if (isIOS) {
-          messageId = Office.context.mailbox.item.itemId;
-          completeWithState(
-            event,
-            "Error",
-            `${Office.context?.mailbox?.item?.itemId} & ${Office.context?.mailbox?.item?.conversationId} & ${Office.context?.mailbox?.item?.conversationIndex}`
-          );
+        messageId = item?.conversationId || item?.itemId;
+        if (!messageId) {
+          completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
           return;
-        } else {
-          messageId = item?.conversationId || item?.itemId;
-          if (!messageId) {
-            completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
-            return;
-          }
-          processEmailId(messageId, event);
         }
+        processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
           setTimeout(() => {
