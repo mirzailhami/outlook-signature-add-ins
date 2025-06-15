@@ -865,14 +865,18 @@ function onNewMessageComposeHandler(event) {
 
       let messageId;
       if (isMobile) {
-        setTimeout(() => {
+        if (isIOS) {
+          messageId = item.inReplyTo;
+          completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
+          return;
+        } else {
           messageId = item?.conversationId || item?.itemId;
           if (!messageId) {
             completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
             return;
           }
           processEmailId(messageId, event);
-        }, 500);
+        }
       } else {
         if (isClassicOutlook) {
           setTimeout(() => {
