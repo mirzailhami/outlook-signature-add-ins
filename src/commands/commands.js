@@ -286,18 +286,24 @@ function detectSignatureKey(signatureText) {
   }
 
   // Step 2: Text-based detection as fallback
-  const textPatterns = {
-    m3: /(Mona Offshore Wind Limited|Morgan Offshore Wind Limited|Morven Offshore Wind Limited)/i,
-    m2: /(Mona Offshore Wind Limited|Morgan Offshore Wind Limited)/i,
-    morven: /Morven Offshore Wind Limited/i,
-    morgan: /Morgan Offshore Wind Limited/i,
+  const companyPatterns = {
     mona: /Mona Offshore Wind Limited/i,
+    morgan: /Morgan Offshore Wind Limited/i,
+    morven: /Morven Offshore Wind Limited/i,
+  };
+  const textChecks = {
+    m3: ["mona", "morgan", "morven"], // All three required
+    m2: ["mona", "morgan"], // Both required
+    morven: ["morven"], // Single required
+    morgan: ["morgan"], // Single required
+    mona: ["mona"], // Single required
   };
 
-  for (const [key, pattern] of Object.entries(textPatterns)) {
-    if (pattern.test(signatureText)) {
+  for (const [key, requiredCompanies] of Object.entries(textChecks)) {
+    const allPresent = requiredCompanies.every((company) => companyPatterns[company].test(signatureText));
+    if (allPresent) {
       logger.log("info", "textDetection", {
-        detectedText: signatureText.match(pattern)[0],
+        detectedCompanies: requiredCompanies,
         key: signatureKey[key],
       });
       return signatureKey[key];
