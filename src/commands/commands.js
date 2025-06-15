@@ -867,7 +867,11 @@ function onNewMessageComposeHandler(event) {
       if (isMobile) {
         if (isIOS) {
           messageId = Office.context.mailbox.item.itemId;
-          completeWithState(event, "Error", `itemId for ${Office.context.mailbox.item.itemId}`);
+          completeWithState(
+            event,
+            "Error",
+            `${Office.context?.mailbox?.item?.itemId} & ${Office.context?.mailbox?.item?.conversationId} & ${Office.context?.mailbox?.item?.conversationIndex}`
+          );
           return;
         } else {
           messageId = item?.conversationId || item?.itemId;
