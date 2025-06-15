@@ -865,13 +865,14 @@ function onNewMessageComposeHandler(event) {
 
       let messageId;
       if (isMobile) {
-        messageId = item?.conversationId || item?.itemId;
-        if (messageId) {
+        setTimeout(() => {
+          messageId = item?.conversationId || item?.itemId;
+          if (!messageId) {
+            completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
+            return;
+          }
           processEmailId(messageId, event);
-        } else {
-          completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
-          return;
-        }
+        }, 500);
       } else {
         if (isClassicOutlook) {
           setTimeout(() => {
