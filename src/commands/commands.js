@@ -236,67 +236,9 @@ const SignatureManager = {
       signatureWithMarker,
       { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
       (asyncResult) => {
-        displayNotification("Info", "Signature restored successfully");
         callback(true, null, asyncResult.asyncContext);
       }
     );
-
-    // const signatureWithMarker = '<div id="Signature">' + signature.trim() + "</div>";
-    // const bodyPattern = /<div class="elementToProof"[^>]*>(?:[\s\S]*?)<\/div>/i; // Match only the first elementToProof div
-    // const signaturePattern = /<div[^>]*id=["'](?:(?:x_)?Signature|_Signature)(?:_\\w+)?["'][^>]*>(?:[\s\S]*?)<\/div>/gi; // Match all signature divs
-    // Office.context.mailbox.item.body.getAsync(
-    //   Office.CoercionType.Html,
-    //   { asyncContext: { signatureWithMarker, bodyPattern, signaturePattern, callback, event, attempt: 0 } },
-    //   function (result) {
-    //     if (result.status !== Office.AsyncResultStatus.Succeeded) {
-    //       logger.log("error", "restoreSignatureAsync", { error: "Failed to get current body" });
-    //       callback(false, new Error("Failed to get current body"), event);
-    //       return;
-    //     }
-
-    //     const currentBody = result.value || "";
-
-    //     // Remove all signature blocks
-    //     let cleanedBody = currentBody.replace(result.asyncContext.signaturePattern, "").trim();
-
-    //     // Extract only the first elementToProof div as body content
-    //     const bodyMatch = cleanedBody.match(result.asyncContext.bodyPattern);
-    //     const finalCleanedBody = bodyMatch ? bodyMatch[0].trim() : "";
-    //     const newBody = finalCleanedBody;
-
-    //     Office.context.mailbox.item.body.setAsync(
-    //       currentBody.trim(),
-    //       { coercionType: Office.CoercionType.Html, asyncContext: event },
-    //       function (asyncResult) {
-    //         if (asyncResult.status !== Office.AsyncResultStatus.Succeeded) {
-    //           logger.log("error", "restoreSignatureAsync", {
-    //             error: asyncResult.error?.message || "Failed to set body",
-    //           });
-    //           callback(false, asyncResult.error || new Error("Failed to set body"), event);
-    //           return;
-    //         }
-
-    //         // addSignature(signatureKey, event, false, () => {
-    //         //   displayNotification("Info", "Restored successfully");
-    //         //   callback(true, null, event);
-    //         // });
-
-    //         Office.context.mailbox.item.body.setSignatureAsync(
-    //           result.asyncContext.signatureWithMarker.trim(),
-    //           { coercionType: Office.CoercionType.Html, asyncContext: event, callback },
-    //           (asyncResult) => {
-    //             displayNotification("Info", "Signature restored successfully");
-
-    //             setTimeout(() => {
-    //               Office.context.mailbox.item.body.prependAsync("&nbsp;");
-    //               callback(true, null, asyncResult.asyncContext);
-    //             }, 500);
-    //           }
-    //         );
-    //       }
-    //     );
-    //   }
-    // );
   },
 };
 
@@ -498,6 +440,8 @@ const auth = {
   clientId: "44cb4054-0802-4e2f-8ccb-aba939633fbb",
   authority: "https://login.microsoftonline.com/common",
 };
+
+Office.initialize = function () {};
 
 Office.onReady(function () {
   console.log("Office.js is ready");
@@ -748,7 +692,6 @@ function validateSignature(event) {
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
     } else {
-      // displayNotification("Info", `Body length: ${body.length}, Signature length: ${currentSignature.length}`);
       validateSignatureChanges(item, currentSignature, event, isClassicOutlook);
     }
   });
@@ -819,37 +762,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
                 return;
               });
             });
-
-            // Office.context.mailbox.item.body.getAsync(Office.CoercionType.Html, function (bodyResult) {
-            //   const xxcurrentSignature = SignatureManager.extractSignature(bodyResult.value);
-            //   event.completed({
-            //     allowEvent: false,
-            //     errorMessage: bodyResult.value.length,
-            //     cancelLabel: "OK",
-            //   });
-            //   return;
           });
-          // displayError(
-          //   "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-          //   event
-          // );
-          // });
-          // SignatureManager.restoreSignature(
-          //   item,
-          //   rawMatchedSignature,
-          //   originalSignatureKey,
-          //   event,
-          //   (restored, error, eventReturn) => {
-          //     if (error || !restored) {
-          //       displayError("Failed to restore the original M3 signature. Please reselect.", eventReturn);
-          //     } else {
-          //       displayError(
-          //         "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-          //         eventReturn
-          //       );
-          //     }
-          //   }
-          // );
         }
       });
       return;
@@ -904,7 +817,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
                 eventReturn
               );
             }
-            // event.completed({ allowEvent: false });
           }
         );
       }
@@ -912,7 +824,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
   } catch (error) {
     displayNotification("Error", `validateSignatureChanges: Exception - ${error.message}`);
     logger.log("error", "validateSignatureChanges", { error: error.message, stack: error.stack });
-    displayError("An unexpected error occurred during signature validation.", event);
   }
 }
 
@@ -954,9 +865,9 @@ function onNewMessageComposeHandler(event) {
 
       let messageId;
       if (isMobile) {
-        messageId = item.conversationId ? item.conversationId : item.itemId;
-        // completeWithState(event, "Error", `messageId: ${messageId}`);
-        processEmailId(messageId, event);
+        messageId = item.conversationId || item.itemId;
+        completeWithState(event, "Error", `messageId: ${messageId}`);
+        // processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
           setTimeout(() => {
