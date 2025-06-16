@@ -113,6 +113,48 @@ const SignatureManager = {
   extractSignatureForOutlookClassic(body) {
     if (!body) return null;
 
+    const signatureTablePattern = /<table class=MsoNormalTable[^>]*>(?:[\s\S]*?)<\/table><\/div>/gi; // Updated to include </div>
+    const signatureDivPattern =
+      /<div[^>]*id=["'](?:(?:x_)?Signature|_Signature)(?:_\\w+)?["'][^>]*>(?:[\s\S]*?)<\/div>/gi;
+    const originalMessageDivider = /<div[^>]*style=['"]border:none;border-top:solid #E1E1E1[^>]*>/i;
+
+    // Find the last signature table
+    let signatureMatch = null;
+    let lastSignatureIndex = -1;
+    let match;
+    while ((match = signatureTablePattern.exec(fullBody)) !== null) {
+      lastSignatureIndex = match.index;
+      signatureMatch = match[0];
+    }
+
+    // Fallback to last signature div if no table found
+    if (!signatureMatch && (match = fullBody.match(signatureDivPattern))) {
+      lastSignatureIndex = fullBody.lastIndexOf(match[match.length - 1]);
+      signatureMatch = match[match.length - 1];
+    }
+
+    let signatureText = "";
+    if (lastSignatureIndex !== -1) {
+      // Ensure signature ends before original message divider
+      const dividerIndex = fullBody.search(originalMessageDivider);
+      if (dividerIndex !== -1 && dividerIndex > lastSignatureIndex) {
+        signatureText = fullBody.substring(lastSignatureIndex, dividerIndex).trim();
+      } else {
+        signatureText = signatureMatch;
+      }
+    } else {
+      // Fallback: Assume signature is after the last body paragraph
+      const bodyEnd = fullBody.lastIndexOf("</p>", fullBody.indexOf("<p class=MsoNormal"));
+      signatureText = bodyEnd !== -1 ? fullBody.substring(bodyEnd + 4).trim() : fullBody.trim();
+      // Trim to signature by stopping at divider if present
+      const dividerIndex = signatureText.search(originalMessageDivider);
+      if (dividerIndex !== -1) {
+        signatureText = signatureText.substring(0, dividerIndex).trim();
+      }
+    }
+
+    return signatureText;
+
     // const marker = "<!-- signature -->";
     // const startIndex = body.lastIndexOf(marker);
     // if (startIndex !== -1) {
@@ -126,18 +168,18 @@ const SignatureManager = {
     //   return signature;
     // }
 
-    const regex =
-      /<table\s+class=MsoNormalTable[^>]*>([\s\S]*?)(?=(?:<div\s+id="[^"]*appendonsend"|>?\s*<(?:table|hr)\b)|$)/is;
-    const match = body.match(regex);
-    if (match) {
-      const signature = match[1].trim();
-      displayNotification("Info", `Body: ${body.length}, Regex match: ${signature.length}`);
-      logger.log("info", "extractSignatureForOutlookClassic", { method: "table", signatureLength: signature.length });
-      return signature;
-    }
+    // const regex =
+    //   /<table\s+class=MsoNormalTable[^>]*>([\s\S]*?)(?=(?:<div\s+id="[^"]*appendonsend"|>?\s*<(?:table|hr)\b)|$)/is;
+    // const match = body.match(regex);
+    // if (match) {
+    //   const signature = match[1].trim();
+    //   displayNotification("Info", `Body: ${body.length}, Regex match: ${signature.length}`);
+    //   logger.log("info", "extractSignatureForOutlookClassic", { method: "table", signatureLength: signature.length });
+    //   return signature;
+    // }
 
-    logger.log("info", "extractSignatureForOutlookClassic", { status: "No signature found" });
-    return null;
+    // logger.log("info", "extractSignatureForOutlookClassic", { status: "No signature found" });
+    // return null;
   },
 
   /**
@@ -720,18 +762,20 @@ function validateSignature(event) {
     const body = bodyResult.value;
 
     // temporary
-    Office.context.mailbox.item.body.setAsync(body, { coercionType: Office.CoercionType.Text }, function (setResult) {
-      event.completed({ allowEvent: true });
-      return;
-    });
+    // Office.context.mailbox.item.body.setAsync(body, { coercionType: Office.CoercionType.Text }, function (setResult) {
+    //   event.completed({ allowEvent: true });
+    //   return;
+    // });
 
-    // const currentSignature = SignatureManager.extractSignature(body);
+    const currentSignature = isClassicOutlook
+      ? SignatureManager.extractSignatureForOutlookClassic(body)
+      : SignatureManager.extractSignature(body);
 
-    // if (!currentSignature) {
-    //   displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
-    // } else {
-    //   validateSignatureChanges(item, currentSignature, event, isClassicOutlook);
-    // }
+    if (!currentSignature) {
+      displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
+    } else {
+      validateSignatureChanges(item, currentSignature, event, isClassicOutlook);
+    }
   });
 }
 
