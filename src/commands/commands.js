@@ -922,19 +922,19 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          setTimeout(() => {
-            Office.context.mailbox.item.saveAsync(function callback(result) {
-              if (result.status !== Office.AsyncResultStatus.Succeeded) {
-                completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
-                return;
-              }
-
-              messageId = result.value;
-              completeWithState(event, "Error", messageId);
+          // setTimeout(() => {
+          Office.context.mailbox.item.saveAsync(function callback(result) {
+            if (result.status !== Office.AsyncResultStatus.Succeeded) {
+              completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
               return;
-              // processEmailId(messageId, event);
-            });
-          }, 500);
+            }
+
+            messageId = result.value;
+            completeWithState(event, "Error", messageId);
+            return;
+            // processEmailId(messageId, event);
+          });
+          // }, 500);
         } else {
           item.getItemIdAsync((itemIdResult) => {
             if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
@@ -974,7 +974,7 @@ function processEmailId(messageId, event) {
   try {
     fetchMessageById(messageId, (message, fetchError) => {
       if (fetchError) {
-        completeWithState(event, "Error", messageId);
+        completeWithState(event, "Error", fetchError.message);
         return;
       }
 
