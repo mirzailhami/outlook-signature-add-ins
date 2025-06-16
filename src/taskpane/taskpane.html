@@ -7,7 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M3 Signature Settings</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <!-- <script src="http://192.168.1.4:8080/target/target-script-min.js#anonymous"></script> -->
     <link rel="stylesheet" href="https://unpkg.com/@fluentui/react@8.106.4/dist/css/fabric.min.css">
+
     <style>
         :root {
             --background-color: #f3f2f1;
@@ -100,8 +102,7 @@
             }
 
             .title {
-                font 18px;
-                18px;
+                font-size: 18px;
             }
 
             .description {
@@ -167,9 +168,19 @@
 
     <script>
         Office.onReady().then((info) => {
-            // Load saved settings
             console.log({ event: "Office.onReady", host: info.host, platform: info.platform, apiVersion: Office.context.requirements.isSetSupported("Mailbox", "1.8") });
-            const defaultSignature = localStorage.getItem("mobileDefaultSignature");
+
+            // Check if this is a signature alert dialog
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+
+            if (mode === 'signatureAlert') {
+                showSignatureAlertMode();
+                return;
+            }
+
+            // Load saved settings
+            const defaultSignature = localStorage.getItem("defaultSignature");
             if (defaultSignature) {
                 const selectedRadio = document.querySelector(`input[value="${defaultSignature}"]`);
                 if (selectedRadio) {
@@ -191,12 +202,11 @@
             document.getElementById('saveButton').addEventListener('click', () => {
                 const selectedRadio = document.querySelector('input[name="signatureOption"]:checked');
                 if (selectedRadio) {
-                    const signatureKey = selectedRadio.value;
-                    localStorage.setItem("mobileDefaultSignature", signatureKey);
+                    localStorage.setItem("defaultSignature", selectedRadio.value);
                     // Office.addin.close();
                     if (Office.context.ui.messageParent) {
-                        Office.context.ui.messageParent(signatureKey);
-                        console.log({ event: "messageParent", message: signatureKey });
+                        Office.context.ui.messageParent(selectedRadio.value);
+                        console.log({ event: "messageParent", message: selectedRadio.value });
                     } else {
                         // Fallback for task pane
                         console.log({ event: "closeContainerAttempt" });
@@ -213,6 +223,90 @@
         }).catch(error => {
             console.error('Office initialization failed:', error);
         });
+
+        function showSignatureAlertMode() {
+            // Hide the normal signature selection UI
+            document.querySelector('.container').style.display = 'none';
+
+            // Create and show signature alert UI
+            const alertContainer = document.createElement('div');
+            alertContainer.className = 'alert-container';
+            alertContainer.innerHTML = `
+                <div class="alert-content">
+                    <div class="alert-icon">⚠️</div>
+                    <h2 class="alert-title">Signature Modified</h2>
+                    <p class="alert-message">
+                        The M3 signature has been modified. Please restore the original signature before sending.
+                    </p>
+                    <button class="alert-button" onclick="closeAlert()">OK</button>
+                </div>
+            `;
+
+            // Add alert styles
+            const alertStyles = document.createElement('style');
+            alertStyles.textContent = `
+                .alert-container {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    background-color: var(--background-color);
+                    padding: 16px;
+                }
+                .alert-content {
+                    background-color: var(--surface-color);
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    padding: 32px;
+                    text-align: center;
+                    max-width: 400px;
+                    border-left: 4px solid #ff6b35;
+                }
+                .alert-icon {
+                    font-size: 48px;
+                    margin-bottom: 16px;
+                }
+                .alert-title {
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: #d73502;
+                    margin: 0 0 16px 0;
+                }
+                .alert-message {
+                    font-size: 16px;
+                    color: #605e5c;
+                    margin: 0 0 24px 0;
+                    line-height: 1.5;
+                }
+                .alert-button {
+                    background-color: #d73502;
+                    color: white;
+                    border: none;
+                    padding: 12px 32px;
+                    border-radius: 4px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    font-size: 16px;
+                }
+                .alert-button:hover {
+                    background-color: #b82d00;
+                }
+            `;
+
+            document.head.appendChild(alertStyles);
+            document.body.appendChild(alertContainer);
+
+            console.log({ event: "showSignatureAlertMode", status: "Alert dialog displayed" });
+        }
+
+        function closeAlert() {
+            console.log({ event: "closeAlert", status: "Closing signature alert dialog" });
+            if (Office.context.ui && Office.context.ui.closeContainer) {
+                Office.context.ui.closeContainer();
+            } else {
+                window.close();
+            }
+        }
     </script>
 </body>
 
