@@ -904,22 +904,21 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          setTimeout(() => {
-            Office.context.mailbox.item.saveAsync(function callback(result) {
-              if (result.status !== Office.AsyncResultStatus.Succeeded) {
-                completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
-                return;
-              }
-              if (result.value) {
-                messageId = result.value;
-                displayNotification("Info", `saveAsync: ${messageId}`);
-                processEmailId(messageId, event);
-              } else {
-                completeWithState(event, "Error", `Can not get messageId for ${item?.itemId}`);
-                return;
-              }
-            });
-          }, 500);
+          Office.context.mailbox.item.saveAsync(function callback(result) {
+            if (result.status !== Office.AsyncResultStatus.Succeeded) {
+              completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
+              return;
+            }
+            messageId = result.value;
+            setTimeout(() => {
+              displayNotification("Info", `saveAsync: ${messageId}`);
+              processEmailId(messageId, event);
+            }, 500);
+            if (!messageId) {
+              completeWithState(event, "Info", "Please select an M3 signature from the ribbon.");
+              return;
+            }
+          });
         } else {
           item.getItemIdAsync((itemIdResult) => {
             if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
@@ -927,9 +926,11 @@ function onNewMessageComposeHandler(event) {
               return;
             }
             messageId = itemIdResult.value;
-            // completeWithState(event, "Info", `messageId: ${messageId}`);
+            if (!messageId) {
+              completeWithState(event, "Info", "Please select an M3 signature from the ribbon.");
+              return;
+            }
             processEmailId(messageId, event);
-            // return;
           });
         }
       }
