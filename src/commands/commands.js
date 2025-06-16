@@ -596,7 +596,7 @@ function fetchMessageById(messageId, callback) {
     }
 
     client
-      .api(`/me/messages/${messageId}`)
+      .api(`/me/messages/${encodeURIComponent(messageId)}`)
       .select("id,subject,body,sentDateTime,toRecipients")
       .get()
       .then((message) => {
