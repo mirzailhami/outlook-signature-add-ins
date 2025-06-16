@@ -770,7 +770,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         const isLogoValid =
           !expectedLogoUrl || (currentLogoUrl && expectedLogoUrl && currentLogoUrl === expectedLogoUrl);
 
-        displayError(`${cleanCurrentSignature.substring(75)} ~ ${cleanFetchedSignature.substring(75)}`, event);
+        displayError(`${cleanCurrentSignature.substring(-70)} ~ ${cleanFetchedSignature.substring(-70)}`, event);
         return;
 
         // if (isTextValid && isLogoValid) {
