@@ -122,30 +122,30 @@ const SignatureManager = {
     let signatureMatch = null;
     let lastSignatureIndex = -1;
     let match;
-    while ((match = signatureTablePattern.exec(fullBody)) !== null) {
+    while ((match = signatureTablePattern.exec(body)) !== null) {
       lastSignatureIndex = match.index;
       signatureMatch = match[0];
     }
 
     // Fallback to last signature div if no table found
-    if (!signatureMatch && (match = fullBody.match(signatureDivPattern))) {
-      lastSignatureIndex = fullBody.lastIndexOf(match[match.length - 1]);
+    if (!signatureMatch && (match = body.match(signatureDivPattern))) {
+      lastSignatureIndex = body.lastIndexOf(match[match.length - 1]);
       signatureMatch = match[match.length - 1];
     }
 
     let signatureText = "";
     if (lastSignatureIndex !== -1) {
       // Ensure signature ends before original message divider
-      const dividerIndex = fullBody.search(originalMessageDivider);
+      const dividerIndex = body.search(originalMessageDivider);
       if (dividerIndex !== -1 && dividerIndex > lastSignatureIndex) {
-        signatureText = fullBody.substring(lastSignatureIndex, dividerIndex).trim();
+        signatureText = body.substring(lastSignatureIndex, dividerIndex).trim();
       } else {
         signatureText = signatureMatch;
       }
     } else {
       // Fallback: Assume signature is after the last body paragraph
-      const bodyEnd = fullBody.lastIndexOf("</p>", fullBody.indexOf("<p class=MsoNormal"));
-      signatureText = bodyEnd !== -1 ? fullBody.substring(bodyEnd + 4).trim() : fullBody.trim();
+      const bodyEnd = body.lastIndexOf("</p>", body.indexOf("<p class=MsoNormal"));
+      signatureText = bodyEnd !== -1 ? body.substring(bodyEnd + 4).trim() : body.trim();
       // Trim to signature by stopping at divider if present
       const dividerIndex = signatureText.search(originalMessageDivider);
       if (dividerIndex !== -1) {
