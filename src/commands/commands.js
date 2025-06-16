@@ -771,7 +771,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
           !expectedLogoUrl || (currentLogoUrl && expectedLogoUrl && currentLogoUrl === expectedLogoUrl);
 
         displayError(
-          `isTextValid (${cleanCurrentSignature.length} === ${cleanFetchedSignature}): ${isTextValid}, isLogoValid (${currentLogoUrl} === ${expectedLogoUrl}): ${isLogoValid}`,
+          `isTextValid (${cleanCurrentSignature.length} === ${cleanFetchedSignature.length}): ${isTextValid}, isLogoValid (${currentLogoUrl.length} === ${expectedLogoUrl.length}): ${isLogoValid}`,
           event
         );
         return;
