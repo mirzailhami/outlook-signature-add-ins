@@ -928,7 +928,7 @@ function onNewMessageComposeHandler(event) {
             }
 
             messageId = result.value;
-            completeWithState(event, "Info", messageId).substring(0, 130) + "..";
+            completeWithState(event, "Info", messageId.substring(0, 130) + "..");
             return;
             // processEmailId(messageId, event);
           });
