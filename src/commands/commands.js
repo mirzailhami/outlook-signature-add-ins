@@ -716,9 +716,7 @@ function validateSignature(event) {
     }
 
     const body = bodyResult.value;
-    const currentSignature = isClassicOutlook
-      ? SignatureManager.extractSignatureForOutlookClassic(body)
-      : SignatureManager.extractSignature(body);
+    const currentSignature = SignatureManager.extractSignature(body);
 
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
