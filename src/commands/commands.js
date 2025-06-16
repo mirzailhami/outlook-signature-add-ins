@@ -881,8 +881,15 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
  * @param {Object} event - The event object from Office.js.
  */
 function onNewMessageComposeHandler(event) {
-  const isAndroid = Office.context?.mailbox?.diagnostics?.hostName === "OutlookAndroid";
-  const isIOS = Office.context?.mailbox?.diagnostics?.hostName === "OutlookIOS";
+  Office.context.mailbox.item.saveAsync((result) => {
+    if (result.status !== Office.AsyncResultStatus.Succeeded) {
+      completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
+      return;
+    }
+    completeWithState(event, "Info", result.value);
+    return;
+  });
+
   isMobile =
     Office.context?.mailbox?.diagnostics?.hostName === "OutlookAndroid" ||
     Office.context?.mailbox?.diagnostics?.hostName === "OutlookIOS";
@@ -930,7 +937,7 @@ function onNewMessageComposeHandler(event) {
             }
 
             messageId = result.value;
-            completeWithState(event, "Error", messageId);
+            completeWithState(event, "Info", messageId);
             return;
             // processEmailId(messageId, event);
           });
