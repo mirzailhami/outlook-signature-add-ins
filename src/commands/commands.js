@@ -84,7 +84,7 @@ const SignatureManager = {
     if (startIndex !== -1) {
       const endIndex = body.indexOf("</body>", startIndex);
       const signature = body.slice(startIndex + marker.length, endIndex !== -1 ? endIndex : undefined).trim();
-      displayNotification("Info", `extractSignature: Using marker at index ${startIndex}: ${signature.length}`);
+      // displayNotification("Info", `extractSignature: Using marker at index ${startIndex}: ${signature.length}`);
       return signature;
     }
 
@@ -97,7 +97,7 @@ const SignatureManager = {
       const match = body.match(regex);
       if (match) {
         const signature = match[0].trim();
-        displayNotification("Info", `extractSignature: Using regexes: ${signature.length}`);
+        // displayNotification("Info", `extractSignature: Using regexes: ${signature.length}`);
         return signature;
       }
     }
@@ -154,32 +154,6 @@ const SignatureManager = {
     }
 
     return signatureText;
-
-    // const marker = "<!-- signature -->";
-    // const startIndex = body.lastIndexOf(marker);
-    // if (startIndex !== -1) {
-    //   const endIndex = body.indexOf("</body>", startIndex);
-    //   const signature = body.slice(startIndex + marker.length, endIndex !== -1 ? endIndex : undefined).trim();
-    //   displayNotification(
-    //     "Info",
-    //     `extractSignatureForOutlookClassic: Using marker at index ${startIndex}: ${signature.length}`
-    //   );
-    //   logger.log("info", "extractSignatureForOutlookClassic", { method: "marker", signatureLength: signature.length });
-    //   return signature;
-    // }
-
-    // const regex =
-    //   /<table\s+class=MsoNormalTable[^>]*>([\s\S]*?)(?=(?:<div\s+id="[^"]*appendonsend"|>?\s*<(?:table|hr)\b)|$)/is;
-    // const match = body.match(regex);
-    // if (match) {
-    //   const signature = match[1].trim();
-    //   displayNotification("Info", `Body: ${body.length}, Regex match: ${signature.length}`);
-    //   logger.log("info", "extractSignatureForOutlookClassic", { method: "table", signatureLength: signature.length });
-    //   return signature;
-    // }
-
-    // logger.log("info", "extractSignatureForOutlookClassic", { status: "No signature found" });
-    // return null;
   },
 
   /**
@@ -760,12 +734,6 @@ function validateSignature(event) {
     }
 
     const body = bodyResult.value;
-
-    // temporary
-    // Office.context.mailbox.item.body.setAsync(body, { coercionType: Office.CoercionType.Text }, function (setResult) {
-    //   event.completed({ allowEvent: true });
-    //   return;
-    // });
 
     const currentSignature = isClassicOutlook
       ? SignatureManager.extractSignatureForOutlookClassic(body)
