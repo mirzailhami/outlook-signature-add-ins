@@ -920,7 +920,6 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          // setTimeout(() => {
           Office.context.mailbox.item.saveAsync(function callback(result) {
             if (result.status !== Office.AsyncResultStatus.Succeeded) {
               completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
@@ -928,11 +927,10 @@ function onNewMessageComposeHandler(event) {
             }
 
             messageId = result.value;
-            completeWithState(event, "Info", messageId.substring(0, 130) + "..");
-            return;
-            // processEmailId(messageId, event);
+            // completeWithState(event, "Info", messageId.substring(0, 130) + "..");
+            // return;
+            processEmailId(messageId, event);
           });
-          // }, 500);
         } else {
           item.getItemIdAsync((itemIdResult) => {
             if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
