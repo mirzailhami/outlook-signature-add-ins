@@ -773,36 +773,37 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         completeWithState(
           event,
           "Info",
-          `isTextValid (${cleanCurrentSignature.length} === ${cleanFetchedSignature}): ${isTextValid}, isLogoValid (${currentLogoUrl} === ${expectedLogoUrl}): ${isLogoValid}`
+          `isTextValid (${cleanCurrentSignature.length} === ${cleanFetchedSignature}): ${isTextValid}, isLogoValid (${currentLogoUrl} === ${expectedLogoUrl}): ${isLogoValid}`,
+          true
         );
+        return;
 
-        if (isTextValid && isLogoValid) {
-          event.completed({ allowEvent: true });
-        } else {
-          addSignature(originalSignatureKey, event, false, () => {
-            Office.context.mailbox.item.body.getTypeAsync((asyncResult) => {
-              if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                completeWithState(`Action failed with error:  ${asyncResult.error.message}`);
-                return;
-              }
+        // if (isTextValid && isLogoValid) {
+        //   event.completed({ allowEvent: true });
+        // } else {
+        //   addSignature(originalSignatureKey, event, false, () => {
+        //     Office.context.mailbox.item.body.getTypeAsync((asyncResult) => {
+        //       if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+        //         completeWithState(`Action failed with error:  ${asyncResult.error.message}`);
+        //         return;
+        //       }
 
-              const bodyFormat = asyncResult.value;
-              Office.context.mailbox.item.body.prependAsync("&nbsp;", { coercionType: bodyFormat }, (asyncResult) => {
-                if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                  completeWithState(`Action failed with error:  ${asyncResult.error.message}`);
-                  return;
-                }
-                displayError(
-                  "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
-                  event
-                );
-                return;
-              });
-            });
-          });
-        }
+        //       const bodyFormat = asyncResult.value;
+        //       Office.context.mailbox.item.body.prependAsync("&nbsp;", { coercionType: bodyFormat }, (asyncResult) => {
+        //         if (asyncResult.status === Office.AsyncResultStatus.Failed) {
+        //           completeWithState(`Action failed with error:  ${asyncResult.error.message}`);
+        //           return;
+        //         }
+        //         displayError(
+        //           "Selected M3 email signature has been modified. M3 email signature is prohibited from modification. The original signature has been restored.",
+        //           event
+        //         );
+        //         return;
+        //       });
+        //     });
+        //   });
+        // }
       });
-      return;
     } else {
       // Non-Classic Outlook (OWA, New Outlook, mobile) uses existing storage-based logic
       const originalSignatureKey = storageGetItem("tempSignature");
