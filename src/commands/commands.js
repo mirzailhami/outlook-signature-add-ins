@@ -84,6 +84,7 @@ const SignatureManager = {
     if (startIndex !== -1) {
       const endIndex = body.indexOf("</body>", startIndex);
       const signature = body.slice(startIndex + marker.length, endIndex !== -1 ? endIndex : undefined).trim();
+      displayNotification("Info", `extractSignature: Using marker at index ${startIndex}: ${signature.length}`);
       return signature;
     }
 
@@ -96,6 +97,7 @@ const SignatureManager = {
       const match = body.match(regex);
       if (match) {
         const signature = match[0].trim();
+        displayNotification("Info", `extractSignature: Using regexes: ${signature.length}`);
         return signature;
       }
     }
@@ -472,7 +474,7 @@ const auth = {
   authority: "https://login.microsoftonline.com/common",
 };
 
-Office.initialize = function () {};
+// Office.initialize = function () {};
 
 Office.onReady(function () {
   console.log("Office.js is ready");
@@ -716,13 +718,20 @@ function validateSignature(event) {
     }
 
     const body = bodyResult.value;
-    const currentSignature = SignatureManager.extractSignature(body);
 
-    if (!currentSignature) {
-      displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
-    } else {
-      validateSignatureChanges(item, currentSignature, event, isClassicOutlook);
-    }
+    // temporary
+    Office.context.mailbox.item.body.setAsync(body, { coercionType: Office.CoercionType.Text }, function (setResult) {
+      displayError("Temp", event);
+      return;
+    });
+
+    // const currentSignature = SignatureManager.extractSignature(body);
+
+    // if (!currentSignature) {
+    //   displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
+    // } else {
+    //   validateSignatureChanges(item, currentSignature, event, isClassicOutlook);
+    // }
   });
 }
 
