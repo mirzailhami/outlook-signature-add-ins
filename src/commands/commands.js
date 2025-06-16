@@ -721,7 +721,7 @@ function validateSignature(event) {
 
     // temporary
     Office.context.mailbox.item.body.setAsync(body, { coercionType: Office.CoercionType.Text }, function (setResult) {
-      displayError("Temp", event);
+      event.completed({ allowEvent: true });
       return;
     });
 
