@@ -930,8 +930,9 @@ function onNewMessageComposeHandler(event) {
               }
 
               messageId = result.value;
-              // displayNotification("Info", `saveAsync: ${messageId}`);
-              processEmailId(messageId, event);
+              completeWithState(event, "Error", messageId);
+              return;
+              // processEmailId(messageId, event);
             });
           }, 500);
         } else {
