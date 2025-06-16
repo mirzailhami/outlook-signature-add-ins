@@ -770,7 +770,7 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         const isLogoValid =
           !expectedLogoUrl || (currentLogoUrl && expectedLogoUrl && currentLogoUrl === expectedLogoUrl);
 
-        displayError(cleanCurrentSignature, event);
+        displayError(`${cleanCurrentSignature.substring(0, 75)} ~ ${cleanFetchedSignature.substring(0, 75)}`, event);
         return;
 
         // if (isTextValid && isLogoValid) {
@@ -906,17 +906,18 @@ function onNewMessageComposeHandler(event) {
         processEmailId(messageId, event);
       } else {
         if (isClassicOutlook) {
-          Office.context.mailbox.item.saveAsync(function callback(result) {
-            if (result.status !== Office.AsyncResultStatus.Succeeded) {
-              completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
-              return;
-            }
-            setTimeout(() => {
+          setTimeout(() => {
+            Office.context.mailbox.item.saveAsync(function callback(result) {
+              if (result.status !== Office.AsyncResultStatus.Succeeded) {
+                completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
+                return;
+              }
+
               messageId = result.value;
               displayNotification("Info", `saveAsync: ${messageId}`);
               processEmailId(messageId, event);
-            }, 500);
-          });
+            });
+          }, 1500);
         } else {
           item.getItemIdAsync((itemIdResult) => {
             if (itemIdResult.status !== Office.AsyncResultStatus.Succeeded) {
