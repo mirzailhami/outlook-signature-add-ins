@@ -746,8 +746,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         return;
       }
 
-      completeWithState(event, "Info", `Detected signature key: ${originalSignatureKey}`, true);
-
       // Step 2: Fetch the signature and compare
       fetchSignature(originalSignatureKey, (fetchedSignature, error) => {
         if (error || !fetchedSignature) {
@@ -771,6 +769,12 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         const isTextValid = cleanCurrentSignature === cleanFetchedSignature;
         const isLogoValid =
           !expectedLogoUrl || (currentLogoUrl && expectedLogoUrl && currentLogoUrl === expectedLogoUrl);
+
+        completeWithState(
+          event,
+          "Info",
+          `isTextValid (${cleanCurrentSignature.length} === ${cleanFetchedSignature}): ${isTextValid}, isLogoValid (${currentLogoUrl} === ${expectedLogoUrl}): ${isLogoValid}`
+        );
 
         if (isTextValid && isLogoValid) {
           event.completed({ allowEvent: true });
