@@ -770,11 +770,9 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         const isLogoValid =
           !expectedLogoUrl || (currentLogoUrl && expectedLogoUrl && currentLogoUrl === expectedLogoUrl);
 
-        completeWithState(
-          event,
-          "Info",
+        displayError(
           `isTextValid (${cleanCurrentSignature.length} === ${cleanFetchedSignature}): ${isTextValid}, isLogoValid (${currentLogoUrl} === ${expectedLogoUrl}): ${isLogoValid}`,
-          true
+          event
         );
         return;
 
@@ -784,14 +782,14 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         //   addSignature(originalSignatureKey, event, false, () => {
         //     Office.context.mailbox.item.body.getTypeAsync((asyncResult) => {
         //       if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-        //         completeWithState(`Action failed with error:  ${asyncResult.error.message}`);
+        //         completeWithState(event, 'Error', `Action failed with error:  ${asyncResult.error.message}`);
         //         return;
         //       }
 
         //       const bodyFormat = asyncResult.value;
         //       Office.context.mailbox.item.body.prependAsync("&nbsp;", { coercionType: bodyFormat }, (asyncResult) => {
         //         if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-        //           completeWithState(`Action failed with error:  ${asyncResult.error.message}`);
+        //           completeWithState(event, 'Error', `Action failed with error:  ${asyncResult.error.message}`);
         //           return;
         //         }
         //         displayError(
