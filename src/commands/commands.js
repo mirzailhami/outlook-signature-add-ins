@@ -746,6 +746,8 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
         return;
       }
 
+      completeWithState(event, "Info", `Detected signature key: ${originalSignatureKey}`, true);
+
       // Step 2: Fetch the signature and compare
       fetchSignature(originalSignatureKey, (fetchedSignature, error) => {
         if (error || !fetchedSignature) {
@@ -909,15 +911,11 @@ function onNewMessageComposeHandler(event) {
               completeWithState(event, "Error", `saveAsync: ${result.error?.message}`);
               return;
             }
-            messageId = result.value;
             setTimeout(() => {
+              messageId = result.value;
               displayNotification("Info", `saveAsync: ${messageId}`);
               processEmailId(messageId, event);
             }, 500);
-            if (!messageId) {
-              completeWithState(event, "Info", "Please select an M3 signature from the ribbon.");
-              return;
-            }
           });
         } else {
           item.getItemIdAsync((itemIdResult) => {
@@ -926,10 +924,6 @@ function onNewMessageComposeHandler(event) {
               return;
             }
             messageId = itemIdResult.value;
-            if (!messageId) {
-              completeWithState(event, "Info", "Please select an M3 signature from the ribbon.");
-              return;
-            }
             processEmailId(messageId, event);
           });
         }
