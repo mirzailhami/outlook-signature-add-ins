@@ -900,10 +900,10 @@ function onNewMessageComposeHandler(event) {
 
   const item = Office.context.mailbox.item;
 
-  displayNotification(
-    `Info`,
-    `${Office.context.mailbox.diagnostics.hostName} - ${Office.context.mailbox.diagnostics.hostVersion}`
-  );
+  // displayNotification(
+  //   `Info`,
+  //   `${Office.context.mailbox.diagnostics.hostName} - ${Office.context.mailbox.diagnostics.hostVersion}`
+  // );
   SignatureManager.isReplyOrForward(item, (isReplyOrForward, error) => {
     if (error) {
       logger.log("error", "onNewMessageComposeHandler", { error: error.message });
