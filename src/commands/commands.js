@@ -761,7 +761,11 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
       const originalSignatureKey = detectSignatureKey(currentSignature);
 
       if (!originalSignatureKey) {
-        displayError("Could not detect M3 signature. Please select a signature from the ribbon.", event);
+        // displayError("Could not detect M3 signature. Please select a signature from the ribbon.", event);
+        displayError(
+          "Email is missing the M3 required signature. Please select an appropriate email signature.",
+          event
+        );
         return;
       }
 
