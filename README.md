@@ -104,7 +104,7 @@ npm run dev
 ```
 npm run build
 ```
-- Production output is in `dist`, deployed to `https://mirzailhami.github.io/outlook-signature-add-ins/`.
+- Production output is in `dist`, deployed to `https://m3emailsignature.z33.web.core.windows.net/`.
 
 5. **Sideloading**:
 - Open Outlook Web App.
@@ -174,7 +174,7 @@ ASSET_BASE_URL=https://localhost:3000
 ```
 - Example `.env.production`:
 ```
-ASSET_BASE_URL=https://mirzailhami.github.io/outlook-signature-add-ins
+ASSET_BASE_URL=https://m3emailsignature.z33.web.core.windows.net
 ```
 - **Versioning**: Current `manifest.xml` version is 1.0.0.50.
 
