@@ -974,7 +974,8 @@ function processEmailId(messageId, event) {
   try {
     fetchMessageById(messageId, (message, fetchError) => {
       if (fetchError) {
-        completeWithState(event, "Error", fetchError.message);
+        completeWithState(event, "Info", "Please select an M3 signature from the ribbon.");
+        // completeWithState(event, "Error", fetchError.message);
         return;
       }
 

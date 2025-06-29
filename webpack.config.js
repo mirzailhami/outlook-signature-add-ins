@@ -86,7 +86,7 @@ module.exports = async (env, options) => {
         template: "./src/taskpane/taskpane.html",
         filename: "taskpane.html",
         chunks: ["polyfill", "commands"],
-        publicPath: isProduction ? "/outlook-signature-add-ins/" : "/",
+        // publicPath: isProduction ? "/outlook-signature-add-ins/" : "/",
         minify: isProduction
           ? {
               removeComments: true,
@@ -99,7 +99,7 @@ module.exports = async (env, options) => {
         template: "./src/commands/commands.html",
         filename: "commands.html",
         chunks: ["polyfill", "commands"],
-        publicPath: isProduction ? "/outlook-signature-add-ins/" : "/",
+        // publicPath: isProduction ? "/outlook-signature-add-ins/" : "/",
         minify: isProduction
           ? {
               removeComments: true,
@@ -115,7 +115,7 @@ module.exports = async (env, options) => {
             transform(content) {
               const assetBaseUrl =
                 process.env.ASSET_BASE_URL ||
-                (isProduction ? "https://mirzailhami.github.io/outlook-signature-add-ins" : "https://localhost:3000");
+                (isProduction ? "https://m3emailsignature.z33.web.core.windows.net" : "https://localhost:3000");
               return content.toString().replace(/\${ASSET_BASE_URL}/g, assetBaseUrl);
             },
           },
@@ -129,7 +129,7 @@ module.exports = async (env, options) => {
               if (path.endsWith("microsoft-officeaddins-allowed.json")) {
                 const assetBaseUrl =
                   process.env.ASSET_BASE_URL ||
-                  (isProduction ? "https://mirzailhami.github.io/outlook-signature-add-ins" : "https://localhost:3000");
+                  (isProduction ? "https://m3emailsignature.z33.web.core.windows.net" : "https://localhost:3000");
                 const allowed = [`${assetBaseUrl}/commands.js`];
                 return JSON.stringify({ allowed }, null, 2);
               }
