@@ -111,46 +111,72 @@ const SignatureManager = {
    * @returns {string|null} The extracted signature, or null if not found.
    */
   extractSignatureForOutlookClassic(body) {
-    if (!body) return null;
+    if (!body) return "";
 
-    const signatureTablePattern = /<table class=MsoNormalTable[^>]*>(?:[\s\S]*?)<\/table><\/div>/gi; // Updated to include </div>
+    const signatureTablePattern = /<table class=MsoNormalTable[^>]*>(?:[\s\S]*?)<\/table><\/div>/gi;
     const signatureDivPattern =
       /<div[^>]*id=["'](?:(?:x_)?Signature|_Signature)(?:_\\w+)?["'][^>]*>(?:[\s\S]*?)<\/div>/gi;
     const originalMessageDivider = /<div[^>]*style=['"]border:none;border-top:solid #E1E1E1[^>]*>/i;
 
-    // Find the last signature table
-    let signatureMatch = null;
-    let lastSignatureIndex = -1;
+    let signatureMatches = [];
     let match;
+    const dividerIndex = body.search(originalMessageDivider);
+
+    // Collect all signature table matches
     while ((match = signatureTablePattern.exec(body)) !== null) {
-      lastSignatureIndex = match.index;
-      signatureMatch = match[0];
+      signatureMatches.push({ index: match.index, text: match[0] });
     }
 
-    // Fallback to last signature div if no table found
-    if (!signatureMatch && (match = body.match(signatureDivPattern))) {
-      lastSignatureIndex = body.lastIndexOf(match[match.length - 1]);
-      signatureMatch = match[match.length - 1];
+    // Collect all signature div matches
+    while ((match = signatureDivPattern.exec(body)) !== null) {
+      signatureMatches.push({ index: match.index, text: match[0] });
     }
+
+    // Sort matches by index in ascending order
+    signatureMatches.sort((a, b) => a.index - b.index);
 
     let signatureText = "";
-    if (lastSignatureIndex !== -1) {
-      // Ensure signature ends before original message divider
-      const dividerIndex = body.search(originalMessageDivider);
-      if (dividerIndex !== -1 && dividerIndex > lastSignatureIndex) {
-        signatureText = body.substring(lastSignatureIndex, dividerIndex).trim();
+    let hasNewSignature = false;
+
+    if (signatureMatches.length > 0) {
+      // Check for signatures before the divider as the new signature
+      if (dividerIndex !== -1) {
+        const preDividerMatches = signatureMatches.filter((match) => match.index < dividerIndex);
+        if (preDividerMatches.length > 0) {
+          signatureText = preDividerMatches[preDividerMatches.length - 1].text; // Last before divider
+          hasNewSignature = true;
+        }
       } else {
-        signatureText = signatureMatch;
+        // No divider (new compose), use the last signature
+        signatureText = signatureMatches[signatureMatches.length - 1].text;
+        hasNewSignature = true;
       }
     } else {
-      // Fallback: Assume signature is after the last body paragraph
+      // Fallback: Check for signature-like content after the last paragraph
       const bodyEnd = body.lastIndexOf("</p>", body.indexOf("<p class=MsoNormal"));
-      signatureText = bodyEnd !== -1 ? body.substring(bodyEnd + 4).trim() : body.trim();
-      // Trim to signature by stopping at divider if present
-      const dividerIndex = signatureText.search(originalMessageDivider);
-      if (dividerIndex !== -1) {
-        signatureText = signatureText.substring(0, dividerIndex).trim();
+      if (bodyEnd !== -1) {
+        let potentialSignature = body.substring(bodyEnd + 4).trim();
+        if (dividerIndex !== -1) {
+          potentialSignature = potentialSignature
+            .substring(0, potentialSignature.indexOf(originalMessageDivider))
+            .trim();
+        }
+        if (potentialSignature.match(signatureTablePattern) || potentialSignature.match(signatureDivPattern)) {
+          signatureText = potentialSignature;
+          hasNewSignature = true;
+        }
+      } else {
+        let potentialSignature = body.trim();
+        if (potentialSignature.match(signatureTablePattern) || potentialSignature.match(signatureDivPattern)) {
+          signatureText = potentialSignature;
+          hasNewSignature = true;
+        }
       }
+    }
+
+    // Return "" if no new signature is detected
+    if (!hasNewSignature) {
+      return "";
     }
 
     return signatureText;
@@ -741,8 +767,10 @@ function validateSignature(event) {
 
     if (!currentSignature) {
       displayError("Email is missing the M3 required signature. Please select an appropriate email signature.", event);
+      return;
     } else {
       validateSignatureChanges(item, currentSignature, event, isClassicOutlook);
+      // displayError(currentSignature, event);
     }
   });
 }
@@ -761,7 +789,6 @@ function validateSignatureChanges(item, currentSignature, event, isClassicOutloo
       const originalSignatureKey = detectSignatureKey(currentSignature);
 
       if (!originalSignatureKey) {
-        // displayError("Could not detect M3 signature. Please select a signature from the ribbon.", event);
         displayError(
           "Email is missing the M3 required signature. Please select an appropriate email signature.",
           event
@@ -931,8 +958,6 @@ function onNewMessageComposeHandler(event) {
             }
 
             messageId = result.value;
-            // completeWithState(event, "Info", messageId.substring(0, 130) + "..");
-            // return;
             processEmailId(messageId, event);
           });
         } else {
